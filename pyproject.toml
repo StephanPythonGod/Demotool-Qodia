@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "demotool"
+version = "0.1.0"
+description = ""
+authors = ["StephanPythonGod <bozztryh@web.de>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+streamlit = "^1.36.0"
+fuzzywuzzy = "^0.18.0"
+st-annotated-text = "^4.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

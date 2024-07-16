@@ -1,0 +1,11 @@
+runtime: custom
+env: flex
+
+entrypoint: streamlit run app.py --server.port $PORT
+
+resources:
+  cpu: 2  # Increase the CPU
+  memory_gb: 4  # Increase the memory
+
+automatic_scaling:
+  max_num_instances: 1
