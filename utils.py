@@ -191,7 +191,10 @@ def ocr_pdf_to_text(file):
 
     print("Done performing OCR on the PDF. Response status: ", response.status_code)
 
-    return response_content["result"]["ocr_text"]
+    if response.status_code != 200:
+        st.error("Error performing OCR on the PDF. Something went wrong with the API.")
+    else:
+        return response_content["result"]["ocr_text"]
 
 def analyze(text):
     """Analyzes the text and returns the prediction."""
