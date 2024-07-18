@@ -6,8 +6,8 @@ from streamlit_cookies_controller import CookieController
 
 
 st.set_page_config(
-    page_title="DOC2GOA",
-    page_icon="🤖",
+    page_title="Qodia",
+    page_icon="🔍🤖📚",
     layout="wide"  # Set the page layout to wide
 )
 
@@ -194,7 +194,7 @@ def generate_pdf(df):
 
 
 def main():
-    st.title("Naibill")
+    st.title("Qodia")
 
     if st.session_state.stage != "modal":
         st.header("KI-basierte automatische Kodierung von Leistungen nach GOÄ")
