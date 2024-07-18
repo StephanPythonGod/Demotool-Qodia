@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 from annotated_text import annotated_text
-import time
 from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa
-import pickle
+from streamlit_cookies_controller import CookieController
 
 
 st.set_page_config(
@@ -12,6 +11,41 @@ st.set_page_config(
     layout="wide"  # Set the page layout to wide
 )
 
+# Initialize CookieController
+controller = CookieController()
+
+# Function to get a cookie value
+def get_cookie(cookie_name):
+    return controller.get(cookie_name)
+
+# Function to set a cookie value
+def set_cookie(cookie_name, value):
+    controller.set(cookie_name, value)
+
+# Function to load settings from cookies
+def load_settings_from_cookies():
+    settings = {
+        "api_url": get_cookie("api_url") or "http://localhost:8000",
+        "api_key": get_cookie("api_key") or "",
+        "category": get_cookie("category") or "Hernien-OP"
+    }
+    print(f"Loaded settings from cookies: {settings}")
+
+    st.session_state.api_url = settings["api_url"]
+    st.session_state.api_key = settings["api_key"]
+    st.session_state.category = settings["category"]
+
+    return settings
+
+# Function to save settings to cookies
+def save_settings_to_cookies():
+    print(f"Saving settings to cookies")
+    set_cookie("api_url", st.session_state.api_url)
+    set_cookie("api_key", st.session_state.api_key)
+    set_cookie("category", st.session_state.category)
+
+# Load initial settings from cookies
+load_settings_from_cookies()
 
 # Set session state
 if 'stage' not in st.session_state:
@@ -39,7 +73,6 @@ if "api_key" not in st.session_state:
 if "category" not in st.session_state:
     st.session_state.category = "Hernien-OP"
 
-
 if 'df' not in st.session_state:
     data = {
             'Ziffer': [],
@@ -58,7 +91,10 @@ with st.sidebar:
     st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url, help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.")
     st.session_state.api_key = st.text_input("API Key", value=st.session_state.api_key, help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.")
     st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP"], index=["Hernien-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
-
+    
+    if st.button("Save Settings"):
+        save_settings_to_cookies()
+        st.success("Settings saved successfully.")
 
 def perform_ocr(file):
     # Extracts text from the uploaded file using OCR

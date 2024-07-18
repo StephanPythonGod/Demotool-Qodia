@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.12"
 streamlit = "^1.36.0"
+streamlit-cookies-controller = "^0.0.4"
 fuzzywuzzy = "^0.18.0"
 st-annotated-text = "^4.0.1"
 
