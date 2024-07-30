@@ -90,7 +90,7 @@ if 'df' not in st.session_state:
 with st.sidebar:
     st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url, help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.")
     st.session_state.api_key = st.text_input("API Key", value=st.session_state.api_key, help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.")
-    st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP"], index=["Hernien-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
+    st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP", "Knie-OP"], index=["Hernien-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
     
     if st.button("Save Settings"):
         save_settings_to_cookies()
