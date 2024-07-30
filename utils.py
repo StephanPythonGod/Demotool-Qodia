@@ -232,7 +232,7 @@ def analyze(text):
                 Message: {response.text}
                 Request ID (Can be used by Qodia for finding the error): {response.headers["request_id"]}
                 """)
-
+    
     return response_content["result"]["prediction"]
 
 def read_in_goa(path = "./data/GOA_Ziffern.csv", fully=False):
@@ -242,7 +242,7 @@ def read_in_goa(path = "./data/GOA_Ziffern.csv", fully=False):
 
     if fully:
         return goa
-    # use only the columns "ZifferStr" and "Beschreibung"
+    # use only the columns "GOÄZiffer" and "Beschreibung"
     goa = goa[["GOÄZiffer", "Beschreibung"]]
 
     goa = goa.dropna()
@@ -310,10 +310,9 @@ def df_to_items(df):
 
     goa = read_in_goa(fully=True)
 
-
     for row in df.iterrows():
 
-        goa_item = goa[goa["ZifferStr"] == row[1]["Ziffer"]]
+        goa_item = goa[goa["GOÄZiffer"] == row[1]["Ziffer"]]
 
         intensity = row[1]["Intensität"]
 
