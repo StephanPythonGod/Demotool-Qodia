@@ -5,7 +5,7 @@ entrypoint: streamlit run app.py --server.port $PORT
 
 resources:
   cpu: 1  # Increase the CPU
-  memory_gb: 2  # Increase the memory
+  memory_gb: 1  # Increase the memory
 
 automatic_scaling:
-  max_num_instances: 1
+  max_num_instances: 4
