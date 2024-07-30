@@ -192,7 +192,13 @@ def ocr_pdf_to_text(file):
     print("Done performing OCR on the PDF. Response status: ", response.status_code)
 
     if response.status_code != 200:
-        st.error("Error performing OCR on the PDF. Something went wrong with the API.")
+        st.error(f"""Error performing OCR on the PDF. Something went wrong with the API.
+
+                API ERROR: 
+                Status Code: {response.status_code} 
+                Message: {response.text}
+                Request ID (Can be used by Qodia for finding the error): {response.headers["request_id"]}
+                """)
     else:
         return response_content["result"]["ocr_text"]
 
@@ -216,7 +222,16 @@ def analyze(text):
 
     response_content = response.json()
 
-    print("Done analyzing text. Respoonse status: ", response.status_code)
+    print("Done analyzing text. Respoonse status: ", response.status_code, response.text)
+
+    if response.status_code != 200:
+        st.error(f"""Error performing Prediction on the Text. Something went wrong with the API.
+
+                API ERROR: 
+                Status Code: {response.status_code} 
+                Message: {response.text}
+                Request ID (Can be used by Qodia for finding the error): {response.headers["request_id"]}
+                """)
 
     return response_content["result"]["prediction"]
 
