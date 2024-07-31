@@ -295,9 +295,9 @@ def analyze_add_data(data):
 
         new_data["Begründung"].append(data[data_count]["begrundung"])
 
-        new_data["Häufigkeit"].append(1)
+        new_data["Häufigkeit"].append(data[data_count]["quantitaet"])
 
-        new_data["Intensität"].append("Hoch")
+        new_data["Intensität"].append(data[data_count]["faktor"])
 
         new_data["Beschreibung"].append(goa[goa["GOÄZiffer"] == data[data_count]["goa_ziffer"]]["Beschreibung"].values[0])
 
@@ -305,48 +305,59 @@ def analyze_add_data(data):
 
 
 def df_to_items(df):
-
     items = []
-
     goa = read_in_goa(fully=True)
-
-    for row in df.iterrows():
-
-        goa_item = goa[goa["GOÄZiffer"] == row[1]["Ziffer"]]
-
-        intensity = row[1]["Intensität"]
-
-        if intensity == "Hoch":
-            try:
-                preis = float(goa_item["Höchstsatz"].values[0].replace(',', '.'))
-                faktor = float(goa_item["Höchstfaktor"].values[0].replace(',', '.'))
-            except:
-                intensity = 2
-        elif intensity == "Mittel":
-            try: 
-                preis = float(goa_item["Regelhöchstsatz"].values[0].replace(',', '.'))
-                faktor = float(goa_item["Regelhöchstfaktor"].values[0].replace(',', '.'))
-            except:
-                intensity = 1
-        elif intensity == "Niedrig":
-            try:
-                preis = float(goa_item["Einfachsatz"].values[0].replace(',', '.'))
-                faktor = float(goa_item["Einfachfaktor"].values[0].replace(',', '.'))
-            except:
-                preis = 0
-                faktor = 0
-        else:
-            preis = 0
+    
+    for idx, row in df.iterrows():
+        goa_item = goa[goa["GOÄZiffer"] == row["Ziffer"]]
         
+        if goa_item.empty:
+            print(f"No matching GOÄZiffer for row index {idx} with Ziffer {row['Ziffer']}")
+            continue
+        
+        intensity = row["Intensität"]
+        
+        # Convert intensity to string in both formats
+        intensity_str_period = f"{intensity:.1f}"  # Format with period
+        intensity_str_comma = intensity_str_period.replace('.', ',')  # Format with comma
+        
+        # Find columns where intensity matches either format
+        matching_columns = goa_item.columns[
+            goa_item.apply(lambda col: col.astype(str).str.contains(f"({intensity_str_period}|{intensity_str_comma})")).any()
+        ]
+        
+        if matching_columns.empty:
+            print(f"No matching intensity {intensity} (as {intensity_str_period} or {intensity_str_comma}) for row index {idx} with Ziffer {row['Ziffer']}")
+            continue
+        
+        column_name = matching_columns[0]
+
+        faktor = intensity
+
+        if column_name == "Einfachfaktor":
+            preis = float(goa_item["Einfachsatz"].values[0].replace(',', '.'))
+        elif column_name == "Regelhöchstfaktor":
+            preis = float(goa_item["Regelhöchstsatz"].values[0].replace(',', '.'))
+        elif column_name == "Höchstfaktor":
+            preis = float(goa_item["Höchstsatz"].values[0].replace(',', '.'))
+        elif faktor < 2:
+            preis = float(goa_item["Einfachsatz"].values[0].replace(',', '.'))
+        elif faktor < 3:
+            preis = float(goa_item["Regelhöchstsatz"].values[0].replace(',', '.'))
+        else:
+            preis = float(goa_item["Höchstsatz"].values[0].replace(',', '.'))
+
+        print(f"Preis: {preis}, Faktor: {faktor}, Row: {row}")
+
         item = {
-            "ziffer" : row[1]["Ziffer"],
-            "Häufigkeit" : row[1]["Häufigkeit"],
+            "ziffer" : row["Ziffer"],
+            "Häufigkeit" : row["Häufigkeit"],
             "intensitat" : intensity,
             "beschreibung" : goa_item["Beschreibung"].values[0],
             "Punktzahl": goa_item["Punktzahl"].values[0],
             "preis": preis,
             "faktor": faktor,
-            "total": preis * int(row[1]["Häufigkeit"]),
+            "total": preis * int(row["Häufigkeit"]),
             "auslagen": "",
             "date": ""
         }

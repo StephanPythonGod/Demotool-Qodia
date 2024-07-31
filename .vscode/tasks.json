@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Streamlit with Poetry",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run",
+                "streamlit",
+                "run",
+                "app.py"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
