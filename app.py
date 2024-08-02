@@ -98,7 +98,6 @@ with st.sidebar:
         working = test_settings = test_settings()
         if working:
             save_settings_to_cookies()
-            st.success("Settings saved successfully.")
 
 def perform_ocr(file):
     # Extracts text from the uploaded file using OCR
@@ -361,8 +360,8 @@ def main():
         haufigkeit = st.number_input("Häufigkeit setzen", value=ziffer_data['Häufigkeit'], placeholder="Bitte wählen Sie die Häufigkeit der Leistung ...", min_value=1, max_value=20)
 
         st.subheader("Faktor")
-        intensitat_value = st.number_input("Faktor setzen", value=ziffer_data["Intensität"], placeholder="Bitte wählen Sie die Intensität der Durchführung der Leistung ...", min_value=0.0, max_value=5.0, format="%.1f")
-        intensitat = f"{intensitat_value:.1f}"
+        intensitat_value = st.number_input("Faktor setzen", value=ziffer_data["Intensität"], placeholder="Bitte wählen Sie die Intensität der Durchführung der Leistung ...", min_value=0.0, max_value=5.0, step=0.1, format="%.1f")
+        intensitat = intensitat_value
 
         st.subheader("Textzitat")
         zitat = st.text_area("Textzitat einfügen", value=ziffer_data["Zitat"], placeholder="Bitte hier das Textzitat einfügen ...", help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.")
