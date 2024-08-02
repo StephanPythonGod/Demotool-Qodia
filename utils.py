@@ -220,7 +220,7 @@ def test_api():
         if response.status_code == 401:
             st.error("Der API-Key ist nicht korrekt. Bitte überprüfen Sie den API-Key und speichern Sie die Einstellungen erneut.")
             return False
-        elif response.status_code != 200 or response.status_code != 201:
+        elif response.status_code != 200 and response.status_code != 201:
             st.error(f"""Ein unerwarteter Fehler ist beim Aufrufen der API aufgetreten. Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.
                      
                      Fehlerdetails: 
@@ -373,7 +373,8 @@ def df_to_items(df):
         
         if matching_columns.empty:
             print(f"No matching intensity {intensity} (as {intensity_str_period} or {intensity_str_comma}) for row index {idx} with Ziffer {row['Ziffer']}")
-            continue
+            matching_columns = ["Regelhöchstfaktor"]
+            
         
         column_name = matching_columns[0]
 
