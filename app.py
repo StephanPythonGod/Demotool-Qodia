@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from annotated_text import annotated_text
-from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa
+from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa, test_api
 from streamlit_cookies_controller import CookieController
 
 
@@ -29,7 +29,6 @@ def load_settings_from_cookies():
         "api_key": get_cookie("api_key") or "",
         "category": get_cookie("category") or "Hernien-OP"
     }
-    print(f"Loaded settings from cookies: {settings}")
 
     st.session_state.api_url = settings["api_url"]
     st.session_state.api_key = settings["api_key"]
@@ -39,7 +38,6 @@ def load_settings_from_cookies():
 
 # Function to save settings to cookies
 def save_settings_to_cookies():
-    print(f"Saving settings to cookies")
     set_cookie("api_url", st.session_state.api_url)
     set_cookie("api_key", st.session_state.api_key)
     set_cookie("category", st.session_state.category)
@@ -87,19 +85,30 @@ if 'df' not in st.session_state:
 
     st.session_state.df = st.session_state.df.astype({'Häufigkeit': 'int', 'Intensität': 'int'}, errors='ignore')
 
+def test_settings():
+    # Test the API settings
+    return test_api()
+
 with st.sidebar:
-    st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url, help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.")
-    st.session_state.api_key = st.text_input("API Key", value=st.session_state.api_key, help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.")
+    st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url, help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.").strip()
+    st.session_state.api_key = st.text_input("API Key", value=st.session_state.api_key, help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.").strip()
     st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP", "Knie-OP"], index=["Hernien-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
     
     if st.button("Save Settings"):
-        save_settings_to_cookies()
-        st.success("Settings saved successfully.")
+        working = test_settings = test_settings()
+        if working:
+            save_settings_to_cookies()
+            st.success("Settings saved successfully.")
 
 def perform_ocr(file):
     # Extracts text from the uploaded file using OCR
     with st.spinner("🔍 Extrahiere Text mittels OCR..."):
-        st.session_state.text = ocr_pdf_to_text(file)
+        text = ocr_pdf_to_text(file)
+        if text == None:
+            return False
+        else:
+            st.session_state.text = text
+            return True
 
 def update_ziffer(new_ziffer):
     # Update the data in the result stage after editing
@@ -172,14 +181,16 @@ def analyze_text():
 
         data = analyze(st.session_state.text) 
     
-    print("Data: ", data)
+    if data is None:
+        pass
+    else:
+        
+        data = analyze_add_data(data)
 
-    data = analyze_add_data(data)
+        st.session_state.df = pd.DataFrame(data)
 
-    st.session_state.df = pd.DataFrame(data)
-
-    annotate_text_update()
-    st.session_state.update(stage="result")
+        annotate_text_update()
+        st.session_state.update(stage="result")
 
 
 def generate_pdf(df):
@@ -222,8 +233,9 @@ def main():
 
         if uploaded_file is not None and st.session_state.text == "":
             # Perform OCR on the uploaded file
-            perform_ocr(uploaded_file)
-            st.rerun()
+            worked = perform_ocr(uploaded_file)
+            if worked:
+                st.rerun()
 
     
     if st.session_state.stage == "result":
