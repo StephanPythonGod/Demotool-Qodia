@@ -185,22 +185,59 @@ def ocr_pdf_to_text(file):
     file_bytes = file.read()
     files = {"file": ("file.pdf", file_bytes, "application/pdf")}
 
-    response = requests.post(url, headers=headers, data=payload, files=files)
+    try: 
+        response = requests.post(url, headers=headers, data=payload, files=files)
+    except Exception as e:
+        st.error(f"""Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.
+                 
+                 Fehlerdetails: {e}""")
 
     response_content = response.json()
 
     print("Done performing OCR on the PDF. Response status: ", response.status_code)
 
     if response.status_code != 200:
-        st.error(f"""Error performing OCR on the PDF. Something went wrong with the API.
+        st.error(f"""Ein Fehler ist beim Aufrufen der API für OCR aufgetreten. Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.
 
-                API ERROR: 
+                API-Fehler: 
                 Status Code: {response.status_code} 
-                Message: {response.text}
-                Request ID (Can be used by Qodia for finding the error): {response.headers["request_id"]}
+                Nachricht: {response.text}
+                Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {response.headers.get("request_id", "")}
                 """)
+        return None
     else:
         return response_content["result"]["ocr_text"]
+
+def test_api():
+    """Test if the settings for the API are correct."""
+    url = f"{st.session_state.api_url}"
+    headers = {
+        'x-api-key': st.session_state.api_key
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 401:
+            st.error("Der API-Key ist nicht korrekt. Bitte überprüfen Sie den API-Key und speichern Sie die Einstellungen erneut.")
+            return False
+        elif response.status_code != 200 or response.status_code != 201:
+            st.error(f"""Ein unerwarteter Fehler ist beim Aufrufen der API aufgetreten. Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.
+                     
+                     Fehlerdetails: 
+                     Status Code: {response.status_code}
+                     Nachricht: {response.text}
+                     Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {response.headers.get('request_id', 'nicht-vorhanden')}
+                    """)
+            return False
+    except Exception as e:
+        st.error(f"""Ein Fehler ist beim Aufrufen der API aufgetreten. Bitte überprüfen Sie die URL und den API-Key und speichern Sie die Einstellungen erneut.
+                 
+                 Fehlerdetails: {e}""")
+        return False
+
+    st.success('Die API-Einstellungen sind korrekt. Die URL und der API-Key funktionieren.')
+    return True
+   
 
 def analyze(text):
     """Analyzes the text and returns the prediction."""
@@ -218,20 +255,28 @@ def analyze(text):
         "x-api-key": st.session_state.api_key
     }
 
-    response = requests.post(url, headers=headers, data=payload)
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+    except Exception as e:
+        st.error(f"""Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes. Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.
+                 
+                 Fehlerdetails: {e}""")
+
 
     response_content = response.json()
 
     print("Done analyzing text. Respoonse status: ", response.status_code, response.text)
 
     if response.status_code != 200:
-        st.error(f"""Error performing Prediction on the Text. Something went wrong with the API.
+        request_id = response.headers.get("request_id", "nicht-vorhanden")
+        st.error(f"""Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes.
 
-                API ERROR: 
+                API-Fehler: 
                 Status Code: {response.status_code} 
-                Message: {response.text}
-                Request ID (Can be used by Qodia for finding the error): {response.headers["request_id"]}
+                Nachricht: {response.text}
+                Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {request_id}
                 """)
+        return None
     
     return response_content["result"]["prediction"]
 

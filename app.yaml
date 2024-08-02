@@ -9,3 +9,4 @@ resources:
 
 automatic_scaling:
   max_num_instances: 4
+  max_concurrent_requests: 1  # Only one connection per instance
