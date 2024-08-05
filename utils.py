@@ -344,7 +344,7 @@ def analyze_add_data(data):
 
         new_data["Intensität"].append(data[data_count]["faktor"])
 
-        new_data["Beschreibung"].append(goa[goa["GOÄZiffer"] == data[data_count]["goa_ziffer"]]["Beschreibung"].values[0])
+        new_data["Beschreibung"].append(data[data_count]["beschreibung"])
 
     return new_data
 
@@ -399,7 +399,7 @@ def df_to_items(df):
             "ziffer" : row["Ziffer"],
             "Häufigkeit" : row["Häufigkeit"],
             "intensitat" : intensity,
-            "beschreibung" : goa_item["Beschreibung"].values[0],
+            "beschreibung" : row["Beschreibung"],
             "Punktzahl": goa_item["Punktzahl"].values[0],
             "preis": preis,
             "faktor": faktor,
