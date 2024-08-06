@@ -4,9 +4,10 @@ env: flex
 entrypoint: streamlit run app.py --server.port $PORT
 
 resources:
-  cpu: 1  # Increase the CPU
-  memory_gb: 1  # Increase the memory
+  cpu: 0.5
+  memory_gb: 0.5
 
 automatic_scaling:
   max_num_instances: 4
-  max_concurrent_requests: 1  # Only one connection per instance
+  min_num_instances: 1
+  max_concurrent_requests: 3
