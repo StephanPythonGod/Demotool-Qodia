@@ -24,5 +24,4 @@ EXPOSE 8080
 # Define environment variable
 ENV PORT 8080
 
-# Run streamlit
-CMD ["streamlit", "run", "app.py", "--server.port", "8080"]
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
