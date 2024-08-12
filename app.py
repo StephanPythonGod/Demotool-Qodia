@@ -3,7 +3,7 @@ import pandas as pd
 from annotated_text import annotated_text
 from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa, test_api
 from streamlit_cookies_controller import CookieController
-
+from datetime import datetime, timedelta
 
 st.set_page_config(
     page_title="Qodia",
@@ -20,7 +20,8 @@ def get_cookie(cookie_name):
 
 # Function to set a cookie value
 def set_cookie(cookie_name, value):
-    controller.set(cookie_name, value)
+    expires = datetime.now() + timedelta(days=180)
+    controller.set(cookie_name, value, expires=expires)
 
 # Function to load settings from cookies
 def load_settings_from_cookies():
@@ -95,9 +96,10 @@ with st.sidebar:
     st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP", "Knie-OP"], index=["Hernien-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
     
     if st.button("Save Settings"):
-        working = test_settings = test_settings()
-        if working:
-            save_settings_to_cookies()
+        with st.spinner("🔍 Teste API Einstellungen..."):
+            working = test_settings = test_settings()
+            if working:
+                save_settings_to_cookies()
 
 def perform_ocr(file):
     # Extracts text from the uploaded file using OCR
