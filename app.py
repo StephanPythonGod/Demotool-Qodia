@@ -200,6 +200,7 @@ def set_selected_ziffer(index):
 
 def delte_ziffer(index):
     st.session_state.df.drop(index, inplace=True)
+    st.session_state.selected_ziffer = None
     st.session_state.df.reset_index(drop=True, inplace=True)
     annotate_text_update()
     st.rerun()
@@ -288,7 +289,6 @@ def main():
             
             # Highlight text based on selected Ziffer
             if "selected_ziffer" in st.session_state and st.session_state.selected_ziffer is not None:
-                print("Selected Ziffer: ", st.session_state.selected_ziffer)
                 selected_zitat = st.session_state.df.loc[
                     st.session_state.selected_ziffer, 'Zitat'
                 ]
@@ -296,6 +296,10 @@ def main():
                 selected_ziffer = st.session_state.df.loc[
                     st.session_state.selected_ziffer, 'Ziffer'
                 ]
+
+                print("Selected Ziffer: ", st.session_state.selected_ziffer)
+                print("Selected Zitat: ", selected_zitat)
+                print("Row: ", st.session_state.df.loc[st.session_state.selected_ziffer])
                 
                 annotated_text(
                     find_zitat_in_text([(selected_zitat, selected_ziffer)], [st.session_state.text])
