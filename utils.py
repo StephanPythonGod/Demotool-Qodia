@@ -156,9 +156,9 @@ def post_process_text(text):
     return '\n\n'.join(paragraphs)
 
 def format_ziffer_to_4digits(ziffer):
-    ziffer_parts = ziffer.split(' ')[1]
+    ziffer_parts = ziffer.split(' ', 1)[1]
     numeric_part = ''.join(filter(str.isdigit, ziffer_parts))
-    alpha_part = ''.join(filter(str.isalpha, ziffer_parts))
+    alpha_part = ''.join(filter(lambda x: not x.isdigit(), ziffer_parts))
 
     try:
         result = f"{int(numeric_part):04d}{alpha_part}"
