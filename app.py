@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
 from annotated_text import annotated_text
-from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa, test_api
+from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa, test_api, transform_auswertungsobjekt_to_resultobjekt
 from streamlit_cookies_controller import CookieController
 from datetime import datetime, timedelta
+import json
 
 st.set_page_config(
     page_title="Qodia",
     page_icon="🔍🤖📚",
-    layout="wide"  # Set the page layout to wide
+    layout="wide",  # Set the page layout to wide
+    initial_sidebar_state="collapsed"
 )
 
 # Initialize CookieController
@@ -26,8 +28,8 @@ def set_cookie(cookie_name, value):
 # Function to load settings from cookies
 def load_settings_from_cookies():
     settings = {
-        "api_url": get_cookie("api_url") or "http://localhost:8000",
-        "api_key": get_cookie("api_key") or "",
+        "api_url": get_cookie("api_url") or "https://qodia-api-staging-gateway-2qn1roat.nw.gateway.dev",
+        "api_key": get_cookie("api_key") or "AIzaSyDQAAPcTJECYfwwFV9QDm9HeHAME99PbQo",
         "category": get_cookie("category") or "Hernien-OP"
     }
 
@@ -64,10 +66,13 @@ if 'pdf_ready' not in st.session_state:
     st.session_state.pdf_data = None
 
 if "api_url" not in st.session_state:
-    st.session_state.api_url = "http://localhost:8000"
+    st.session_state.api_url = "https://qodia-api-staging-gateway-2qn1roat.nw.gateway.dev"
 
 if "api_key" not in st.session_state:
-    st.session_state.api_key = None
+    st.session_state.api_key = "AIzaSyDQAAPcTJECYfwwFV9QDm9HeHAME99PbQo"
+
+if "selected_ziffer" not in st.session_state:
+    st.session_state.selected_ziffer = None
 
 if "category" not in st.session_state:
     st.session_state.category = "Hernien-OP"
@@ -85,47 +90,6 @@ if 'df' not in st.session_state:
     st.session_state.df = pd.DataFrame(data)
 
     st.session_state.df = st.session_state.df.astype({'Häufigkeit': 'int', 'Intensität': 'int'}, errors='ignore')
-
-def test_settings():
-    # Test the API settings
-    return test_api()
-
-with st.sidebar:
-    st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url, help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.").strip()
-    st.session_state.api_key = st.text_input("API Key", value=st.session_state.api_key, help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.").strip()
-    st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP", "Knie-OP"], index=["Hernien-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
-    
-    if st.button("Save Settings"):
-        with st.spinner("🔍 Teste API Einstellungen..."):
-            working = test_settings = test_settings()
-            if working:
-                save_settings_to_cookies()
-
-def perform_ocr(file):
-    # Extracts text from the uploaded file using OCR
-    with st.spinner("🔍 Extrahiere Text mittels OCR..."):
-        text = ocr_pdf_to_text(file)
-        if text == None:
-            return False
-        else:
-            st.session_state.text = text
-            return True
-
-def update_ziffer(new_ziffer):
-    # Update the data in the result stage after editing
-
-    # Check if a new ziffer is being added
-    if st.session_state.ziffer_to_edit is None:
-        new_row = pd.DataFrame(new_ziffer, index=[0])
-        new_row = new_row.apply(pd.to_numeric, errors='ignore', downcast='integer')
-        st.session_state.df = pd.concat([st.session_state.df, new_row], ignore_index=True)
-    else:
-        new_ziffer = {k: pd.to_numeric(v, errors='ignore', downcast='integer') if isinstance(v, (int, float)) else v for k, v in new_ziffer.items()}
-        st.session_state.df.iloc[st.session_state.ziffer_to_edit] = new_ziffer
-    
-    annotate_text_update()
-
-    st.session_state.update(stage="result")
 
 
 def annotate_text_update():
@@ -162,6 +126,77 @@ def annotate_text_update():
 
     st.session_state.df = st.session_state.df.reset_index(drop=True)
 
+def test_settings():
+    # Test the API settings
+    return test_api()
+
+def load_external_results(external_results):
+    external_results.seek(0)
+    data_json = external_results.read().decode('utf-8')  # Decode the bytes to a string
+    text = json.loads(data_json)['text']
+    data_json = json.loads(data_json)  # Load the JSON from the string
+    data_json = data_json['result']  # Access the 'result' key
+    data = transform_auswertungsobjekt_to_resultobjekt(data_json)
+    print(data)
+    data = analyze_add_data(data)
+
+    st.session_state.df = pd.DataFrame(data)
+    st.session_state.text = text
+
+    annotate_text_update()
+    st.session_state.update(stage="result")
+
+
+with st.sidebar:
+    st.session_state.api_url = st.text_input("API URL", value=st.session_state.api_url, help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.").strip()
+    st.session_state.api_key = st.text_input("API Key", value=st.session_state.api_key, help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.").strip()
+    st.session_state.category = st.selectbox("Kategorie", options=["Hernien-OP", "Knie-OP", "Zahn-OP"], index=["Hernien-OP", "Knie-OP", "Zahn-OP"].index(st.session_state.category), help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.")
+    
+    if st.button("Save Settings"):
+        with st.spinner("🔍 Teste API Einstellungen..."):
+            working = test_settings = test_settings()
+            if working:
+                save_settings_to_cookies()
+    
+    # external_results = st.file_uploader("Ergebnisse hochladen", type=["json"], help="Hier können Ergebnisse hochgeladen werden, die in das System importiert werden sollen.")
+    # if external_results is not None:
+    #     load_external_results(external_results)
+
+
+
+def check_if_default_credentials():
+    if st.session_state.api_key == "AIzaSyDQAAPcTJECYfwwFV9QDm9HeHAME99PbQo":
+        st.warning("Bitte ändern Sie die Standard-API-Schlüssel-Einstellungen, um die Anwendung zu testen. Dieser Testlauf wird noch funktionieren, aber bitte fügen Sie Ihren Organisations-API-Schlüssel ein, um die Anwendung zu verwenden. Details hierzu finden Sie in der Dokumentation.", icon="⚠️")
+
+def perform_ocr(file):
+    check_if_default_credentials()
+    # Extracts text from the uploaded file using OCR
+    with st.spinner("🔍 Extrahiere Text mittels OCR..."):
+        text = ocr_pdf_to_text(file)
+        if text == None:
+            return False
+        else:
+            st.session_state.text = text
+            return True
+
+def update_ziffer(new_ziffer):
+    # Update the data in the result stage after editing
+
+    # Check if a new ziffer is being added
+    if st.session_state.ziffer_to_edit is None:
+        new_row = pd.DataFrame(new_ziffer, index=[0])
+        new_row = new_row.apply(pd.to_numeric, errors='ignore', downcast='integer')
+        st.session_state.df = pd.concat([st.session_state.df, new_row], ignore_index=True)
+    else:
+        new_ziffer = {k: pd.to_numeric(v, errors='ignore', downcast='integer') if isinstance(v, (int, float)) else v for k, v in new_ziffer.items()}
+        st.session_state.df.iloc[st.session_state.ziffer_to_edit] = new_ziffer
+    
+    annotate_text_update()
+
+    st.session_state.update(stage="result")
+
+def set_selected_ziffer(index):
+    st.session_state.selected_ziffer = index
 
 def delte_ziffer(index):
     st.session_state.df.drop(index, inplace=True)
@@ -177,6 +212,7 @@ def reset():
     st.session_state.df = pd.DataFrame()
 
 def analyze_text():
+    check_if_default_credentials()
 
     with st.spinner("🤖 Analysiere den Bericht ..."):
 
@@ -226,7 +262,8 @@ def main():
         st.session_state.text = text
 
         if left_outer_column.button("Analysieren", disabled=(text == ""), on_click=analyze_text, type="primary"):
-            st.rerun()
+            if not st.session_state.df.empty:
+                st.rerun()
 
         # Right column
         right_column.subheader("Dokument Hochladen")
@@ -245,12 +282,26 @@ def main():
         left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 3, 2, 1])
 
         
-        # Left column
+        # Left Column: Display the text with highlighting
         with left_column:
             st.subheader("Ärztlicher Bericht:")
+            
+            # Highlight text based on selected Ziffer
+            if "selected_ziffer" in st.session_state and st.session_state.selected_ziffer is not None:
+                print("Selected Ziffer: ", st.session_state.selected_ziffer)
+                selected_zitat = st.session_state.df.loc[
+                    st.session_state.selected_ziffer, 'Zitat'
+                ]
 
-            annotated_text(st.session_state.annotated_text_object)
-
+                selected_ziffer = st.session_state.df.loc[
+                    st.session_state.selected_ziffer, 'Ziffer'
+                ]
+                
+                annotated_text(
+                    find_zitat_in_text([(selected_zitat, selected_ziffer)], [st.session_state.text])
+                )
+            else:
+                st.write(st.session_state.text)
         # Right column
 
         # Dataframe with the recognized GOÄ codes
@@ -268,7 +319,13 @@ def main():
             for index, row in st.session_state.df.iterrows():
                 cols = right_column.columns([1, 1, 1, 3, 0.5, 0.5])
                 # cols[0].write(row['Ziffer'])
-                cols[0].write(format_ziffer_to_4digits(row['Ziffer']))
+                # cols[0].write(format_ziffer_to_4digits(row['Ziffer']))
+                if cols[0].button(format_ziffer_to_4digits(row['Ziffer']), key=f'ziffer_{index}', type="secondary" if st.session_state.selected_ziffer != index else "primary"):
+                    if st.session_state.selected_ziffer == index:
+                        set_selected_ziffer(None)
+                    else:
+                        set_selected_ziffer(index)
+                    st.rerun()
                 # Use HTML and CSS for scrollable text field
                 description_html = f"""
                 <div style="overflow-x: auto; white-space: nowrap; padding: 5px;">

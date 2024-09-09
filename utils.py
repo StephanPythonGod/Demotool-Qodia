@@ -64,6 +64,7 @@ def clean_zitat(zitat):
     return cleaned_lines
 
 def find_zitat_in_text(zitate_to_find, annotated_text):
+    print("Finding zitate in text...")
     updated_annotated_text = []
     text_string = ''.join([item[0] if isinstance(item, tuple) else item for item in annotated_text])
 
@@ -183,7 +184,7 @@ def ocr_pdf_to_text(file):
 
     # Read the UploadedFile as bytes
     file_bytes = file.read()
-    files = {"file": ("file.pdf", file_bytes, "application/pdf")}
+    files = {"file": (f"{file.name}.pdf", file_bytes, "application/pdf")}
 
     try: 
         response = requests.post(url, headers=headers, data=payload, files=files)
@@ -194,7 +195,7 @@ def ocr_pdf_to_text(file):
 
     response_content = response.json()
 
-    print("Done performing OCR on the PDF. Response status: ", response.status_code)
+    print("Done performing OCR on the PDF. Response status: ", response.status_code, response.headers)
 
     if response.status_code != 200:
         st.error(f"""Ein Fehler ist beim Aufrufen der API für OCR aufgetreten. Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.
@@ -202,7 +203,7 @@ def ocr_pdf_to_text(file):
                 API-Fehler: 
                 Status Code: {response.status_code} 
                 Nachricht: {response.text}
-                Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {response.headers.get("request_id", "")}
+                Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {response.headers.get("X-Request-ID", "")}
                 """)
         return None
     else:
@@ -226,7 +227,7 @@ def test_api():
                      Fehlerdetails: 
                      Status Code: {response.status_code}
                      Nachricht: {response.text}
-                     Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {response.headers.get('request_id', 'nicht-vorhanden')}
+                     Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {response.headers.get('X-Request-ID', 'nicht-vorhanden')}
                     """)
             return False
     except Exception as e:
@@ -257,18 +258,14 @@ def analyze(text):
 
     try:
         response = requests.post(url, headers=headers, data=payload)
+        print("Done analyzing text. Respoonse status: ", response.status_code)
     except Exception as e:
         st.error(f"""Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes. Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.
                  
                  Fehlerdetails: {e}""")
 
-
-    response_content = response.json()
-
-    print("Done analyzing text. Respoonse status: ", response.status_code, response.text)
-
     if response.status_code != 200:
-        request_id = response.headers.get("request_id", "nicht-vorhanden")
+        request_id = response.headers.get("X-Request-ID", "nicht-vorhanden")
         st.error(f"""Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes.
 
                 API-Fehler: 
@@ -277,8 +274,13 @@ def analyze(text):
                 Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {request_id}
                 """)
         return None
+
+    response_content = response.json()
+
     
     return response_content["result"]["prediction"]
+
+
 
 def read_in_goa(path = "./data/GOA_Ziffern.csv", fully=False):
     # Read in the csv file with pandas
@@ -348,38 +350,52 @@ def analyze_add_data(data):
 
     return new_data
 
-
 def df_to_items(df):
     items = []
     goa = read_in_goa(fully=True)
     
+    print(f"Initial DataFrame length: {len(df)}")
+    
     for idx, row in df.iterrows():
+        print(f"\nProcessing row {idx}: {row.to_dict()}")
+        
         goa_item = goa[goa["GOÄZiffer"] == row["Ziffer"]]
+
+        analog_ziffer = False
         
         if goa_item.empty:
             print(f"No matching GOÄZiffer for row index {idx} with Ziffer {row['Ziffer']}")
-            continue
+            goa_analog_ziffer = row["Ziffer"].replace(" A", "")
+            goa_item = goa[goa["GOÄZiffer"] == goa_analog_ziffer]
+            if goa_item.empty:
+                print(f"No matching GOÄZiffer for analog Ziffer {goa_analog_ziffer}")
+                continue
+            else:
+                analog_ziffer = True
         
         intensity = row["Intensität"]
+        print(f"Intensity: {intensity}")
         
         # Convert intensity to string in both formats
         intensity_str_period = f"{intensity:.1f}"  # Format with period
         intensity_str_comma = intensity_str_period.replace('.', ',')  # Format with comma
+        print(f"Intensity formatted (period): {intensity_str_period}, (comma): {intensity_str_comma}")
         
         # Find columns where intensity matches either format
         matching_columns = goa_item.columns[
-            goa_item.apply(lambda col: col.astype(str).str.contains(f"({intensity_str_period}|{intensity_str_comma})")).any()
+            goa_item.apply(lambda col: col.astype(str).str.contains(f"(?:{intensity_str_period}|{intensity_str_comma})")).any()
         ]
+        print(f"Matching columns: {matching_columns.tolist()}")
         
         if matching_columns.empty:
-            print(f"No matching intensity {intensity} (as {intensity_str_period} or {intensity_str_comma}) for row index {idx} with Ziffer {row['Ziffer']}")
+            print(f"No matching intensity {intensity} for row index {idx} with Ziffer {row['Ziffer']}")
             matching_columns = ["Regelhöchstfaktor"]
-            
         
         column_name = matching_columns[0]
-
+        print(f"Using column: {column_name}")
+        
         faktor = intensity
-
+        
         if column_name == "Einfachfaktor":
             preis = float(goa_item["Einfachsatz"].values[0].replace(',', '.'))
         elif column_name == "Regelhöchstfaktor":
@@ -392,27 +408,33 @@ def df_to_items(df):
             preis = float(goa_item["Regelhöchstsatz"].values[0].replace(',', '.'))
         else:
             preis = float(goa_item["Höchstsatz"].values[0].replace(',', '.'))
-
-        print(f"Preis: {preis}, Faktor: {faktor}, Row: {row}")
-
+        
+        print(f"Calculated price: {preis}")
+        
         item = {
-            "ziffer" : row["Ziffer"],
-            "Häufigkeit" : row["Häufigkeit"],
-            "intensitat" : intensity,
-            "beschreibung" : row["Beschreibung"],
+            "ziffer": row["Ziffer"],
+            "Häufigkeit": row["Häufigkeit"],
+            "intensitat": intensity,
+            "beschreibung": row["Beschreibung"],
             "Punktzahl": goa_item["Punktzahl"].values[0],
             "preis": preis,
             "faktor": faktor,
             "total": preis * int(row["Häufigkeit"]),
             "auslagen": "",
-            "date": ""
+            "date": "",
+            "analog_ziffer": analog_ziffer
         }
-
+        
+        print(f"Generated item: {item}")
         items.append(item)
     
-    if not items[0]["date"]:
-        items[0]["date"] = "25.05.24"
-
+    if items:
+        if not items[0]["date"]:
+            items[0]["date"] = "25.05.24"
+        print(f"\nFinal items list length: {len(items)}")
+    else:
+        print("No items were created.")
+    
     return items
 
 def generate_pdf_from_df(df=None):
@@ -428,8 +450,12 @@ def generate_pdf_from_df(df=None):
     }
 
 
+    print("Generating PDF from DataFrame...")
+    print("Length of df: ", len(df))
 
     items = df_to_items(df)
+
+    print("Length of items: ", len(items))
 
     data["items"] = items
     data["total"] = sum([item["total"] for item in data["items"]])
@@ -451,9 +477,12 @@ def generate_pdf_from_df(df=None):
     
     # Change Ziffer format
     for item in data["items"]:
+        print("Item: ", item)
         item["ziffer"] = format_ziffer_to_4digits(item["ziffer"])
         if int(item["Häufigkeit"]) > 1:
             item["ziffer"] = f"{item['Häufigkeit']}x {item['ziffer']}"
+        if item["analog_ziffer"] == "True":
+            item["ziffer"] = f"{item['ziffer']} A"
 
     data["total"] = f"{data["total"]:.2f} €".replace('.', ',')
     data["discount"] = f"{data["discount"]:.2f} €".replace('.', ',')
@@ -523,3 +552,26 @@ def generate_pdf_from_df(df=None):
         file.write(data)
 
     return pdf_file
+
+def transform_auswertungsobjekt_to_resultobjekt(data_json) -> any:
+    """Transform Logged Prediction Result to Customer Facing API Result"""
+
+    print("Transforming Auswertungsobjekt to Resultobjekt...")
+
+        # Check if the data_json is a string, if so, parse it to a list
+    if isinstance(data_json, str):
+        data_json = json.loads(data_json) 
+
+    transformed_results = []
+
+    for obj in data_json:
+        transformed_results.append({
+            "zitat": obj["zitat"][-1],
+            "begrundung": obj["begrundung"][-1],
+            "goa_ziffer": obj["goa_ziffer"],
+            "quantitaet": obj["leistungQuantitaet"],
+            "faktor": obj["leistungIntensitaet"],
+            "beschreibung": obj["leistungBeschreibung"],
+        })
+
+    return transformed_results
