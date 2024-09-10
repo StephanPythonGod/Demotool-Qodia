@@ -5,6 +5,7 @@ import time
 import http.client
 import json
 import requests
+import re
 
 from fuzzywuzzy import fuzz
 
@@ -64,56 +65,53 @@ def clean_zitat(zitat):
     return cleaned_lines
 
 def find_zitat_in_text(zitate_to_find, annotated_text):
-    print("Finding zitate in text...")
     updated_annotated_text = []
     text_string = ''.join([item[0] if isinstance(item, tuple) else item for item in annotated_text])
-
     list_of_indices = []
     list_of_zitate_to_find = [(clean_zitat(z[0]), z[1]) for z in zitate_to_find]
-
     # Flatten the list of zitate to find
     list_of_zitate_to_find = [(z, zitat_label) for zitate, zitat_label in list_of_zitate_to_find for z in zitate]
 
     for zitat, zitat_label in list_of_zitate_to_find:
-        first_word = zitat.split()[0]
-        start_positions = [i for i in range(len(text_string)) if text_string.startswith(first_word, i)]
+        # Use regex to find all potential matches
+        potential_matches = list(re.finditer(re.escape(zitat[:10]) + '.*?' + re.escape(zitat[-10:]), text_string, re.DOTALL))
+        
+        best_match = None
+        best_ratio = 0
+        
+        for match in potential_matches:
+            substring = text_string[match.start():match.end()]
+            ratio = fuzz.ratio(zitat, substring)
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_match = match
 
-        for start in start_positions:
-            substring = text_string[start:start + len(zitat)]
-            match = fuzz.partial_ratio(zitat, substring)
-            if match >= 50:
-                list_of_indices.append(((start, start + len(zitat)), zitat_label, text_string[start:start + len(zitat)]))
-                break
+        if best_match and best_ratio >= 80:  # Increased threshold for better accuracy
+            list_of_indices.append(((best_match.start(), best_match.end()), zitat_label, text_string[best_match.start():best_match.end()]))
 
-    # list_of_indices_new = resolve_overlaps(list_of_indices, text_string)
     # Sort the list of indices by the start position
-    list_of_indices_new = list_of_indices
-    list_of_indices_new.sort(key=lambda x: x[0][0])
+    list_of_indices.sort(key=lambda x: x[0][0])
 
     # Add all the text before the first quote
-    if list_of_indices_new:
-        zitat_start, zitat_end = list_of_indices_new[0][0][0], list_of_indices_new[0][0][1]
-        updated_annotated_text.append(remove_cleaned_newline(text_string[0:zitat_start ]))
+    if list_of_indices:
+        zitat_start = list_of_indices[0][0][0]
+        updated_annotated_text.append(remove_cleaned_newline(text_string[0:zitat_start]))
 
-    # enumerate through the list of indices
-    for index in range(len(list_of_indices_new)):
-        zitat_start, zitat_end = list_of_indices[index][0][0], list_of_indices[index][0][1]
-        next_zitat_start = list_of_indices[index + 1][0][0] if index + 1 < len(list_of_indices) else len(text_string)
-        next_zitat_end = list_of_indices[index + 1][0][1] if index + 1 < len(list_of_indices) else len(text_string)
-
+    # Process quotes and text between them
+    for i, (indices, label, zitat_text) in enumerate(list_of_indices):
         # Add the current quote
-        updated_annotated_text.append((list_of_indices[index][2], list_of_indices[index][1]))
-
-        # Check if the next quote is overlapping with the current one
-        if zitat_end > next_zitat_start:
-            continue
-        else:
-            # Add any remaining text between the current and next quote
-            updated_annotated_text.append(remove_cleaned_newline(text_string[zitat_end :next_zitat_start ]))
+        updated_annotated_text.append((zitat_text, label))
+        
+        # Add text between quotes
+        if i < len(list_of_indices) - 1:
+            next_start = list_of_indices[i+1][0][0]
+            updated_annotated_text.append(remove_cleaned_newline(text_string[indices[1]:next_start]))
 
     # Add any remaining text after the last quote
-    if next_zitat_end < len(text_string):
-        updated_annotated_text.append(remove_cleaned_newline(text_string[next_zitat_end:]))
+    if list_of_indices:
+        last_end = list_of_indices[-1][0][1]
+        if last_end < len(text_string):
+            updated_annotated_text.append(remove_cleaned_newline(text_string[last_end:]))
 
     return updated_annotated_text
 
