@@ -479,8 +479,8 @@ def generate_pdf_from_df(df=None):
         item["ziffer"] = format_ziffer_to_4digits(item["ziffer"])
         if int(item["Häufigkeit"]) > 1:
             item["ziffer"] = f"{item['Häufigkeit']}x {item['ziffer']}"
-        if item["analog_ziffer"] == "True":
-            item["ziffer"] = f"{item['ziffer']} A"
+        # if item["analog_ziffer"] == "True":
+        #     item["ziffer"] = f"{item['ziffer']} A"
 
     data["total"] = f"{data["total"]:.2f} €".replace('.', ',')
     data["discount"] = f"{data["discount"]:.2f} €".replace('.', ',')
