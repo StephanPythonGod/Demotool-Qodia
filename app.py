@@ -218,7 +218,7 @@ def analyze_text():
     with st.spinner("🤖 Analysiere den Bericht ..."):
 
         data = analyze(st.session_state.text) 
-    
+
     if data is None:
         pass
     else:
@@ -297,10 +297,6 @@ def main():
                     st.session_state.selected_ziffer, 'Ziffer'
                 ]
 
-                print("Selected Ziffer: ", st.session_state.selected_ziffer)
-                print("Selected Zitat: ", selected_zitat)
-                print("Row: ", st.session_state.df.loc[st.session_state.selected_ziffer])
-                
                 annotated_text(
                     find_zitat_in_text([(selected_zitat, selected_ziffer)], [st.session_state.text])
                 )
