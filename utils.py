@@ -205,7 +205,7 @@ def ocr_pdf_to_text(file):
                 """)
         return None
     else:
-        return response_content["result"]["ocr_text"]
+        return response_content["ocr"]["ocr_text"]
 
 def test_api():
     """Test if the settings for the API are correct."""
@@ -276,7 +276,7 @@ def analyze(text):
     response_content = response.json()
 
     
-    return response_content["result"]["prediction"]
+    return response_content["prediction"]
 
 
 
