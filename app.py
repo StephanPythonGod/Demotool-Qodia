@@ -1,10 +1,15 @@
 import streamlit as st
 import pandas as pd
 from annotated_text import annotated_text
-from utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa, test_api, transform_auswertungsobjekt_to_resultobjekt
+from utils.utils import find_zitat_in_text, ziffer_from_options, ocr_pdf_to_text, generate_pdf_from_df, format_ziffer_to_4digits, analyze, analyze_add_data, read_in_goa, test_api, transform_auswertungsobjekt_to_resultobjekt, perform_ocr_on_file, anonymize_text
 from streamlit_cookies_controller import CookieController
 from datetime import datetime, timedelta
 import json
+import streamlit as st
+from streamlit_drawable_canvas import st_canvas
+from pdf2image import convert_from_bytes
+from PIL import Image
+import io
 
 st.set_page_config(
     page_title="Qodia",
@@ -76,6 +81,9 @@ if "selected_ziffer" not in st.session_state:
 
 if "category" not in st.session_state:
     st.session_state.category = "Hernien-OP"
+
+if "uploaded_file" not in st.session_state:
+    st.session_state.uploaded_file = None
 
 if 'df' not in st.session_state:
     data = {
@@ -211,6 +219,7 @@ def reset():
     st.session_state.text = ""
     st.session_state.annotated_text_object = []
     st.session_state.df = pd.DataFrame()
+    st.rerun()
 
 def analyze_text():
     check_if_default_credentials()
@@ -230,7 +239,6 @@ def analyze_text():
         annotate_text_update()
         st.session_state.update(stage="result")
 
-
 def generate_pdf(df):
     # Generate a PDF with the recognized GOÄ codes
     pdf_file_path = generate_pdf_from_df(st.session_state.df)
@@ -239,9 +247,122 @@ def generate_pdf(df):
     with open(pdf_file_path, "rb") as file:
         pdf_data = file.read()
     return pdf_data
+
+def display_file_selection_interface(uploaded_file):
+    # Step 1: Check the type of file and reset the stream if it's already read
+    pages = []
     
+    # Reset the stream so we can read it again if needed
+    uploaded_file.seek(0)
 
+    if uploaded_file.type == "application/pdf":
+        # Convert PDF to list of images
+        try:
+            pages = convert_from_bytes(uploaded_file.read())
+        except Exception as e:
+            st.error(f"Fehler beim Lesen der PDF-Datei: {e}")
+            return None
+    elif uploaded_file.type.startswith("image"):
+        # If it's an image, load it
+        try:
+            image = Image.open(uploaded_file)
+            pages.append(image)
+        except Exception as e:
+            st.error(f"Fehler beim Laden des Bildes: {e}")
+            return None
+    
+    # Store all user selections (one list for each page)
+    all_selections = []
 
+    # Two-column layout
+    left_column, right_column = st.columns([1, 1])  # Wider left column for image
+    # Step 2: Display a two-column layout: left for canvas, right for help text
+    with left_column:
+        for i, page_image in enumerate(pages):
+            # Original image dimensions
+            original_width, original_height = page_image.size
+
+            # Max dimensions
+            max_display_height = 800
+            max_display_width = 600
+
+            # Calculate new width and height while maintaining the aspect ratio
+            aspect_ratio = original_width / original_height
+
+            # Adjust width and height based on the constraints
+            if original_height > max_display_height:
+                display_height = max_display_height
+                display_width = int(display_height * aspect_ratio)
+            else:
+                display_height = original_height
+                display_width = original_width
+
+            if display_width > max_display_width:
+                display_width = max_display_width
+                display_height = int(display_width / aspect_ratio)
+
+            # Left Column: Canvas for drawing
+            st.subheader(f"Seite {i+1}")  # German translation for "Page {i+1}"
+            
+            # Display the image with a proportional size
+            canvas_result = st_canvas(
+                fill_color=None,  # No fill color, just outline
+                stroke_width=2,  # Box border thickness
+                stroke_color="red",  # Red outline for the rectangle
+                background_image=page_image,  # Page to draw on
+                update_streamlit=True,
+                height=display_height,  # Adjusted height based on the aspect ratio and max dimensions
+                width=display_width,  # Adjusted width based on the aspect ratio and max dimensions
+                drawing_mode="rect",  # Allow drawing rectangles (for selection)
+                key=f"canvas_{i}"  # A unique key for each canvas
+            )
+        
+            # Step 3: Capture the selections drawn on the canvas
+            if canvas_result.json_data is not None:
+                shapes = canvas_result.json_data["objects"]
+                normalized_selections = []
+                
+                for shape in shapes:
+                    if shape["type"] == "rect":
+                        # Normalize the selection coordinates to [0, 1]
+                        left = shape['left'] / display_width
+                        top = shape['top'] / display_height
+                        width = shape['width'] / display_width
+                        height = shape['height'] / display_height
+
+                        normalized_selections.append({
+                            "left": left,
+                            "top": top,
+                            "width": width,
+                            "height": height
+                        })
+
+                all_selections.append(normalized_selections)
+    
+    # Right Column: Instruction/Help Section
+    with right_column:
+        st.markdown(
+            """
+            ## Anleitung zur Auswahl der Textpassagen
+            
+            Verwenden Sie das Tool auf der linken Seite, um **wichtige Textstellen** zu markieren, die extrahiert und anonymisiert werden sollen. 
+
+            ### Schritte zur Auswahl:
+            1. Klicken Sie auf das Bild und ziehen Sie ein **rotes Rechteck** um den Bereich, den Sie markieren möchten.
+            2. Sie können mehrere Bereiche auf einer Seite auswählen.
+            3. Um einen Bereich zu löschen, verwenden Sie die **Rückgängig-Funktion** des Tools.
+            4. Sobald Sie alle relevanten Bereiche markiert haben, klicken Sie auf **„Datei Anonymisieren“** unten.
+            5. Danach erscheint der anonymisierte Text auf der rechten Seite und sie können ihn nochmals bearbeiten.
+
+            ### Tipps:
+            - Stellen Sie sicher, dass Sie alle relevanten Textstellen markieren.
+            - Wenn Sie fertig sind, klicken Sie auf **„Datei Anonymisieren“** unten, um die markierten Bereiche für die OCR zu extrahieren und den Text zu anonymisieren.
+            """
+        )
+
+    # Return the normalized selections for each page
+    return all_selections
+   
 def main():
     st.title("Qodia")
 
@@ -254,11 +375,15 @@ def main():
     if st.session_state.stage == 'analyze':
         # Analyze Stage
 
-        left_outer_column, _, _, _, _ = st.columns([1, 2, 3, 2, 1])
+        left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 3, 2, 1])
 
         # Left column
         left_column.subheader("Ärztlicher Bericht:")
-        text = left_column.text_area("Text des ärztlichen Berichts", value=st.session_state.text, height=400, placeholder="Hier den Text des ärztlichen Bericht einfügen ...",help="Hier soll der Text des ärztlichen Berichts eingefügt werden. Wenn ein Dokument auf der rechten Seite hochgeladen wird, wird der erkannte Text hier eingefügt und ist dadurch bearbeitbar.")
+        text = left_column.text_area("Text des ärztlichen Berichts", 
+                                    value=st.session_state.text, 
+                                    height=400, 
+                                    placeholder="Hier den Text des ärztlichen Berichts einfügen ...", 
+                                    help="Hier soll der Text des ärztlichen Berichts eingefügt werden. Wenn ein Dokument auf der rechten Seite hochgeladen wird, wird der erkannte Text hier eingefügt und ist dadurch bearbeitbar.")
 
         st.session_state.text = text
 
@@ -268,15 +393,95 @@ def main():
 
         # Right column
         right_column.subheader("Dokument Hochladen")
-        uploaded_file = right_column.file_uploader("PDF Dokument auswählen", help="Das hochgeladene Dokument wird mittels OCR analysiert und der Text wird im linken Feld angezeigt.", type=["pdf"])
+        uploaded_file = right_column.file_uploader("PDF Dokument auswählen", 
+                                                help="Das hochgeladene Dokument wird mittels OCR analysiert und der Text wird im linken Feld angezeigt.", 
+                                                type=["pdf"])
 
-        if uploaded_file is not None and st.session_state.text == "":
-            # Perform OCR on the uploaded file
-            worked = perform_ocr(uploaded_file)
-            if worked:
+        if uploaded_file is not None:
+            button_col1, _, button_col2 = right_column.columns([1, 1, 1])
+
+            if button_col1.button("Anonymisieren", type="primary"):
+                st.session_state.uploaded_file = uploaded_file
+                st.session_state.stage = "anonymize"
                 st.rerun()
 
-    
+            if button_col2.button("Keine Anonymisierung Notwendig", type="secondary"):
+                worked = perform_ocr(uploaded_file)
+                if worked:
+                    st.rerun()
+
+    if st.session_state.stage == "anonymize":
+        selections = display_file_selection_interface(st.session_state.uploaded_file)
+
+        if st.button("Datei Anonymisieren", type="primary"):
+            with st.spinner("🔍 Extrahiere Text und anonymisiere..."):
+                extracted_text = perform_ocr_on_file(st.session_state.uploaded_file, selections)
+                anonymize_result = anonymize_text(extracted_text)
+
+                # Store the anonymized text in session state
+                st.session_state.anonymized_text = anonymize_result["anonymized_text"]
+
+                # Clean detected entities
+                detected_entities = anonymize_result["detected_entities"]
+                detected_entities = [(entity.get("original_word", None), entity.get('entity_type', None)) for entity in detected_entities]
+                detected_entities = [entity for entity in detected_entities if entity[0] is not None and entity[1] is not None]
+                st.session_state.detected_entities = detected_entities
+
+                # Change the stage to editing
+                st.session_state.stage = "edit_anonymized"
+                st.rerun()
+
+    if st.session_state.stage == "edit_anonymized":
+
+        left_column.subheader("Originaldokument")
+
+        # Handle display of uploaded file (PDF or image)
+        uploaded_file = st.session_state.uploaded_file
+        if uploaded_file.type == "application/pdf":
+            # Convert all pages of PDF to images
+            pdf_pages = convert_from_bytes(uploaded_file.getvalue())
+            if pdf_pages:
+                for pdf_image in pdf_pages:
+                    img_byte_arr = io.BytesIO()
+                    pdf_image.save(img_byte_arr, format='PNG')
+                    left_column.image(img_byte_arr.getvalue(), use_column_width=True)
+            else:
+                left_column.warning("Konnte PDF nicht anzeigen.")
+        elif uploaded_file.type.startswith('image'):
+            # Display image directly
+            left_column.image(uploaded_file, use_column_width=True)
+        else:
+            left_column.warning("Nicht unterstütztes Dateiformat.")
+
+        right_column.subheader("Anonymisierter Text")
+        edited_text = right_column.text_area("Bearbeiten Sie den anonymisierten Text:", 
+                                            value=st.session_state.anonymized_text, 
+                                            height=400)
+
+        # Display the table of replaced entities below the text area
+        right_column.subheader("Ersetzte Wörter und zugehörige Entitäten:")
+        right_column.markdown("Die folgende Tabelle zeigt die Wörter, die durch Anonymisierung ersetzt wurden, sowie die Art der Entität.")
+
+        # Display detected entities in a table
+        if st.session_state.detected_entities:
+            right_column.dataframe(pd.DataFrame(st.session_state.detected_entities, columns=["Ersetztes Wort", "Entitätstyp"]), hide_index=True)
+        else:
+            right_column.warning("Keine ersetzten Entitäten gefunden.")
+
+        # Confirm or go back buttons
+        col1, _, col2 = right_column.columns([1, 0.5, 1])
+        with col1:
+            if st.button("Text bestätigen", type="primary"):
+                st.session_state.text = edited_text
+                st.session_state.stage = "analyze"
+                st.rerun()
+
+        with col2:
+            if st.button("Zurück zur Anonymisierung", type="secondary"):
+                st.session_state.stage = "anonymize"
+                st.rerun()
+
+
     if st.session_state.stage == "result":
         # Result Stage
 

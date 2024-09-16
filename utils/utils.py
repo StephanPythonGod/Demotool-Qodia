@@ -6,8 +6,15 @@ import http.client
 import json
 import requests
 import re
+from pdf2image import convert_from_bytes
+from PIL import Image
+import pytesseract
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 from fuzzywuzzy import fuzz
+
+from utils.anonymization import anonymize_text_german
 
 def flatten(lst):
     result = []
@@ -66,37 +73,50 @@ def clean_zitat(zitat):
 
 def find_zitat_in_text(zitate_to_find, annotated_text):
     updated_annotated_text = []
-    text_string = ''.join([item[0] if isinstance(item, tuple) else item for item in annotated_text])
+    print("Zitate to find: ", zitate_to_find)
+    print("Annotated text: ", annotated_text)
+    
+    # Join the text, keeping the original structure
+    original_text = ''.join([item[0] if isinstance(item, tuple) else item for item in annotated_text])
+    
+    # Create a cleaned version for searching
+    cleaned_text = original_text.replace('\n', ' ')
+    
     list_of_indices = []
     list_of_zitate_to_find = [(clean_zitat(z[0]), z[1]) for z in zitate_to_find]
     # Flatten the list of zitate to find
     list_of_zitate_to_find = [(z, zitat_label) for zitate, zitat_label in list_of_zitate_to_find for z in zitate]
-
+    
     for zitat, zitat_label in list_of_zitate_to_find:
-        # Use regex to find all potential matches
-        potential_matches = list(re.finditer(re.escape(zitat[:10]) + '.*?' + re.escape(zitat[-10:]), text_string, re.DOTALL))
+        # Clean the zitat by replacing newlines with spaces
+        cleaned_zitat = zitat.replace('\n', ' ')
+        
+        # Use regex to find all potential matches in the cleaned text
+        potential_matches = list(re.finditer(re.escape(cleaned_zitat[:10]) + '.*?' + re.escape(cleaned_zitat[-10:]), cleaned_text, re.DOTALL))
         
         best_match = None
         best_ratio = 0
         
         for match in potential_matches:
-            substring = text_string[match.start():match.end()]
-            ratio = fuzz.ratio(zitat, substring)
+            substring = cleaned_text[match.start():match.end()]
+            ratio = fuzz.ratio(cleaned_zitat, substring)
             if ratio > best_ratio:
                 best_ratio = ratio
                 best_match = match
-
+        
         if best_match and best_ratio >= 80:  # Increased threshold for better accuracy
-            list_of_indices.append(((best_match.start(), best_match.end()), zitat_label, text_string[best_match.start():best_match.end()]))
-
+            # Get the original text (with newlines) for this match
+            original_match_text = original_text[best_match.start():best_match.end()]
+            list_of_indices.append(((best_match.start(), best_match.end()), zitat_label, original_match_text))
+    
     # Sort the list of indices by the start position
     list_of_indices.sort(key=lambda x: x[0][0])
-
+    
     # Add all the text before the first quote
     if list_of_indices:
         zitat_start = list_of_indices[0][0][0]
-        updated_annotated_text.append(remove_cleaned_newline(text_string[0:zitat_start]))
-
+        updated_annotated_text.append(original_text[0:zitat_start])
+    
     # Process quotes and text between them
     for i, (indices, label, zitat_text) in enumerate(list_of_indices):
         # Add the current quote
@@ -105,14 +125,15 @@ def find_zitat_in_text(zitate_to_find, annotated_text):
         # Add text between quotes
         if i < len(list_of_indices) - 1:
             next_start = list_of_indices[i+1][0][0]
-            updated_annotated_text.append(remove_cleaned_newline(text_string[indices[1]:next_start]))
-
+            updated_annotated_text.append(original_text[indices[1]:next_start])
+    
     # Add any remaining text after the last quote
     if list_of_indices:
         last_end = list_of_indices[-1][0][1]
-        if last_end < len(text_string):
-            updated_annotated_text.append(remove_cleaned_newline(text_string[last_end:]))
-
+        if last_end < len(original_text):
+            updated_annotated_text.append(original_text[last_end:])
+    
+    print("Updated annotated text: ", updated_annotated_text)
     return updated_annotated_text
 
 def ziffer_from_options(ziffer_option):
@@ -277,7 +298,6 @@ def analyze(text):
 
     
     return response_content["prediction"]
-
 
 
 def read_in_goa(path = "./data/GOA_Ziffern.csv", fully=False):
@@ -571,3 +591,114 @@ def transform_auswertungsobjekt_to_resultobjekt(data_json) -> any:
         })
 
     return transformed_results
+
+def anonymize_text(text):
+    """
+    Anonymize the extracted text locally.
+    """
+
+    anonymize_result = anonymize_text_german(text, use_spacy=False, use_flair=True)
+
+    print("Detected entities: ")
+    for entity in anonymize_result["detected_entities"]:
+        print(f"Entity Type: {entity.get('entity_type', None)}, "
+              f"Start: {entity.get('start', None)}, "
+              f"End: {entity.get('end', None)}, "
+              f"Score: {entity.get('score', None)}, "
+              f"Original Word: {entity.get('original_word', None)}, "
+              f"Recognizer: {entity.get('recognition_metadata', {}).get('recognizer_name', None)}")
+
+
+    return anonymize_result
+
+def perform_ocr_on_file(uploaded_file, selections=None):
+    """
+    Perform OCR on a PDF or image file, applying OCR to the selected areas if provided.
+    """
+    print(f"Starting OCR on file of type: {uploaded_file.type}")
+    extracted_text = ""
+    uploaded_file.seek(0)
+
+    if uploaded_file.type == "application/pdf":
+        pages = convert_from_bytes(uploaded_file.read())
+        print(f"Converted PDF to {len(pages)} images")
+        
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(perform_ocr_on_image, page, selections[i] if selections and len(selections) > i else None)
+                for i, page in enumerate(pages)
+            ]
+            results = [future.result() for future in as_completed(futures)]
+        
+        extracted_text = "\n".join(filter(None, results))  # Filter out empty results
+
+    elif uploaded_file.type.startswith("image"):
+        image = Image.open(uploaded_file)
+        print(f"Opened image of size: {image.size}")
+        extracted_text = perform_ocr_on_image(image, selections[0] if selections else None)
+
+    print(f"Total extracted text length: {len(extracted_text)}")
+    print(f"Extracted text (first 200 chars): {extracted_text[:200]}...")
+    return extracted_text
+
+def perform_ocr_on_image(image, selections):
+    """
+    Perform OCR on an image, limiting it to the selected regions if provided.
+    """
+    print(f"Performing OCR on image of size: {image.size}")
+    print(f"Number of selections: {len(selections) if selections else 'None'}")
+
+    if not selections:
+        result = pytesseract.image_to_string(image, lang='deu')
+        return result
+
+    results = []
+    for selection in selections:
+        try:
+            result = process_selection(image, selection)
+            if result.strip():  # Only add non-empty results
+                results.append(result)
+        except Exception as e:
+            print(f"Error processing selection: {e}")
+
+    combined_result = "\n".join(results)
+    return combined_result
+
+def process_selection(image, selection):
+    """
+    Process a single selection for OCR.
+    """
+    original_width, original_height = image.size
+    left = int(selection["left"] * original_width)
+    top = int(selection["top"] * original_height)
+    width = int(selection["width"] * original_width)
+    height = int(selection["height"] * original_height)
+    
+    # Ensure the selection is within the image bounds
+    left = max(0, min(left, original_width))
+    top = max(0, min(top, original_height))
+    right = max(0, min(left + width, original_width))
+    bottom = max(0, min(top + height, original_height))
+    
+    if left >= right or top >= bottom:
+        print("Invalid selection coordinates, skipping.")
+        return ""
+
+    cropped_image = image.crop((left, top, right, bottom))
+    result = pytesseract.image_to_string(cropped_image, lang='deu')
+    return result
+
+def convert_selections_to_image_space(selections, original_width, original_height):
+    """
+    Convert the canvas selection box coordinates to the original image's pixel coordinates.
+    """
+    converted = [
+        {
+            "left": selection['left'],
+            "top": selection['top'],
+            "width": selection['width'],
+            "height": selection['height']
+        }
+        for selection in selections
+    ]
+    return converted
