@@ -1,16 +1,24 @@
-from typing import List, Dict, Any, Optional, Set, Tuple
-from presidio_analyzer import AnalyzerEngine, EntityRecognizer, RecognizerResult, AnalysisExplanation
-from presidio_anonymizer import AnonymizerEngine
-from presidio_analyzer.nlp_engine import NlpEngineProvider
+import re
+from typing import Any, Dict, List, Optional, Set, Tuple
+
 from flair.data import Sentence
 from flair.models import SequenceTagger
+from presidio_analyzer import (
+    AnalysisExplanation,
+    AnalyzerEngine,
+    EntityRecognizer,
+    RecognizerResult,
+)
+from presidio_analyzer.nlp_engine import NlpEngineProvider
+from presidio_anonymizer import AnonymizerEngine
 
-ENTITIES = ["LOCATION", "PERSON", "ORGANIZATION"]
+ENTITIES = ["LOCATION", "PERSON", "ORGANIZATION", "DATE_TIME"]
 
 PRESIDIO_EQUIVALENCES = {
     "PER": "PERSON",
     "LOC": "LOCATION",
     "ORG": "ORGANIZATION",
+    "DATE_TIME": "DATE_TIME",
 }
 
 # Supported entities and label groups mapping Flair to Presidio
@@ -25,11 +33,19 @@ MODEL_LANGUAGES = {
 
 DEFAULT_EXPLANATION = "Identified as {} by Flair's Named Entity Recognition"
 
+DATE_PATTERNS = [
+    r"\b(?:\d{1,2}\.){1,2}\d{2,4}\b",  # Matches 12.04.2020, 12.04., 12.2020
+    r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b",  # Matches 12-04-2020, 12/04/20
+    r"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b",  # Matches 2020-04-12
+]
+
 
 class FlairRecognizer(EntityRecognizer):
     """
-    Recognizer that uses a Flair NER model for entity recognition in German texts.
+    Recognizer that uses a Flair NER model for
+    entity recognition in German texts.
     """
+
     def __init__(
         self,
         supported_language: str = "de",
@@ -163,7 +179,10 @@ def setup_analyzer(use_spacy: bool = True, use_flair: bool = True) -> AnalyzerEn
     """
     nlp_engine = None
     if use_spacy:
-        spacy_configuration = {"nlp_engine_name": "spacy", "models": [{"lang_code": "de", "model_name": "de_core_news_lg"}]}
+        spacy_configuration = {
+            "nlp_engine_name": "spacy",
+            "models": [{"lang_code": "de", "model_name": "de_core_news_lg"}],
+        }
         provider = NlpEngineProvider(nlp_configuration=spacy_configuration)
         nlp_engine = provider.create_engine()
 
@@ -176,7 +195,9 @@ def setup_analyzer(use_spacy: bool = True, use_flair: bool = True) -> AnalyzerEn
     return analyzer
 
 
-def anonymize_text_german(text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.8) -> Dict[str, Any]:
+def anonymize_text_german(
+    text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.8
+) -> Dict[str, Any]:
     """
     Anonymize German text using NER models (Flair, SpaCy, or both).
 
@@ -185,23 +206,41 @@ def anonymize_text_german(text: str, use_spacy: bool = True, use_flair: bool = T
     :param use_flair: Use Flair for NER.
     :return: Dictionary containing anonymized text and detected entities.
     """
-    print("Started anonymizing text ...")
+
+    detected_entities = []
+
+    # Identify dates using regular expressions
+    for pattern in DATE_PATTERNS:
+        for match in re.finditer(pattern, text):
+            detected_entities.append(
+                {
+                    "original_word": match.group(0),
+                    "entity_type": "DATE_TIME",
+                    "start": match.start(),
+                    "end": match.end(),
+                    "score": 1.0,  # Assign a high confidence for regex matches
+                }
+            )
+
     if use_flair and not use_spacy:
         # Flair-only case optimization
         tagger = SequenceTagger.load("flair/ner-german-large")
         sentence = Sentence(text)
         tagger.predict(sentence)
 
-        detected_entities = [
+        # Add NER detected entities from Flair
+        flair_entities = [
             {
                 "original_word": entity.text,
                 "entity_type": entity.get_label("ner").value,
                 "start": entity.start_position,
                 "end": entity.end_position,
-                "score": entity.score
+                "score": entity.score,
             }
-            for entity in sentence.get_spans('ner')
+            for entity in sentence.get_spans("ner")
         ]
+
+        detected_entities.extend(flair_entities)
 
         # Sort entities by start position in descending order
         detected_entities.sort(key=lambda x: x["start"], reverse=True)
@@ -211,36 +250,60 @@ def anonymize_text_german(text: str, use_spacy: bool = True, use_flair: bool = T
         for entity in detected_entities:
             presidio_entity_type = PRESIDIO_EQUIVALENCES.get(entity["entity_type"])
             if presidio_entity_type in ENTITIES and entity["score"] > threshold:
-                anonymized_text = anonymized_text[:entity["start"]] + f"<{presidio_entity_type}>" + anonymized_text[entity["end"]:]
-        
+                anonymized_text = (
+                    anonymized_text[: entity["start"]]
+                    + f"<{presidio_entity_type}>"
+                    + anonymized_text[entity["end"] :]
+                )
+
         # Filter detected entities by score threshold and ENTITIES
         detected_entities = [
-            {**entity, 'entity_type': PRESIDIO_EQUIVALENCES.get(entity['entity_type'])}
+            {**entity, "entity_type": PRESIDIO_EQUIVALENCES.get(entity["entity_type"])}
             for entity in detected_entities
         ]
 
-        detected_entities = [entity for entity in detected_entities if entity["score"] > threshold and entity["entity_type"] in ENTITIES]
-        
+        detected_entities = [
+            entity
+            for entity in detected_entities
+            if entity["score"] > threshold and entity["entity_type"] in ENTITIES
+        ]
+
         return {
             "anonymized_text": anonymized_text,
-            "detected_entities": detected_entities
+            "detected_entities": detected_entities,
         }
     else:
         # Presidio-based anonymization using either SpaCy or Flair
         analyzer = setup_analyzer(use_spacy, use_flair)
         entities_to_anonymize = ENTITIES
 
-        analyzer_results = analyzer.analyze(text=text, entities=entities_to_anonymize, language="de")
+        analyzer_results = analyzer.analyze(
+            text=text, entities=entities_to_anonymize, language="de"
+        )
 
         anonymizer_engine = AnonymizerEngine()
-        anonymized_result = anonymizer_engine.anonymize(text=text, analyzer_results=analyzer_results)
+        anonymized_result = anonymizer_engine.anonymize(
+            text=text, analyzer_results=analyzer_results
+        )
 
-        detected_entities = [
-            {**entity.to_dict(), 'original_word': text[entity.start:entity.end]}
+        presidio_entities = [
+            {**entity.to_dict(), "original_word": text[entity.start : entity.end]}
             for entity in analyzer_results
         ]
 
+        detected_entities.extend(presidio_entities)
+
         return {
             "anonymized_text": anonymized_result.text,
-            "detected_entities": detected_entities
+            "detected_entities": detected_entities,
         }
+
+
+def anonymize_text(text):
+    """
+    Anonymize the extracted text locally.
+    """
+
+    anonymize_result = anonymize_text_german(text, use_spacy=False, use_flair=True)
+
+    return anonymize_result
