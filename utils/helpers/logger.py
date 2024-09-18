@@ -31,26 +31,29 @@ def setup_logger(
         raise ValueError("Invalid logging level. Must be an integer.")
 
     logger = logging.getLogger(name)
-    logger.setLevel(level)
 
-    # Use default format if none is provided
-    if log_format is None:
-        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    # Prevent adding handlers multiple times
+    if not logger.hasHandlers():
+        logger.setLevel(level)
 
-    formatter = logging.Formatter(log_format)
+        # Use default format if none is provided
+        if log_format is None:
+            log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    # Create console handler and set level
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+        formatter = logging.Formatter(log_format)
 
-    # If a log file is specified, add a file handler
-    if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(level)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        # Create console handler and set level
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(level)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+        # If a log file is specified, add a file handler
+        if log_file:
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setLevel(level)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
 
     return logger
 
