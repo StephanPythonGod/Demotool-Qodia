@@ -1,5 +1,6 @@
+import json
 import re
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from fuzzywuzzy import fuzz
 
@@ -58,22 +59,25 @@ def find_zitat_in_text(
 
     Args:
         zitate_to_find (List[Tuple[str, str]]): List of tuples containing zitate and their associated labels.
-        annotated_text (List[Union[Tuple[str, str], str]]): The original annotated text with zitate in it.
+        annotated_text (List[Union[Tuple[str, str], str]]): The original annotated text with possible zitate.
 
     Returns:
         List[Union[Tuple[str, str], str]]: The annotated text with zitate identified and labeled.
     """
     updated_annotated_text = []
 
+    # Join annotated text, preserving the structure
     original_text = "".join(
         [item[0] if isinstance(item, tuple) else item for item in annotated_text]
     )
 
+    # Create a cleaned version of the text
     cleaned_text = original_text.replace("\n", " ")
 
     list_of_indices = []
     list_of_zitate_to_find = [(clean_zitat(z[0]), z[1]) for z in zitate_to_find]
 
+    # Flatten the list of zitate
     list_of_zitate_to_find = [
         (z, zitat_label)
         for zitate, zitat_label in list_of_zitate_to_find
@@ -83,14 +87,13 @@ def find_zitat_in_text(
     for zitat, zitat_label in list_of_zitate_to_find:
         cleaned_zitat = zitat.replace("\n", " ")
 
-        # Check if the zitat is an exact match
+        # Find exact match
         start = original_text.find(zitat)
         if start != -1:
             end = start + len(zitat)
             list_of_indices.append(((start, end), zitat_label, zitat))
-
-        # Search a bit more flexible
         else:
+            # Use fuzzy matching for inexact matches
             potential_matches = list(
                 re.finditer(
                     re.escape(cleaned_zitat[:6])
@@ -123,8 +126,10 @@ def find_zitat_in_text(
                     )
                 )
 
+    # Sort indices by the start position
     list_of_indices.sort(key=lambda x: x[0][0])
 
+    # Build the updated annotated text with the found quotes
     if list_of_indices:
         zitat_start = list_of_indices[0][0][0]
         updated_annotated_text.append(original_text[:zitat_start])
@@ -159,3 +164,35 @@ def ziffer_from_options(ziffer_option: Union[List[str], str]) -> List[str]:
     elif isinstance(ziffer_option, str):
         return [ziffer_option.split(" - ")[0]]
     return []
+
+
+def transform_auswertungsobjekt_to_resultobjekt(
+    data_json: Union[str, List[Dict[str, Any]]]
+) -> List[Dict[str, Any]]:
+    """
+    Transforms a prediction result (auswertungsobjekt) into a customer-facing API result.
+
+    Args:
+        data_json (Union[str, List[Dict[str, Any]]]): The JSON string or list of dictionaries representing the result data.
+
+    Returns:
+        List[Dict[str, Any]]: Transformed data, suitable for the customer-facing API.
+    """
+    if isinstance(data_json, str):
+        data_json = json.loads(data_json)
+
+    transformed_results = []
+
+    for obj in data_json:
+        transformed_results.append(
+            {
+                "zitat": obj["zitat"][-1],
+                "begrundung": obj["begrundung"][-1],
+                "goa_ziffer": obj["goa_ziffer"],
+                "quantitaet": obj["leistungQuantitaet"],
+                "faktor": obj["leistungIntensitaet"],
+                "beschreibung": obj["leistungBeschreibung"],
+            }
+        )
+
+    return transformed_results

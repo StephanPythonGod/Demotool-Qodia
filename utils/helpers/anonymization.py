@@ -371,7 +371,7 @@ def anonymize_text(text: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Dictionary containing anonymized text and detected entities.
     """
-    logger.info("Starting text anonymization ...")
+    logger.info("Starting text anonymization")
     anonymize_result = anonymize_text_german(text, use_spacy=False, use_flair=True)
     logger.info("Text anonymization completed")
     return anonymize_result

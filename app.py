@@ -1,5 +1,4 @@
 import streamlit as st
-from dotenv import load_dotenv
 
 from utils.helpers.logger import logger
 from utils.helpers.settings import load_settings_from_cookies, settings_sidebar
@@ -9,9 +8,6 @@ from utils.stages.anonymize import anonymize_stage
 from utils.stages.edit_anonymized import edit_anonymized_stage
 from utils.stages.modal import modal_stage
 from utils.stages.result import result_stage
-
-# Load env variables from .env file
-load_dotenv()
 
 # Load settings from cookies before initializing session state
 settings = load_settings_from_cookies()
@@ -45,6 +41,7 @@ def main() -> None:
 
     # Retrieve and log the current stage
     current_stage = st.session_state.stage
+    logger.info(f"Current stage: {current_stage}")
 
     # Call the appropriate stage function based on session state
     stage_function = stage_functions.get(current_stage)
