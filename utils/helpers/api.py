@@ -40,7 +40,7 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     Returns:
         Optional[Dict]: The prediction result or None if an error occurred.
     """
-    logger.info("Analyzing text... : ", text)
+    logger.info("Analyzing text...  ")
 
     url = f"{st.session_state.api_url}/process_document"
     payload = {
