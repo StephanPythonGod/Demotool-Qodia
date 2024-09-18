@@ -11,3 +11,4 @@ deploy.sh
 /data/*
 !/data/GOA_Ziffern.csv
 !/data/template_rechnung.html
+.env

@@ -69,6 +69,9 @@ def analyze_text(text: str) -> None:
                 st.session_state.df = pd.DataFrame(processed_data)
                 annotate_text_update()
                 st.session_state.update(stage="result")
+                return True
+            else:
+                return False
 
     except Exception as e:
         logger.error(f"Error analyzing text: {e}")
@@ -157,8 +160,8 @@ def analyze_stage() -> None:
     if left_column.button(
         "Analysieren", disabled=(not st.session_state.text), type="primary"
     ):
-        analyze_text(st.session_state.text)
-        st.rerun()
+        if analyze_text(st.session_state.text):
+            st.rerun()
 
     right_column.subheader("Dokument hochladen")
     right_column.markdown(
