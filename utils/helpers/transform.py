@@ -1,14 +1,21 @@
+from typing import Any, Dict, List, Tuple
+
+import pandas as pd
 import streamlit as st
 
 from utils.helpers.db import read_in_goa
 from utils.utils import find_zitat_in_text
 
 
-def annotate_text_update():
+def annotate_text_update() -> None:
+    """
+    Update the annotated text object in the Streamlit session state.
+    This function finds and highlights medical billing codes in the text.
+    """
     st.session_state.annotated_text_object = [st.session_state.text]
 
-    zitate_to_find = [
-        (row["Zitat"], row["Ziffer"]) for index, row in st.session_state.df.iterrows()
+    zitate_to_find: List[Tuple[str, str]] = [
+        (row["Zitat"], row["Ziffer"]) for _, row in st.session_state.df.iterrows()
     ]
 
     st.session_state.annotated_text_object = find_zitat_in_text(
@@ -16,34 +23,30 @@ def annotate_text_update():
     )
 
     # Update st.session_state.df to be in the order as the labels are in the annotated_text_object
-
-    ziffer_order = []
-
-    for i in st.session_state.annotated_text_object:
-        if isinstance(i, tuple):
-            ziffer_order.append(i[1])
-
+    ziffer_order = [
+        i[1] for i in st.session_state.annotated_text_object if isinstance(i, tuple)
+    ]
     ziffer_order = list(dict.fromkeys(ziffer_order))
 
-    # Order the dataframe according to the order of the ziffer in the text, if a ziffer is not in the text, it will be at the end
-
+    # Order the dataframe according to the order of the ziffer in the text
     ziffer_order_dict = {ziffer: order for order, ziffer in enumerate(ziffer_order)}
-
     st.session_state.df["order"] = st.session_state.df["Ziffer"].map(ziffer_order_dict)
-
-    # Fill NaN values with a large number to ensure these rows go to the end when sorted
     st.session_state.df["order"].fillna(9999, inplace=True)
-
-    # Sort the DataFrame by the 'order' column
     st.session_state.df.sort_values("order", inplace=True)
-
-    # Drop the 'order' column as it's no longer needed
     st.session_state.df.drop("order", axis=1, inplace=True)
+    st.session_state.df.reset_index(drop=True, inplace=True)
 
-    st.session_state.df = st.session_state.df.reset_index(drop=True)
 
+def format_ziffer_to_4digits(ziffer: str) -> str:
+    """
+    Format a billing code (ziffer) to a 4-digit format.
 
-def format_ziffer_to_4digits(ziffer):
+    Args:
+        ziffer (str): The billing code to format.
+
+    Returns:
+        str: The formatted billing code.
+    """
     ziffer_parts = ziffer.split(" ", 1)[1]
     numeric_part = "".join(filter(str.isdigit, ziffer_parts))
     alpha_part = "".join(filter(lambda x: not x.isdigit(), ziffer_parts))
@@ -55,36 +58,35 @@ def format_ziffer_to_4digits(ziffer):
     return result
 
 
-def df_to_items(df):
+def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """
+    Convert a DataFrame of billing codes to a list of item dictionaries.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing billing code information.
+
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries, each representing a billing item.
+    """
     items = []
     goa = read_in_goa(fully=True)
 
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         goa_item = goa[goa["GOÄZiffer"] == row["Ziffer"]]
-
         analog_ziffer = False
 
         if goa_item.empty:
-            print(
-                f"No matching GOÄZiffer for row index {idx} with Ziffer {row['Ziffer']}"
-            )
             goa_analog_ziffer = row["Ziffer"].replace(" A", "")
             goa_item = goa[goa["GOÄZiffer"] == goa_analog_ziffer]
             if goa_item.empty:
                 print(f"No matching GOÄZiffer for analog Ziffer {goa_analog_ziffer}")
                 continue
-            else:
-                analog_ziffer = True
+            analog_ziffer = True
 
         intensity = row["Intensität"]
+        intensity_str_period = f"{intensity:.1f}"
+        intensity_str_comma = intensity_str_period.replace(".", ",")
 
-        # Convert intensity to string in both formats
-        intensity_str_period = f"{intensity:.1f}"  # Format with period
-        intensity_str_comma = intensity_str_period.replace(
-            ".", ","
-        )  # Format with comma
-
-        # Find columns where intensity matches either format
         matching_columns = goa_item.columns[
             goa_item.apply(
                 lambda col: col.astype(str).str.contains(
@@ -97,21 +99,9 @@ def df_to_items(df):
             matching_columns = ["Regelhöchstfaktor"]
 
         column_name = matching_columns[0]
-
         faktor = intensity
 
-        if column_name == "Einfachfaktor":
-            preis = float(goa_item["Einfachsatz"].values[0].replace(",", "."))
-        elif column_name == "Regelhöchstfaktor":
-            preis = float(goa_item["Regelhöchstsatz"].values[0].replace(",", "."))
-        elif column_name == "Höchstfaktor":
-            preis = float(goa_item["Höchstsatz"].values[0].replace(",", "."))
-        elif faktor < 2:
-            preis = float(goa_item["Einfachsatz"].values[0].replace(",", "."))
-        elif faktor < 3:
-            preis = float(goa_item["Regelhöchstsatz"].values[0].replace(",", "."))
-        else:
-            preis = float(goa_item["Höchstsatz"].values[0].replace(",", "."))
+        preis = _calculate_price(goa_item, column_name, faktor)
 
         item = {
             "ziffer": row["Ziffer"],
@@ -136,3 +126,29 @@ def df_to_items(df):
         print("No items were created.")
 
     return items
+
+
+def _calculate_price(goa_item: pd.DataFrame, column_name: str, faktor: float) -> float:
+    """
+    Calculate the price based on the GOÄ item and factor.
+
+    Args:
+        goa_item (pd.DataFrame): The GOÄ item DataFrame.
+        column_name (str): The name of the column to use for price calculation.
+        faktor (float): The intensity factor.
+
+    Returns:
+        float: The calculated price.
+    """
+    if column_name == "Einfachfaktor":
+        return float(goa_item["Einfachsatz"].values[0].replace(",", "."))
+    elif column_name == "Regelhöchstfaktor":
+        return float(goa_item["Regelhöchstsatz"].values[0].replace(",", "."))
+    elif column_name == "Höchstfaktor":
+        return float(goa_item["Höchstsatz"].values[0].replace(",", "."))
+    elif faktor < 2:
+        return float(goa_item["Einfachsatz"].values[0].replace(",", "."))
+    elif faktor < 3:
+        return float(goa_item["Regelhöchstsatz"].values[0].replace(",", "."))
+    else:
+        return float(goa_item["Höchstsatz"].values[0].replace(",", "."))
