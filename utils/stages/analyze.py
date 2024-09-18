@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 
 import pandas as pd
@@ -11,6 +12,9 @@ from utils.helpers.api import (
 )
 from utils.helpers.logger import logger
 from utils.helpers.transform import annotate_text_update
+
+# Check for the environment variable DEPLOYMENT_ENV, default to 'local' if not set
+DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "local")
 
 
 def analyze_add_data(data: list[dict]) -> dict:
@@ -142,8 +146,6 @@ def analyze_stage() -> None:
     if st.session_state.text != st.session_state.temp_text:
         st.session_state.temp_text = st.session_state.text
 
-    logger.info(f"Length of text: {len(st.session_state.text)}")
-
     left_column.text_area(
         "Text des ärztlichen Berichts",
         key="temp_text",
@@ -181,19 +183,35 @@ def analyze_stage() -> None:
 
     if uploaded_file:
         st.session_state.uploaded_file = uploaded_file
-        # right_column.markdown("### ✅ Dokument erfolgreich hochgeladen")
-        # right_column.markdown("Wählen Sie eine der folgenden Optionen aus:")
-        right_column.warning(
-            "Dokument erfolgreich hochgeladen. Bitte wählen Sie eine der folgenden Optionen aus.",
-            icon="✅",
-        )
 
-        button_col1, _, button_col2 = right_column.columns([1, 1, 1])
+        # Cloud environment logic
+        if DEPLOYMENT_ENV == "cloud":
+            right_column.warning(
+                "Dokument erfolgreich hochgeladen. Der Text wird automatisch extrahiert.",
+                icon="✅",
+            )
+            # Perform OCR only if text is not already extracted
+            if not st.session_state.text:
+                if perform_ocr(uploaded_file):
+                    st.rerun()
 
-        if button_col1.button("Anonymisieren", type="primary"):
-            st.session_state.stage = "anonymize"
-            st.rerun()
+        # Local environment logic
+        elif DEPLOYMENT_ENV == "local":
+            right_column.warning(
+                "Dokument erfolgreich hochgeladen. Bitte wählen Sie eine der folgenden Optionen aus.",
+                icon="✅",
+            )
 
-        if button_col2.button("Keine Anonymisierung Notwendig", type="primary"):
-            if perform_ocr(uploaded_file):
+            # Show anonymization options
+            button_col1, _, button_col2 = right_column.columns([1, 1, 1])
+
+            if button_col1.button("Anonymisieren", type="primary"):
+                st.session_state.stage = "anonymize"
                 st.rerun()
+
+            if button_col2.button("Keine Anonymisierung Notwendig", type="primary"):
+                if (
+                    not st.session_state.text
+                ):  # Only run OCR if text is not already extracted
+                    if perform_ocr(uploaded_file):
+                        st.rerun()
