@@ -51,9 +51,9 @@ def load_settings_from_cookies() -> Dict[str, str]:
         Dict[str, str]: A dictionary containing the loaded settings.
     """
     return {
-        "api_url": get_cookie("api_url") or None,
-        "api_key": get_cookie("api_key") or None,
-        "category": get_cookie("category") or None,
+        "api_url": get_cookie("api_url") or "http://localhost:8080",
+        "api_key": get_cookie("api_key") or "AIzaSyA7lclPCmJrWwUhcAsSaXrhmU3SL2rlOzc",
+        "category": get_cookie("category") or "Hernien-OP",
     }
 
 
