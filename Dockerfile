@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-deu \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -37,4 +38,5 @@ EXPOSE 8080
 # Define environment variable
 ENV PORT 8080
 
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+# Start the Streamlit application using Poetry
+ENTRYPOINT ["poetry", "run", "streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
