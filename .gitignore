@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.DS_Store
+__pycache__/utils.cpython-312.pyc
+.flake8
+.pre-commit-config.yaml
+app.yaml
+deploy.sh
+
+/data/*
+!/data/GOA_Ziffern.csv
+!/data/template_rechnung.html
