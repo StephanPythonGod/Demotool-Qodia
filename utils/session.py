@@ -10,7 +10,6 @@ def reset() -> None:
     st.session_state.text = ""
     st.session_state.annotated_text_object = []
     st.session_state.df = pd.DataFrame()
-    st.rerun()  # `st.experimental_rerun` is preferred for future compatibility.
 
 
 def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
