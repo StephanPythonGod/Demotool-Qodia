@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "demotool"
+name = "qodia-kodierungstool"
 version = "0.1.0"
 description = ""
 authors = ["StephanPythonGod <bozztryh@web.de>"]
@@ -22,6 +22,8 @@ torch = "^2.4.1"
 pytesseract = "^0.3.13"
 flair = "^0.14.0"
 streamlit-paste-button = "^0.1.2"
+python-dotenv = "^1.0.1"
+python-levenshtein = "^0.25.1"
 
 
 [tool.poetry.group.dev.dependencies]

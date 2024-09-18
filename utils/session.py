@@ -1,7 +1,9 @@
+import os  # For accessing environment variables
 from typing import Any, Dict, Optional
 
 import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv  # For loading environment variables from a .env file
 
 
 def reset() -> None:
@@ -27,13 +29,17 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
         - ziffer_to_edit: an editable item in the app, default is None
         - pdf_ready: flag indicating if a PDF is ready for download, default is False
         - pdf_data: binary data for the PDF, default is None
-        - api_url: API endpoint, default is "http://localhost:8080"
-        - api_key: API key for authentication, default is a mock API key
+        - api_url: API endpoint, default is "URL der API"
+        - api_key: API key for authentication, default is "Ihr API Schlüssel"
         - category: default category, default is "Hernien-OP"
         - selected_ziffer: currently selected item, default is None
         - uploaded_file: file uploaded by the user, default is None
         - df: pandas DataFrame holding some default structured data, with specific column types
     """
+
+    # Load environment variables from a .env file if it exists
+    load_dotenv()
+
     if settings is None:
         settings = {}
 
@@ -45,12 +51,16 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("pdf_ready", False)
     st.session_state.setdefault("pdf_data", None)
 
-    # Load settings if available, otherwise default values are used
-    st.session_state.api_url = settings.get("api_url", "http://localhost:8080")
-    st.session_state.api_key = settings.get(
-        "api_key", "AIzaSyA7lclPCmJrWwUhcAsSaXrhmU3SL2rlOzc"
+    # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
+    st.session_state.api_url = settings.get("api_url") or os.getenv(
+        "API_URL", "URL der API"
     )
-    st.session_state.category = settings.get("category", "Hernien-OP")
+    st.session_state.api_key = settings.get("api_key") or os.getenv(
+        "API_KEY", "Ihr API Schlüssel"
+    )
+
+    # Default category if not in settings
+    st.session_state.category = settings.get("category") or "Hernien-OP"
 
     st.session_state.setdefault("selected_ziffer", None)
     st.session_state.setdefault("uploaded_file", None)

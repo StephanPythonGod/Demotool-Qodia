@@ -1,7 +1,6 @@
 __pycache__/
-*.pyc
-.DS_Store
-__pycache__/utils.cpython-312.pyc
+.vscode/
+.env
 .flake8
 .pre-commit-config.yaml
 app.yaml
