@@ -2,7 +2,7 @@ from typing import Optional
 
 import pandas as pd
 
-from utils.helpers import logger
+from utils.helpers.logger import logger
 
 
 def read_in_goa(

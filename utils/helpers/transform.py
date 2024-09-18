@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from utils.helpers.db import read_in_goa
+from utils.helpers.logger import logger
 from utils.utils import find_zitat_in_text
 
 
@@ -79,7 +80,9 @@ def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
             goa_analog_ziffer = row["Ziffer"].replace(" A", "")
             goa_item = goa[goa["GOÄZiffer"] == goa_analog_ziffer]
             if goa_item.empty:
-                print(f"No matching GOÄZiffer for analog Ziffer {goa_analog_ziffer}")
+                logger.error(
+                    f"No matching GOÄZiffer for analog Ziffer {goa_analog_ziffer}"
+                )
                 continue
             analog_ziffer = True
 
@@ -123,7 +126,7 @@ def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
         if not items[0]["date"]:
             items[0]["date"] = "25.05.24"
     else:
-        print("No items were created.")
+        logger.error("No items were created.")
 
     return items
 
