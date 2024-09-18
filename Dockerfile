@@ -9,14 +9,27 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-deu \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Set the Poetry path as an environment variable
+ENV PATH="/root/.local/bin:$PATH"
+
 # Set the working directory
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
 COPY . /app
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies using Poetry
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-root
+
+# Download and cache the spaCy model
+RUN python -m spacy download de_core_news_lg
+
+# Download and cache the Flair model (Hugging Face model)
+RUN python -c "from flair.models import SequenceTagger; SequenceTagger.load('flair/ner-german-large')"
 
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
