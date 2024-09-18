@@ -1,47 +1,83 @@
 import json
 import re
+from typing import Any, Dict, List, Tuple, Union
 
 from fuzzywuzzy import fuzz
 
 
-def flatten(lst):
-    result = []
+def flatten(lst: Union[List[Any], str]) -> List[Any]:
+    """
+    Recursively flattens a nested list. If the input is a string, returns it as a single-element list.
+
+    Args:
+        lst (Union[List[Any], str]): The list to flatten or a string.
+
+    Returns:
+        List[Any]: A flattened list or a list containing the input string.
+    """
     if isinstance(lst, str):
-        result.append(lst)
-        return result
-    for i in lst:
-        if isinstance(i, list):
-            result.extend(flatten(i))
+        return [lst]
+
+    result = []
+    for item in lst:
+        if isinstance(item, list):
+            result.extend(flatten(item))
         else:
-            result.append(i)
+            result.append(item)
     return result
 
 
-def clean_zitat(zitat):
+def clean_zitat(zitat: str) -> List[str]:
+    """
+    Cleans and splits a zitat string into individual parts, removing unnecessary whitespace and placeholders.
+
+    Args:
+        zitat (str): The input zitat string, possibly containing newlines or '[...]' placeholders.
+
+    Returns:
+        List[str]: A list of cleaned parts of the zitat.
+    """
     lines = zitat.split("\n")
     cleaned_lines = []
+
     for line in lines:
         parts = line.split("[...]")
         for part in parts:
             cleaned_part = part.strip()
             if cleaned_part:
                 cleaned_lines.append(cleaned_part)
+
     return cleaned_lines
 
 
-def find_zitat_in_text(zitate_to_find, annotated_text):
+def find_zitat_in_text(
+    zitate_to_find: List[Tuple[str, str]],
+    annotated_text: List[Union[Tuple[str, str], str]],
+) -> List[Union[Tuple[str, str], str]]:
+    """
+    Finds and annotates 'zitate' in a given annotated text by matching it to the original text.
+
+    Args:
+        zitate_to_find (List[Tuple[str, str]]): List of tuples containing zitate and their associated labels.
+        annotated_text (List[Union[Tuple[str, str], str]]): The original annotated text with possible zitate.
+
+    Returns:
+        List[Union[Tuple[str, str], str]]: The annotated text with zitate identified and labeled.
+    """
     updated_annotated_text = []
-    # Join the text, keeping the original structure
+
+    # Join annotated text, preserving the structure
     original_text = "".join(
         [item[0] if isinstance(item, tuple) else item for item in annotated_text]
     )
 
-    # Create a cleaned version for searching
+    # Create a cleaned version of the text
     cleaned_text = original_text.replace("\n", " ")
 
     list_of_indices = []
     list_of_zitate_to_find = [(clean_zitat(z[0]), z[1]) for z in zitate_to_find]
-    # Flatten the list of zitate to find
+
+    # Flatten the list of zitate
     list_of_zitate_to_find = [
         (z, zitat_label)
         for zitate, zitat_label in list_of_zitate_to_find
@@ -49,16 +85,15 @@ def find_zitat_in_text(zitate_to_find, annotated_text):
     ]
 
     for zitat, zitat_label in list_of_zitate_to_find:
-        # Clean the zitat by replacing newlines with spaces
         cleaned_zitat = zitat.replace("\n", " ")
 
+        # Find exact match
         start = original_text.find(zitat)
         if start != -1:
             end = start + len(zitat)
             list_of_indices.append(((start, end), zitat_label, zitat))
-
         else:
-            # Use regex to find all potential matches in the cleaned text
+            # Use fuzzy matching for inexact matches
             potential_matches = list(
                 re.finditer(
                     re.escape(cleaned_zitat[:6])
@@ -79,10 +114,7 @@ def find_zitat_in_text(zitate_to_find, annotated_text):
                     best_ratio = ratio
                     best_match = match
 
-            if (
-                best_match and best_ratio >= 90
-            ):  # Increased threshold for better accuracy
-                # Get the original text (with newlines) for this match
+            if best_match and best_ratio >= 90:
                 original_match_text = original_text[
                     best_match.start() : best_match.end()
                 ]
@@ -94,54 +126,58 @@ def find_zitat_in_text(zitate_to_find, annotated_text):
                     )
                 )
 
-    # Sort the list of indices by the start position
+    # Sort indices by the start position
     list_of_indices.sort(key=lambda x: x[0][0])
 
-    # Add all the text before the first quote
+    # Build the updated annotated text with the found quotes
     if list_of_indices:
         zitat_start = list_of_indices[0][0][0]
-        updated_annotated_text.append(original_text[0:zitat_start])
+        updated_annotated_text.append(original_text[:zitat_start])
 
-    # Process quotes and text between them
     for i, (indices, label, zitat_text) in enumerate(list_of_indices):
-        # Add the current quote
         updated_annotated_text.append((zitat_text, label))
 
-        # Add text between quotes
         if i < len(list_of_indices) - 1:
             next_start = list_of_indices[i + 1][0][0]
             updated_annotated_text.append(original_text[indices[1] : next_start])
 
-    # Add any remaining text after the last quote
     if list_of_indices:
         last_end = list_of_indices[-1][0][1]
         if last_end < len(original_text):
             updated_annotated_text.append(original_text[last_end:])
 
-    if not updated_annotated_text:
-        updated_annotated_text = annotated_text
-
-    return updated_annotated_text
+    return updated_annotated_text or annotated_text
 
 
-def ziffer_from_options(ziffer_option):
-    for i in ziffer_option:
-        if isinstance(i, float):
-            pass
+def ziffer_from_options(ziffer_option: Union[List[str], str]) -> List[str]:
+    """
+    Extracts the ziffer (numeric part) from a string or list of strings.
 
+    Args:
+        ziffer_option (Union[List[str], str]): A string or list of strings containing ziffer options.
+
+    Returns:
+        List[str]: A list of extracted ziffer values.
+    """
     if isinstance(ziffer_option, list):
-        ziffer = [i.split(" - ")[0] for i in ziffer_option]
+        return [i.split(" - ")[0] for i in ziffer_option]
     elif isinstance(ziffer_option, str):
-        ziffer = ziffer_option.split(" - ")[0]
-        ziffer = [ziffer]
-    return ziffer
+        return [ziffer_option.split(" - ")[0]]
+    return []
 
 
-# TODO: Remove this?
-def transform_auswertungsobjekt_to_resultobjekt(data_json) -> any:
-    """Transform Logged Prediction Result to Customer Facing API Result"""
+def transform_auswertungsobjekt_to_resultobjekt(
+    data_json: Union[str, List[Dict[str, Any]]]
+) -> List[Dict[str, Any]]:
+    """
+    Transforms a prediction result (auswertungsobjekt) into a customer-facing API result.
 
-    # Check if the data_json is a string, if so, parse it to a list
+    Args:
+        data_json (Union[str, List[Dict[str, Any]]]): The JSON string or list of dictionaries representing the result data.
+
+    Returns:
+        List[Dict[str, Any]]: Transformed data, suitable for the customer-facing API.
+    """
     if isinstance(data_json, str):
         data_json = json.loads(data_json)
 

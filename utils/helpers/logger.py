@@ -1,25 +1,56 @@
 import logging
+import sys
+from typing import Optional
 
 
-def setup_logger() -> logging.Logger:
-    """Set up a logger for the application."""
-    logger = logging.getLogger("qodia_koodierungstool")
-    logger.setLevel(logging.INFO)
+def setup_logger(
+    name: str = "qodia_koodierungstool",
+    level: int = logging.INFO,
+    log_format: Optional[str] = None,
+    log_file: Optional[str] = None,
+) -> logging.Logger:
+    """
+    Set up a logger for the application.
 
-    # Create console handler and set level to INFO
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    This function configures a logger with the specified name, log level,
+    format, and optional file output.
 
-    # Create formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    Args:
+        name (str): The name of the logger. Defaults to "qodia_koodierungstool".
+        level (int): The logging level. Defaults to logging.INFO.
+        log_format (Optional[str]): The log message format. If None, a default format is used.
+        log_file (Optional[str]): The path to a log file. If provided, logs will be written to this file.
 
-    # Add formatter to ch
-    ch.setFormatter(formatter)
+    Returns:
+        logging.Logger: A configured logger instance.
 
-    # Add ch to logger
-    logger.addHandler(ch)
+    Raises:
+        ValueError: If an invalid logging level is provided.
+    """
+    if not isinstance(level, int):
+        raise ValueError("Invalid logging level. Must be an integer.")
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # Use default format if none is provided
+    if log_format is None:
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    formatter = logging.Formatter(log_format)
+
+    # Create console handler and set level
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    # If a log file is specified, add a file handler
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(level)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     return logger
 

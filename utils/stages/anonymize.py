@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from pdf2image import convert_from_bytes
 from PIL import Image
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit_drawable_canvas import st_canvas
 
 from utils.helpers.anonymization import anonymize_text
@@ -12,7 +13,7 @@ from utils.helpers.ocr import perform_ocr_on_file
 
 
 def display_file_selection_interface(
-    uploaded_file: st.UploadedFile,
+    uploaded_file: UploadedFile,
 ) -> Optional[List[List[Dict[str, float]]]]:
     """
     Display the file selection interface and handle user selections.

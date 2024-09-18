@@ -181,9 +181,9 @@ def analyze_stage() -> None:
 
     if uploaded_file:
         st.session_state.uploaded_file = uploaded_file
-        right_column.markdown("### ✅ Dokument erfolgreich hochgeladen")
-        right_column.markdown("Wählen Sie eine der folgenden Optionen aus:")
-        st.warning(
+        # right_column.markdown("### ✅ Dokument erfolgreich hochgeladen")
+        # right_column.markdown("Wählen Sie eine der folgenden Optionen aus:")
+        right_column.warning(
             "Dokument erfolgreich hochgeladen. Bitte wählen Sie eine der folgenden Optionen aus.",
             icon="✅",
         )
