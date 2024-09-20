@@ -37,6 +37,7 @@ def check_if_default_credentials() -> None:
 def analyze_api_call(text: str) -> Optional[Dict]:
     """
     Analyze the given text using the API and return the prediction.
+    If a cached response exists in the data folder, return that instead.
 
     Args:
         text (str): The text to be analyzed.
@@ -44,8 +45,28 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     Returns:
         Optional[Dict]: The prediction result or None if an error occurred.
     """
-    logger.info("Analyzing text...  ")
+    logger.info("Analyzing text...")
 
+    # Define the data folder path relative to the current script
+    data_folder = os.path.join(os.path.dirname(__file__), "data")
+
+    # Ensure the data folder exists
+    os.makedirs(data_folder, exist_ok=True)
+
+    # Generate a filename based on the text hash
+    safe_filename = os.path.join(data_folder, f"{hash(text)}_response.json")
+
+    # Check if a cached response exists
+    if os.path.exists(safe_filename):
+        logger.info(f"Using cached response from {safe_filename}")
+        try:
+            with open(safe_filename, "r") as file:
+                cached_response = json.load(file)
+            return cached_response
+        except Exception as e:
+            logger.error(f"Error loading cached response: {e}")
+
+    # Perform the API call if no cached response exists
     url = f"{st.session_state.api_url}/process_document"
     payload = {
         "text": text,
@@ -86,6 +107,14 @@ def analyze_api_call(text: str) -> Optional[Dict]:
         prediction = response.json()["result"]["prediction"]
     except KeyError:
         prediction = response.json()["prediction"]
+
+    # Save the response to a file for future use
+    try:
+        with open(safe_filename, "w") as file:
+            json.dump(prediction, file)
+        logger.info(f"Response saved to {safe_filename}")
+    except Exception as e:
+        logger.error(f"Error saving response to file: {e}")
 
     return prediction
 

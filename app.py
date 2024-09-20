@@ -7,7 +7,6 @@ from utils.session import initialize_session_state
 from utils.stages.analyze import analyze_stage
 from utils.stages.anonymize import anonymize_stage
 from utils.stages.edit_anonymized import edit_anonymized_stage
-from utils.stages.modal import modal_stage
 from utils.stages.result import result_stage
 
 # Load env variables from .env file
@@ -40,10 +39,9 @@ def main() -> None:
         "anonymize": anonymize_stage,
         "edit_anonymized": edit_anonymized_stage,
         "result": result_stage,
-        "modal": modal_stage,
     }
 
-    # Retrieve and log the current stage
+    # Retrieve the current stage
     current_stage = st.session_state.stage
 
     # Call the appropriate stage function based on session state
