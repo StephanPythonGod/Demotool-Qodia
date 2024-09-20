@@ -1,8 +1,12 @@
 import streamlit as st
 from annotated_text import annotated_text
 
-from utils.helpers.api import generate_pdf
-from utils.helpers.transform import annotate_text_update, format_ziffer_to_4digits
+from utils.helpers.api import generate_pdf, send_feedback_api
+from utils.helpers.transform import (
+    annotate_text_update,
+    df_to_processdocumentresponse,
+    format_ziffer_to_4digits,
+)
 from utils.session import reset
 from utils.utils import find_zitat_in_text
 
@@ -104,13 +108,29 @@ def result_stage():
 
     with left_outer_column:
         st.button(
-            "Zurücksetzen", on_click=reset, type="primary", use_container_width=True
+            "Zurücksetzen",
+            on_click=lambda: (
+                send_feedback_api(
+                    df_to_processdocumentresponse(
+                        st.session_state.df, st.session_state.text
+                    )
+                ),
+                reset(),
+            ),
+            type="primary",
+            use_container_width=True,
         )
 
     with right_outer_column:
         if st.button("PDF generieren", type="primary", use_container_width=True):
             with st.spinner("📄 Generiere PDF..."):
                 st.session_state.pdf_data = generate_pdf(st.session_state.df)
+                # send feedback to the api
+                send_feedback_api(
+                    response_object=df_to_processdocumentresponse(
+                        df=st.session_state.df, ocr_text=st.session_state.text
+                    )
+                )
                 st.session_state.pdf_ready = True
 
         # If the PDF is ready, show the download button

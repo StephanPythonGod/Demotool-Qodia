@@ -12,6 +12,8 @@ def reset() -> None:
     st.session_state.text = ""
     st.session_state.annotated_text_object = []
     st.session_state.df = pd.DataFrame()
+    st.session_state.analyze_api_response = None
+    st.session_state.ocr_api_response = None
 
 
 def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
@@ -50,6 +52,8 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("ziffer_to_edit", None)
     st.session_state.setdefault("pdf_ready", False)
     st.session_state.setdefault("pdf_data", None)
+    st.session_state.setdefault("analyze_api_response", None)
+    st.session_state.setdefault("ocr_api_response", None)
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(
