@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-deu \
     curl \
-    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -20,8 +19,11 @@ ENV PATH="/root/.local/bin:$PATH"
 # Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy the project files
+COPY pyproject.toml poetry.lock ./
+COPY app.py ./
+COPY utils ./utils
+COPY data ./data
 
 # Install dependencies using Poetry
 RUN poetry config virtualenvs.create false && \
@@ -33,14 +35,11 @@ RUN python -m spacy download de_core_news_lg
 # Download and cache the Flair model (Hugging Face model)
 RUN python -c "from flair.models import SequenceTagger; SequenceTagger.load('flair/ner-german-large')"
 
-# Copy the SSL certificate generation script
-RUN chmod +x /app/scripts/generate_self_signed_cert.sh
-
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
 
 # Define environment variable
 ENV PORT 8080
 
-# Generate self-signed certificate and start the Streamlit application
-CMD ["/bin/bash", "-c", "/app/scripts/generate_self_signed_cert.sh && poetry run streamlit run app.py --server.port=8080 --server.address=0.0.0.0"]
+# Start the Streamlit application
+CMD ["poetry", "run", "streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]

@@ -1,5 +1,6 @@
 import http.client
 import json
+import os
 import time
 from io import BytesIO
 from typing import Dict, Optional, Union
@@ -7,12 +8,15 @@ from typing import Dict, Optional, Union
 import pandas as pd
 import requests
 import streamlit as st
+from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_items, format_ziffer_to_4digits
+
+load_dotenv()
 
 
 def check_if_default_credentials() -> None:
@@ -76,7 +80,14 @@ def analyze_api_call(text: str) -> Optional[Dict]:
         )
         return None
 
-    return response.json()["prediction"]
+    st.session_state.analyze_api_response = response
+
+    try:
+        prediction = response.json()["result"]["prediction"]
+    except KeyError:
+        prediction = response.json()["prediction"]
+
+    return prediction
 
 
 def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]:
@@ -145,7 +156,39 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         )
         return None
 
-    return response.json()["ocr"]["ocr_text"]
+    st.session_state.ocr_api_response = response
+
+    try:
+        ocr_text = response.json()["result"]["ocr"]["ocr_text"]
+    except KeyError:
+        ocr_text = response.json()["result"]["ocr_text"]
+    return ocr_text
+
+
+def send_feedback_api(response_object: Dict) -> None:
+    """
+    Send feedback to the API for the given response object.
+    Args:
+        response_object (Dict): The response object from the API.
+    """
+    analyze_api_call_response = st.session_state.analyze_api_response
+    api_request_id = analyze_api_call_response.headers.get("X-Request-ID", None)
+    if api_request_id:
+        url = f"{st.session_state.api_url}/feedback/{api_request_id}"
+        payload = json.dumps(response_object)  # Convert dict to JSON string
+        headers = {
+            "x-api-key": st.session_state.api_key,
+            "Content-Type": "application/json",  # Specify content type as JSON
+        }
+        try:
+            response = requests.post(url, headers=headers, data=payload)
+            logger.info(f"Feedback sent. Response status: {response.status_code}")
+            if response.status_code != 200:
+                logger.error(f"API Feedback error: {response.text}")
+        except Exception as e:
+            logger.error(f"Error sending feedback: {e}")
+    else:
+        logger.error("API request ID not found. Feedback not sent.")
 
 
 def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
@@ -218,9 +261,16 @@ def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
         "wait": {"for": "navigation", "timeout": 250, "waitUntil": "load"},
     }
 
+    api_key = os.getenv("RAPID_API_KEY")
+
+    if api_key is None:
+        logger.error("API key for PDF generation not found.")
+        st.error("Fehler bei der PDF Generierung. API-Schlüssel nicht gefunden.")
+        return
+
     headers = {
         "content-type": "application/json",
-        "x-rapidapi-key": "18a7c1f0a3mshc09f133b9c99f34p1fab4cjsn3f4de4a18cfa",
+        "x-rapidapi-key": api_key,
         "x-rapidapi-host": "yakpdf.p.rapidapi.com",
     }
 

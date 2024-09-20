@@ -38,6 +38,43 @@ def annotate_text_update() -> None:
     st.session_state.df.reset_index(drop=True, inplace=True)
 
 
+def df_to_processdocumentresponse(df: pd.DataFrame, ocr_text: str) -> Dict[str, Any]:
+    """
+    Transform a DataFrame and OCR text into a ProcessDocumentResponse-compatible dictionary.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the prediction results.
+        ocr_text (str): The OCR text to be included in the response.
+
+    Returns:
+        Dict[str, Any]: A dictionary compatible with the ProcessDocumentResponse schema.
+    """
+    # Transform DataFrame rows into ResultObjekt-compatible dictionaries
+    result_objekts = []
+    for _, row in df.iterrows():
+        result_objekt = {
+            "zitat": row["Zitat"],
+            "begrundung": row["Begründung"],
+            "goa_ziffer": row["Ziffer"],
+            "quantitaet": int(row["Häufigkeit"]),
+            "faktor": float(row["Intensität"]),
+            "beschreibung": row["Beschreibung"],
+            "confidence": float(row["confidence"]),
+        }
+        result_objekts.append(result_objekt)
+
+    # Create the OCRResponse
+    ocr_response = {"ocr_text": ocr_text}
+
+    # Create the PredictionResponse
+    prediction_response = {"ocr": ocr_response, "prediction": result_objekts}
+
+    # Create the final ProcessDocumentResponse
+    process_document_response = {"result": prediction_response}
+
+    return process_document_response
+
+
 def format_ziffer_to_4digits(ziffer: str) -> str:
     """
     Format a billing code (ziffer) to a 4-digit format.

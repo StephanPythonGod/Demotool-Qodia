@@ -34,17 +34,17 @@ def analyze_add_data(data: list[dict]) -> dict:
             "Beschreibung": [],
             "Zitat": [],
             "Begründung": [],
+            "confidence": [],
         }
 
         for entry in data:
             new_data["Ziffer"].append(entry.get("goa_ziffer", ""))
             new_data["Zitat"].append(entry.get("zitat", ""))
             new_data["Begründung"].append(entry.get("begrundung", ""))
-            new_data["Häufigkeit"].append(
-                entry.get("quantitaet", 0)
-            )  # Use default values if missing
+            new_data["Häufigkeit"].append(entry.get("quantitaet", 0))
             new_data["Intensität"].append(entry.get("faktor", 0))
             new_data["Beschreibung"].append(entry.get("beschreibung", ""))
+            new_data["confidence"].append(entry.get("confidence", 1.0))
 
         return new_data
 

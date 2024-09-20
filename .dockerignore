@@ -1,11 +1,14 @@
-__pycache__/
+**pycache**/
 .vscode/
 .env
 .flake8
 .pre-commit-config.yaml
 app.yaml
 deploy.sh
-
 /data/*
 !/data/GOA_Ziffern.csv
 !/data/template_rechnung.html
+!/data/nginx.conf
+!/data/logo.jpg
+!/data/logo.png
+ssl/
