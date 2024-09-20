@@ -41,31 +41,75 @@ def update_ziffer(new_ziffer: Dict[str, Union[str, int, float, None]]) -> None:
         )
 
 
-def modal_stage() -> None:
+def display_update_button(new_data: Dict[str, Union[str, int, float, None]]) -> None:
     """
-    Display the modal for editing a Ziffer.
+    Display the "Aktualisieren" button to save the new ziffer data.
+
+    Args:
+        new_data (Dict[str, Union[str, int, float, None]]): The new ziffer data.
+    """
+    all_fields_filled = all(
+        [
+            new_data["Ziffer"],
+            new_data["Häufigkeit"],
+            new_data["Intensität"],
+            new_data["Beschreibung"],
+            new_data["Zitat"],
+        ]
+    )
+
+    # Only show button if all required fields are filled
+    if all_fields_filled:
+        if st.button(
+            "Aktualisieren",
+            on_click=lambda: update_ziffer(new_data),
+            type="primary",
+            use_container_width=False,
+        ):
+            st.session_state.stage = "result"  # Go back to result stage after update
+            st.rerun()
+    else:
+        st.button(
+            "Aktualisieren",
+            on_click=None,
+            type="primary",
+            use_container_width=True,
+            disabled=True,
+            help="Bitte füllen Sie alle erforderlichen Felder aus.",
+        )
+
+
+@st.dialog("Leistungsziffer aktualisieren", width="large")
+def modal_dialog() -> None:
+    """
+    Modal dialog for editing a Ziffer.
     """
     try:
         ziffer_dataframe: pd.DataFrame = read_in_goa()
         ziffer_options: List[str] = ziffer_dataframe["Ziffern"].tolist()
 
         ziffer_data: Dict[str, Union[str, int, float, None]] = get_ziffer_data()
+        # TODO: Replace analogziffern finding in the database
         ziffer_index: Optional[int] = get_ziffer_index(
-            ziffer_options, ziffer_data["Ziffer"]
+            ziffer_options, ziffer_data["Ziffer"].replace(" A", "")
         )
 
-        st.subheader("Leistungsziffer aktualisieren")
-
+        # Ziffer selection
         ziffer, beschreibung = display_ziffer_selection(ziffer_options, ziffer_index)
+
+        # Other input fields
         haufigkeit = display_haufigkeit_input(ziffer_data["Häufigkeit"])
         intensitat = display_intensitat_input(ziffer_data["Intensität"])
         zitat = display_zitat_input(ziffer_data["Zitat"])
         begrundung = display_begrundung_input(ziffer_data["Begründung"])
 
+        # Prepare new data
         new_data = create_new_data(
             ziffer, haufigkeit, intensitat, beschreibung, zitat, begrundung
         )
-        display_buttons(new_data)
+
+        # Display the "Aktualisieren" button
+        display_update_button(new_data)
 
     except Exception as e:
         logger.error(f"Error in modal_stage: {str(e)}")
@@ -130,6 +174,7 @@ def display_ziffer_selection(
         options=ziffer_options,
         index=ziffer_index,
         placeholder="Bitte wählen Sie eine Ziffer aus ...",
+        label_visibility="collapsed",
     )
 
     if ziffer:
@@ -158,6 +203,7 @@ def display_haufigkeit_input(current_value: Optional[int]) -> int:
         placeholder="Bitte wählen Sie die Häufigkeit der Leistung ...",
         min_value=1,
         max_value=20,
+        label_visibility="collapsed",
     )
 
 
@@ -180,6 +226,7 @@ def display_intensitat_input(current_value: Optional[float]) -> float:
         max_value=5.0,
         step=0.1,
         format="%.1f",
+        label_visibility="collapsed",
     )
 
 
@@ -199,6 +246,7 @@ def display_zitat_input(current_value: Optional[str]) -> str:
         value=current_value,
         placeholder="Bitte hier das Textzitat einfügen ...",
         help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
+        height=200,
     )
 
 
@@ -218,6 +266,7 @@ def display_begrundung_input(current_value: Optional[str]) -> Optional[str]:
         value=current_value,
         placeholder="Bitte hier die Begründung einfügen ...",
         help="Hier soll die Begründung für die Leistungsziffer eingefügt werden.",
+        height=400,
     )
     return begrundung if begrundung else None
 
@@ -252,50 +301,3 @@ def create_new_data(
         "Zitat": zitat,
         "Begründung": begrundung,
     }
-
-
-def display_buttons(new_data: Dict[str, Union[str, int, float, None]]) -> None:
-    """
-    Display the "Abbrechen" and "Aktualisieren" buttons.
-
-    Args:
-        new_data (Dict[str, Union[str, int, float, None]]): The new ziffer data.
-    """
-    left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 3, 2, 1])
-
-    all_fields_filled = all(
-        [
-            new_data["Ziffer"],
-            new_data["Häufigkeit"],
-            new_data["Intensität"],
-            new_data["Beschreibung"],
-            new_data["Zitat"],
-        ]
-    )
-
-    with left_outer_column:
-        st.button(
-            "Abbrechen",
-            on_click=lambda: st.session_state.update(stage="result"),
-            type="primary",
-            use_container_width=True,
-        )
-
-    with right_outer_column:
-        if all_fields_filled:
-            if st.button(
-                "Aktualisieren",
-                on_click=lambda: update_ziffer(new_data),
-                type="primary",
-                use_container_width=True,
-            ):
-                st.rerun()
-        else:
-            st.button(
-                "Aktualisieren",
-                on_click=None,
-                type="primary",
-                use_container_width=True,
-                disabled=True,
-                help="Bitte füllen Sie alle erforderlichen Felder aus.",
-            )

@@ -1,3 +1,5 @@
+import re
+
 import streamlit as st
 from annotated_text import annotated_text
 
@@ -8,6 +10,7 @@ from utils.helpers.transform import (
     format_ziffer_to_4digits,
 )
 from utils.session import reset
+from utils.stages.modal import modal_dialog
 from utils.utils import find_zitat_in_text
 
 
@@ -23,6 +26,54 @@ def delete_ziffer(index):
     st.rerun()
 
 
+def extract_numeric_value(ziffer):
+    # Extract the numeric portion of the Ziffer and convert to int after removing leading zeros
+    numeric_part = re.search(r"\d+", ziffer)
+    return int(numeric_part.group()) if numeric_part else float("inf")
+
+
+def sort_ziffer(ascending=True):
+    # Sort based on the numeric values extracted from Ziffer strings
+    st.session_state.df["numeric_ziffer"] = st.session_state.df["Ziffer"].apply(
+        extract_numeric_value
+    )
+    st.session_state.df.sort_values(
+        by="numeric_ziffer", ascending=ascending, inplace=True
+    )
+    st.session_state.df.drop(
+        columns=["numeric_ziffer"], inplace=True
+    )  # Remove helper column
+    st.session_state.df.reset_index(drop=True, inplace=True)
+    st.session_state.selected_ziffer = None  # Reset selection on sorting
+
+
+def reset_ziffer_order():
+    st.session_state.df = st.session_state.df.loc[st.session_state.original_order]
+    st.session_state.df.reset_index(drop=True, inplace=True)
+    st.session_state.selected_ziffer = None
+    st.rerun()
+
+
+def set_sort_mode():
+    # Cycle through sorting modes: ask -> desc -> text
+    modes = ["ask", "desc"]
+    current_mode = st.session_state.get("sort_mode", "ask")
+    next_mode = modes[(modes.index(current_mode) + 1) % len(modes)]
+    st.session_state.sort_mode = next_mode
+    apply_sorting()  # Apply sorting whenever mode changes
+
+
+def apply_sorting():
+    # Apply sorting based on the current sort mode
+    if st.session_state.sort_mode == "ask":
+        sort_ziffer(ascending=True)
+    elif st.session_state.sort_mode == "desc":
+        sort_ziffer(ascending=False)
+    # Reset index and clear the selected ziffer
+    st.session_state.df.reset_index(drop=True, inplace=True)
+    st.session_state.selected_ziffer = None  # Reset selection
+
+
 def result_stage():
     "Display the result of the analysis."
     left_column, right_column = st.columns(2)
@@ -31,8 +82,6 @@ def result_stage():
     # Left Column: Display the text with highlighting
     with left_column:
         st.subheader("Ärztlicher Bericht:")
-
-        # Highlight text based on selected Ziffer
         if (
             "selected_ziffer" in st.session_state
             and st.session_state.selected_ziffer is not None
@@ -40,11 +89,9 @@ def result_stage():
             selected_zitat = st.session_state.df.loc[
                 st.session_state.selected_ziffer, "Zitat"
             ]
-
             selected_ziffer = st.session_state.df.loc[
                 st.session_state.selected_ziffer, "Ziffer"
             ]
-
             annotated_text(
                 find_zitat_in_text(
                     [(selected_zitat, selected_ziffer)], [st.session_state.text]
@@ -56,13 +103,25 @@ def result_stage():
     with right_column:
         st.subheader("Erkannte Leistungsziffern:")
 
-        # Display column headers
+        # Header row with the new Ziffer button
         header_cols = right_column.columns([1, 1, 1, 3, 1])
         headers = ["Ziffer", "Häufigkeit", "Faktor", "Beschreibung", "Aktionen"]
-        for col, header in zip(header_cols, headers):
-            col.markdown(f"**{header}**")
+        for i, (col, header) in enumerate(zip(header_cols, headers)):
+            if header == "Ziffer":
+                # Set the button label based on the current sort_mode
+                sort_label = {"ask": "Ziffer ⬆️", "desc": "Ziffer ⬇️"}
 
-        # Create a unique identifier for each row
+                # Initialize sort_mode in session_state if not set yet
+                sort_mode = st.session_state.get("sort_mode", "text")
+
+                # Display the button and set the sort mode accordingly
+                col.button(
+                    sort_label.get(sort_mode, "Ziffer 🔠"), on_click=set_sort_mode
+                )
+            else:
+                col.markdown(f"**{header}**")
+
+        # Display table rows
         for index, row in st.session_state.df.iterrows():
             cols = right_column.columns([1, 1, 1, 3, 0.5, 0.5])
             if cols[0].button(
@@ -72,40 +131,23 @@ def result_stage():
                 if st.session_state.selected_ziffer != index
                 else "primary",
             ):
-                if st.session_state.selected_ziffer == index:
-                    set_selected_ziffer(None)
-                else:
-                    set_selected_ziffer(index)
+                set_selected_ziffer(
+                    None if st.session_state.selected_ziffer == index else index
+                )
                 st.rerun()
-            # Use HTML and CSS for scrollable text field
-            description_html = f"""
-            <div style="overflow-x: auto; white-space: nowrap; padding: 5px;">
-                {row['Beschreibung']}
-            </div>
-            """
 
+            description_html = f"<div style='overflow-x: auto; white-space: nowrap; padding: 5px;'>{row['Beschreibung']}</div>"
             cols[1].write(row["Häufigkeit"])
             cols[2].write(row["Intensität"])
             cols[3].markdown(description_html, unsafe_allow_html=True)
 
-            # Add a delete button for each row
             if cols[4].button("✏️", key=f"edit_{index}"):
                 st.session_state.ziffer_to_edit = index
-                st.session_state.stage = "modal"
-                st.rerun()
+                modal_dialog()
             if cols[5].button("🗑️", key=f"delete_{index}"):
                 delete_ziffer(index)
 
-        _, middle_column_right_column, _ = st.columns([3, 1, 3])
-
-        with middle_column_right_column:
-            st.write("")
-            # Add a button to add a new row
-            if middle_column_right_column.button("➕", use_container_width=True):
-                st.session_state.ziffer_to_edit = None
-                st.session_state.stage = "modal"
-                st.rerun()
-
+    # Rest of the layout
     with left_outer_column:
         st.button(
             "Zurücksetzen",
@@ -125,7 +167,6 @@ def result_stage():
         if st.button("PDF generieren", type="primary", use_container_width=True):
             with st.spinner("📄 Generiere PDF..."):
                 st.session_state.pdf_data = generate_pdf(st.session_state.df)
-                # send feedback to the api
                 send_feedback_api(
                     response_object=df_to_processdocumentresponse(
                         df=st.session_state.df, ocr_text=st.session_state.text
@@ -133,7 +174,6 @@ def result_stage():
                 )
                 st.session_state.pdf_ready = True
 
-        # If the PDF is ready, show the download button
         if st.session_state.pdf_ready:
             st.download_button(
                 label="Download PDF",
