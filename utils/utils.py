@@ -1,7 +1,6 @@
-import re
 from typing import Any, List, Tuple, Union
 
-from fuzzywuzzy import fuzz
+from Levenshtein import distance as levenshtein_distance
 
 
 def flatten(lst: Union[List[Any], str]) -> List[Any]:
@@ -52,6 +51,8 @@ def clean_zitat(zitat: str) -> List[str]:
 def find_zitat_in_text(
     zitate_to_find: List[Tuple[str, str]],
     annotated_text: List[Union[Tuple[str, str], str]],
+    window_size: int = 50,
+    distance_threshold: int = 10,
 ) -> List[Union[Tuple[str, str], str]]:
     """
     Finds and annotates 'zitate' in a given annotated text by matching it to the original text.
@@ -59,72 +60,74 @@ def find_zitat_in_text(
     Args:
         zitate_to_find (List[Tuple[str, str]]): List of tuples containing zitate and their associated labels.
         annotated_text (List[Union[Tuple[str, str], str]]): The original annotated text with zitate in it.
+        window_size (int): The size of the sliding window in characters for potential matches.
+        distance_threshold (int): Maximum Levenshtein distance to consider a match.
 
     Returns:
         List[Union[Tuple[str, str], str]]: The annotated text with zitate identified and labeled.
     """
     updated_annotated_text = []
 
+    # Join the annotated text to create a single text string
     original_text = "".join(
         [item[0] if isinstance(item, tuple) else item for item in annotated_text]
     )
 
-    cleaned_text = original_text.replace("\n", " ")
+    # Clean text for matching (remove line breaks, normalize spaces)
+    cleaned_text = original_text.replace("\n", " ").replace("  ", " ")
 
-    list_of_indices = []
+    # Process the quotes to find
     list_of_zitate_to_find = [(clean_zitat(z[0]), z[1]) for z in zitate_to_find]
-
     list_of_zitate_to_find = [
         (z, zitat_label)
         for zitate, zitat_label in list_of_zitate_to_find
         for z in zitate
     ]
 
+    list_of_indices = []
+
+    # Sliding window with Levenshtein distance for approximate matching
     for zitat, zitat_label in list_of_zitate_to_find:
-        cleaned_zitat = zitat.replace("\n", " ")
+        cleaned_zitat = zitat.replace("\n", " ").replace("  ", " ")
 
-        # Check if the zitat is an exact match
-        start = original_text.find(zitat)
-        if start != -1:
-            end = start + len(zitat)
-            list_of_indices.append(((start, end), zitat_label, zitat))
+        # Set up sliding window mechanism
+        zitat_len = len(cleaned_zitat)
+        best_match = None
+        best_distance = float("inf")
+        best_match_indices = None
 
-        # Search a bit more flexible
-        else:
-            potential_matches = list(
-                re.finditer(
-                    re.escape(cleaned_zitat[:6])
-                    + ".*?"
-                    + re.escape(cleaned_zitat[-6:]),
-                    cleaned_text,
-                    re.DOTALL,
-                )
+        # Slide over the text in windows of size 'window_size'
+        for i in range(len(cleaned_text) - zitat_len + 1):
+            window_text = cleaned_text[i : i + zitat_len]
+
+            # Calculate Levenshtein distance between the quote and the window text
+            current_distance = levenshtein_distance(cleaned_zitat, window_text)
+
+            if (
+                current_distance < best_distance
+                and current_distance <= distance_threshold
+            ):
+                best_distance = current_distance
+                best_match = window_text
+                best_match_indices = (i, i + zitat_len)
+
+        if best_match:
+            start_idx, end_idx = best_match_indices
+
+            # Extend the match to the next blank space if it ends in the middle of a word
+            while end_idx < len(cleaned_text) and cleaned_text[end_idx] != " ":
+                end_idx += 1
+
+            # Add the match to the list with the adjusted end index
+            adjusted_match_text = cleaned_text[start_idx:end_idx]
+            list_of_indices.append(
+                ((start_idx, end_idx), zitat_label, adjusted_match_text)
             )
 
-            best_match = None
-            best_ratio = 0
-
-            for match in potential_matches:
-                substring = cleaned_text[match.start() : match.end()]
-                ratio = fuzz.ratio(cleaned_zitat, substring)
-                if ratio > best_ratio:
-                    best_ratio = ratio
-                    best_match = match
-
-            if best_match and best_ratio >= 90:
-                original_match_text = original_text[
-                    best_match.start() : best_match.end()
-                ]
-                list_of_indices.append(
-                    (
-                        (best_match.start(), best_match.end()),
-                        zitat_label,
-                        original_match_text,
-                    )
-                )
-
+    # Sort list of indices by the starting position in the text
     list_of_indices.sort(key=lambda x: x[0][0])
 
+    # Build the annotated text with the found quotes
     if list_of_indices:
         zitat_start = list_of_indices[0][0][0]
         updated_annotated_text.append(original_text[:zitat_start])
@@ -134,7 +137,7 @@ def find_zitat_in_text(
 
         if i < len(list_of_indices) - 1:
             next_start = list_of_indices[i + 1][0][0]
-            updated_annotated_text.append(original_text[indices[1] : next_start])
+            updated_annotated_text.append(original_text[indices[1] + 1 : next_start])
 
     if list_of_indices:
         last_end = list_of_indices[-1][0][1]

@@ -161,7 +161,8 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
     try:
         ocr_text = response.json()["result"]["ocr"]["ocr_text"]
     except KeyError:
-        ocr_text = response.json()["result"]["ocr_text"]
+        ocr_text = response.json()["ocr"]["ocr_text"]
+
     return ocr_text
 
 
