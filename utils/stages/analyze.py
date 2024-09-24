@@ -21,30 +21,38 @@ def analyze_add_data(data: list[dict]) -> dict:
     """Add all necessary data for the frontend.
 
     Args:
-        data (list[dict]): A list of dictionaries with 'zitat', 'begrundung', 'goa_ziffer'.
+        data (list[dict]): A list of dictionaries with 'zitat', 'begruendung', 'goa_ziffer'.
 
     Returns:
-        dict: Dictionary with keys 'Ziffer', 'Häufigkeit', 'Intensität', 'Beschreibung', 'Zitat', and 'Begründung'.
+        dict: Dictionary with keys 'ziffer', 'anzahl', 'faktor', 'text', 'zitat', and 'begruendung'.
     """
     try:
         new_data = {
-            "Ziffer": [],
-            "Häufigkeit": [],
-            "Intensität": [],
-            "Beschreibung": [],
-            "Zitat": [],
-            "Begründung": [],
+            "ziffer": [],
+            "anzahl": [],
+            "faktor": [],
+            "text": [],
+            "zitat": [],
+            "begruendung": [],
             "confidence": [],
+            "analog": [],
+            "einzelbetrag": [],
+            "gesamtbetrag": [],
+            "go": [],
         }
 
         for entry in data:
-            new_data["Ziffer"].append(entry.get("goa_ziffer", ""))
-            new_data["Zitat"].append(entry.get("zitat", ""))
-            new_data["Begründung"].append(entry.get("begrundung", ""))
-            new_data["Häufigkeit"].append(entry.get("quantitaet", 0))
-            new_data["Intensität"].append(entry.get("faktor", 0))
-            new_data["Beschreibung"].append(entry.get("beschreibung", ""))
+            new_data["ziffer"].append(entry.get("ziffer", ""))
+            new_data["zitat"].append(entry.get("zitat", ""))
+            new_data["begruendung"].append(entry.get("begruendung", ""))
+            new_data["anzahl"].append(entry.get("anzahl", 0))
+            new_data["faktor"].append(entry.get("faktor", 0))
+            new_data["text"].append(entry.get("text", ""))
             new_data["confidence"].append(entry.get("confidence", 1.0))
+            new_data["analog"].append(entry.get("analog", ""))
+            new_data["einzelbetrag"].append(entry.get("einzelbetrag", 0))
+            new_data["gesamtbetrag"].append(entry.get("gesamtbetrag", 0))
+            new_data["go"].append(entry.get("go", ""))
 
         return new_data
 

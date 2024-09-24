@@ -44,10 +44,47 @@ def read_in_goa(
 
     logger.info("Processing GOA data")
     # Use only the columns "GOÄZiffer" and "Beschreibung"
-    goa = goa[["GOÄZiffer", "Beschreibung"]]
+    goa = goa[
+        [
+            "GOÄZiffer",
+            "Beschreibung",
+            "Einfachfaktor",
+            "Einfachsatz",
+            "Regelhöchstfaktor",
+            "Regelhöchstsatz",
+            "Höchstfaktor",
+            "Höchstsatz",
+        ]
+    ]
 
     # Drop rows with NaN values
     goa = goa.dropna()
+
+    # Cast type of "Einfachfaktor", "Einachsatz", "Regelhöchstfaktor", "Regelhöchstsatz", "Höchstfaktor", "Höchstsatz" to float
+    # Replace "-" with None
+    goa["Einfachfaktor"] = goa["Einfachfaktor"].replace("-", None)
+    goa["Einfachfaktor"] = goa["Einfachfaktor"].str.replace(",", ".").astype(float)
+    goa["Einfachsatz"] = goa["Einfachsatz"].replace("-", None)
+    goa["Einfachsatz"] = goa["Einfachsatz"].str.replace(",", ".").astype(float)
+    goa["Regelhöchstfaktor"] = goa["Regelhöchstfaktor"].replace("-", None)
+    goa["Regelhöchstfaktor"] = (
+        goa["Regelhöchstfaktor"].str.replace(",", ".").astype(float)
+    )
+    goa["Regelhöchstsatz"] = goa["Regelhöchstsatz"].replace("-", None)
+    goa["Regelhöchstsatz"] = goa["Regelhöchstsatz"].str.replace(",", ".").astype(float)
+    goa["Höchstfaktor"] = goa["Höchstfaktor"].replace("-", None)
+    goa["Höchstfaktor"] = goa["Höchstfaktor"].str.replace(",", ".").astype(float)
+    goa["Höchstsatz"] = goa["Höchstsatz"].replace("-", None)
+    goa["Höchstsatz"] = goa["Höchstsatz"].str.replace(",", ".").astype(float)
+
+    # For every row in the DataFrame add a new row with the same values but the GOÄZiffer with an " A" at the end
+    # Replace the Beschreibung with the text "Analogziffer zu " + original GO'Ziffer
+    goa_analog = goa.copy()
+    goa_analog["Beschreibung"] = "Analogziffer zu " + goa_analog["GOÄZiffer"]
+    goa_analog["GOÄZiffer"] = goa_analog["GOÄZiffer"] + " A"
+
+    # Concatenate the original DataFrame with the analog DataFrame
+    goa = pd.concat([goa, goa_analog])
 
     # Combine the two columns into a single string using " - " as separator
     goa["Ziffern"] = goa["GOÄZiffer"] + " - " + goa["Beschreibung"]
