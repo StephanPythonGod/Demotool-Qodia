@@ -1,17 +1,51 @@
 import re
 
+import pandas as pd
 import streamlit as st
 from annotated_text import annotated_text
 
 from utils.helpers.api import generate_pdf, send_feedback_api
+from utils.helpers.logger import logger
 from utils.helpers.transform import (
     annotate_text_update,
     df_to_processdocumentresponse,
+    format_euro,
     format_ziffer_to_4digits,
 )
 from utils.session import reset
-from utils.stages.modal import modal_dialog
+from utils.stages.modal import create_new_data, modal_dialog
 from utils.utils import find_zitat_in_text
+
+
+def add_new_ziffer():
+    # Create a temporary placeholder for the new ziffer
+    temp_index = len(st.session_state.df)
+
+    # Add a temporary row to the dataframe
+    temp_row = create_new_data(
+        ziffer=None,
+        analog=None,
+        haufigkeit=0,
+        intensitat=1.0,
+        beschreibung=None,
+        zitat=st.session_state.text,
+        begruendung=None,
+        einzelbetrag=0.0,
+        gesamtbetrag=0.0,
+    )
+    st.session_state.df = pd.concat(
+        [st.session_state.df, pd.DataFrame([temp_row])], ignore_index=True
+    )
+
+    # Set the temporary row as the selected index
+    st.session_state.selected_ziffer = temp_index
+
+    # Set a flag to indicate that we're adding a new ziffer
+    st.session_state.adding_new_ziffer = True
+
+    # Open the modal dialog for editing the new row
+    st.session_state.ziffer_to_edit = temp_index
+    modal_dialog()
 
 
 def set_selected_ziffer(index):
@@ -34,7 +68,7 @@ def extract_numeric_value(ziffer):
 
 def sort_ziffer(ascending=True):
     # Sort based on the numeric values extracted from Ziffer strings
-    st.session_state.df["numeric_ziffer"] = st.session_state.df["Ziffer"].apply(
+    st.session_state.df["numeric_ziffer"] = st.session_state.df["ziffer"].apply(
         extract_numeric_value
     )
     st.session_state.df.sort_values(
@@ -74,8 +108,31 @@ def apply_sorting():
     st.session_state.selected_ziffer = None  # Reset selection
 
 
+def handle_feedback_submission():
+    try:
+        send_feedback_api(
+            df_to_processdocumentresponse(st.session_state.df, st.session_state.text)
+        )
+        st.success("Feedback successfully sent!")
+    except Exception as e:
+        logger.error(f"Failed to send feedback: {e}")
+        st.error("Failed to send feedback")
+
+
 def result_stage():
     "Display the result of the analysis."
+    # Check if we need to clean up after adding a new ziffer
+    if st.session_state.get("adding_new_ziffer", False):
+        # If we're here, it means the modal was closed without saving
+        if st.session_state.ziffer_to_edit is not None:
+            st.session_state.df = st.session_state.df.drop(
+                st.session_state.ziffer_to_edit
+            )
+            st.session_state.df = st.session_state.df.reset_index(drop=True)
+        st.session_state.ziffer_to_edit = None
+        st.session_state.selected_ziffer = None
+        st.session_state.adding_new_ziffer = False
+
     left_column, right_column = st.columns(2)
     left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 3, 2, 1])
 
@@ -87,10 +144,10 @@ def result_stage():
             and st.session_state.selected_ziffer is not None
         ):
             selected_zitat = st.session_state.df.loc[
-                st.session_state.selected_ziffer, "Zitat"
+                st.session_state.selected_ziffer, "zitat"
             ]
             selected_ziffer = st.session_state.df.loc[
-                st.session_state.selected_ziffer, "Ziffer"
+                st.session_state.selected_ziffer, "ziffer"
             ]
             annotated_text(
                 find_zitat_in_text(
@@ -101,11 +158,27 @@ def result_stage():
             st.write(st.session_state.text)
 
     with right_column:
-        st.subheader("Erkannte Leistungsziffern:")
+        top_left, _, _, top_right = st.columns([2, 1, 1, 1])
+        top_left.subheader("Erkannte Leistungsziffern:")
 
-        # Header row with the new Ziffer button
-        header_cols = right_column.columns([1, 1, 1, 3, 1])
-        headers = ["Ziffer", "Häufigkeit", "Faktor", "Beschreibung", "Aktionen"]
+        # Displaying the Honorarsumme (Sum of "Gesamtbetrag" column) with thousand separators
+        top_right.metric(
+            label="Honorarsumme",
+            value=format_euro(st.session_state.df["gesamtbetrag"].sum()),
+        )
+
+        # Header row with the new Ziffer button and the new "Gesamtbetrag" column
+        header_cols = right_column.columns(
+            [1, 1, 1, 1, 2, 1]
+        )  # Adjusted column widths for the new column
+        headers = [
+            "Ziffer",
+            "Häufigkeit",
+            "Faktor",
+            "Gesamtbetrag",
+            "Beschreibung",
+            "Aktionen",
+        ]
         for i, (col, header) in enumerate(zip(header_cols, headers)):
             if header == "Ziffer":
                 # Set the button label based on the current sort_mode
@@ -121,11 +194,15 @@ def result_stage():
             else:
                 col.markdown(f"**{header}**")
 
-        # Display table rows
+        # Display table rows, now including "Gesamtbetrag" in the table
         for index, row in st.session_state.df.iterrows():
-            cols = right_column.columns([1, 1, 1, 3, 0.5, 0.5])
+            cols = right_column.columns(
+                [1, 1, 1, 1, 2, 0.5, 0.5]
+            )  # Adjusted column widths for the new column
+
+            # Ziffer button
             if cols[0].button(
-                format_ziffer_to_4digits(row["Ziffer"]),
+                format_ziffer_to_4digits(row["ziffer"]),
                 key=f"ziffer_{index}",
                 type="secondary"
                 if st.session_state.selected_ziffer != index
@@ -136,27 +213,37 @@ def result_stage():
                 )
                 st.rerun()
 
-            description_html = f"<div style='overflow-x: auto; white-space: nowrap; padding: 5px;'>{row['Beschreibung']}</div>"
-            cols[1].write(row["Häufigkeit"])
-            cols[2].write(row["Intensität"])
-            cols[3].markdown(description_html, unsafe_allow_html=True)
+            # Displaying each row's values
+            cols[1].write(row["anzahl"])  # Häufigkeit
+            cols[2].write(row["faktor"])  # Faktor
 
-            if cols[4].button("✏️", key=f"edit_{index}"):
+            # Format "Gesamtbetrag" with thousand separators
+            formatted_gesamtbetrag = format_euro(row["gesamtbetrag"])
+            cols[3].write(
+                f"{formatted_gesamtbetrag}"
+            )  # New "Gesamtbetrag" column displaying value
+
+            description_html = f"<div style='overflow-x: auto; white-space: nowrap; padding: 5px;'>{row['text']}</div>"
+            cols[4].markdown(description_html, unsafe_allow_html=True)  # Beschreibung
+
+            # Actions: Edit and Delete
+            if cols[5].button("✏️", key=f"edit_{index}"):
                 st.session_state.ziffer_to_edit = index
                 modal_dialog()
-            if cols[5].button("🗑️", key=f"delete_{index}"):
+            if cols[6].button("🗑️", key=f"delete_{index}"):
                 delete_ziffer(index)
+
+        # Center the "Add New Ziffer" button
+        button_col = right_column.columns([1, 1, 1, 1, 2, 1, 1, 1, 1])[4]
+        if button_col.button("➕", key="add_new_ziffer", type="secondary"):
+            add_new_ziffer()
 
     # Rest of the layout
     with left_outer_column:
         st.button(
             "Zurücksetzen",
             on_click=lambda: (
-                send_feedback_api(
-                    df_to_processdocumentresponse(
-                        st.session_state.df, st.session_state.text
-                    )
-                ),
+                handle_feedback_submission(),
                 reset(),
             ),
             type="primary",
@@ -166,13 +253,13 @@ def result_stage():
     with right_outer_column:
         if st.button("PDF generieren", type="primary", use_container_width=True):
             with st.spinner("📄 Generiere PDF..."):
-                st.session_state.pdf_data = generate_pdf(st.session_state.df)
-                send_feedback_api(
-                    response_object=df_to_processdocumentresponse(
-                        df=st.session_state.df, ocr_text=st.session_state.text
-                    )
-                )
-                st.session_state.pdf_ready = True
+                try:
+                    st.session_state.pdf_data = generate_pdf(st.session_state.df)
+                    st.session_state.pdf_ready = True
+                except Exception as e:
+                    st.error(f"Failed to generate PDF : {str(e)}")
+
+                handle_feedback_submission()
 
         if st.session_state.pdf_ready:
             st.download_button(

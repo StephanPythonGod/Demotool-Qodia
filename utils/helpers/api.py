@@ -263,8 +263,8 @@ def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
                 else:
                     item[key] = str(value)
         item["ziffer"] = format_ziffer_to_4digits(item["ziffer"])
-        if int(item["Häufigkeit"]) > 1:
-            item["ziffer"] = f"{item['Häufigkeit']}x {item['ziffer']}"
+        if int(item["anzahl"]) > 1:
+            item["ziffer"] = f"{item['anzahl']}x {item['ziffer']}"
 
     data["total"] = f"{data['total']:.2f} €".replace(".", ",")
     data["discount"] = f"{data['discount']:.2f} €".replace(".", ",")

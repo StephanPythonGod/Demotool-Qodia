@@ -72,14 +72,25 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     # Initialize an empty DataFrame with specific columns and types
     if "df" not in st.session_state:
         data = {
-            "Ziffer": [],
-            "Häufigkeit": [],
-            "Intensität": [],
-            "Beschreibung": [],
-            "Zitat": [],
-            "Begründung": [],
+            "ziffer": [],
+            "anzahl": [],
+            "faktor": [],
+            "text": [],
+            "zitat": [],
+            "begruendung": [],
+            "confidence": [],
+            "analog": [],
+            "einzelbetrag": [],
+            "gesamtbetrag": [],
+            "go": [],
         }
         df = pd.DataFrame(data)
         st.session_state.df = df.astype(
-            {"Häufigkeit": "int", "Intensität": "int"}, errors="ignore"
+            {
+                "anzahl": "int",
+                "faktor": "int",
+                "einzelbetrag": "float",
+                "gesamtbetrag": "float",
+            },
+            errors="ignore",
         )

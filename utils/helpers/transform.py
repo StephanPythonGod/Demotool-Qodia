@@ -1,3 +1,4 @@
+import locale
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
@@ -6,6 +7,8 @@ import streamlit as st
 from utils.helpers.db import read_in_goa
 from utils.helpers.logger import logger
 from utils.utils import find_zitat_in_text
+
+locale.setlocale(locale.LC_ALL, "de_DE.UTF-8")  # German locale for formatting
 
 
 def annotate_text_update() -> None:
@@ -16,7 +19,7 @@ def annotate_text_update() -> None:
     st.session_state.annotated_text_object = [st.session_state.text]
 
     zitate_to_find: List[Tuple[str, str]] = [
-        (row["Zitat"], row["Ziffer"]) for _, row in st.session_state.df.iterrows()
+        (row["zitat"], row["ziffer"]) for _, row in st.session_state.df.iterrows()
     ]
 
     st.session_state.annotated_text_object = find_zitat_in_text(
@@ -31,7 +34,7 @@ def annotate_text_update() -> None:
 
     # Order the dataframe according to the order of the ziffer in the text
     ziffer_order_dict = {ziffer: order for order, ziffer in enumerate(ziffer_order)}
-    st.session_state.df["order"] = st.session_state.df["Ziffer"].map(ziffer_order_dict)
+    st.session_state.df["order"] = st.session_state.df["ziffer"].map(ziffer_order_dict)
     st.session_state.df["order"].fillna(9999, inplace=True)
     st.session_state.df.sort_values("order", inplace=True)
     st.session_state.df.drop("order", axis=1, inplace=True)
@@ -53,12 +56,12 @@ def df_to_processdocumentresponse(df: pd.DataFrame, ocr_text: str) -> Dict[str, 
     result_objekts = []
     for _, row in df.iterrows():
         result_objekt = {
-            "zitat": row["Zitat"],
-            "begrundung": row["Begründung"],
-            "goa_ziffer": row["Ziffer"],
-            "quantitaet": int(row["Häufigkeit"]),
-            "faktor": float(row["Intensität"]),
-            "beschreibung": row["Beschreibung"],
+            "zitat": row["zitat"],
+            "begruendung": row["begruendung"],
+            "goa_ziffer": row["ziffer"],
+            "quantitaet": int(row["anzahl"]),
+            "faktor": float(row["faktor"]),
+            "beschreibung": row["text"],
             "confidence": float(row["confidence"]),
         }
         result_objekts.append(result_objekt)
@@ -110,11 +113,11 @@ def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
     goa = read_in_goa(fully=True)
 
     for _, row in df.iterrows():
-        goa_item = goa[goa["GOÄZiffer"] == row["Ziffer"]]
+        goa_item = goa[goa["GOÄZiffer"] == row["ziffer"]]
         analog_ziffer = False
 
         if goa_item.empty:
-            goa_analog_ziffer = row["Ziffer"].replace(" A", "")
+            goa_analog_ziffer = row["ziffer"].replace(" A", "")
             goa_item = goa[goa["GOÄZiffer"] == goa_analog_ziffer]
             if goa_item.empty:
                 logger.error(
@@ -123,7 +126,7 @@ def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
                 continue
             analog_ziffer = True
 
-        intensity = row["Intensität"]
+        intensity = row["faktor"]
         intensity_str_period = f"{intensity:.1f}"
         intensity_str_comma = intensity_str_period.replace(".", ",")
 
@@ -144,14 +147,14 @@ def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
         preis = _calculate_price(goa_item, column_name, faktor)
 
         item = {
-            "ziffer": row["Ziffer"],
-            "Häufigkeit": row["Häufigkeit"],
+            "ziffer": row["ziffer"],
+            "anzahl": row["anzahl"],
             "intensitat": intensity,
-            "beschreibung": row["Beschreibung"],
+            "beschreibung": row["text"],
             "Punktzahl": goa_item["Punktzahl"].values[0],
             "preis": preis,
             "faktor": faktor,
-            "total": preis * int(row["Häufigkeit"]),
+            "total": preis * int(row["anzahl"]),
             "auslagen": "",
             "date": "",
             "analog_ziffer": analog_ziffer,
@@ -192,3 +195,27 @@ def _calculate_price(goa_item: pd.DataFrame, column_name: str, faktor: float) ->
         return float(goa_item["Regelhöchstsatz"].values[0].replace(",", "."))
     else:
         return float(goa_item["Höchstsatz"].values[0].replace(",", "."))
+
+
+def format_euro(value):
+    """
+    Manually formats a float value as a Euro string in German format.
+    Thousands are separated by dots and decimals by commas.
+
+    Args:
+        value (float): The value to be formatted.
+
+    Returns:
+        str: The formatted Euro value.
+    """
+    # Split the value into whole and decimal parts
+    whole_part, decimal_part = f"{value:.2f}".split(".")
+
+    # Add dot as thousands separator to the whole part
+    whole_part_with_dots = "{:,}".format(int(whole_part)).replace(",", ".")
+
+    # Combine the whole part with the decimal part (replacing '.' with ',')
+    formatted_value = f"{whole_part_with_dots},{decimal_part}"
+
+    # Return the formatted value with Euro symbol
+    return f"{formatted_value} €"
