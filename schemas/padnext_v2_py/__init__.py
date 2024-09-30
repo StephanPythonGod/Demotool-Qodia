@@ -1,6 +1,10 @@
-from padnext_v2_py.padx_adl_v2_12 import Rechnungen
-from padnext_v2_py.padx_auf_v2_12 import Auftrag, DateiTyp, VerschluesselungVerfahren
-from padnext_v2_py.padx_basis_v2_12 import (
+from schemas.padnext_v2_py.padx_adl_v2_12 import Rechnungen
+from schemas.padnext_v2_py.padx_auf_v2_12 import (
+    Auftrag,
+    DateiTyp,
+    VerschluesselungVerfahren,
+)
+from schemas.padnext_v2_py.padx_basis_v2_12 import (
     AmboTyp,
     AnhangidTyp,
     Anschrift2Typ,
@@ -88,7 +92,7 @@ from padnext_v2_py.padx_basis_v2_12 import (
     ZeitraumTyp,
     ZifferTyp,
 )
-from padnext_v2_py.padx_enums_v2_12 import (
+from schemas.padnext_v2_py.padx_enums_v2_12 import (
     BehandlungsartEnum,
     BelegartEnum,
     BerechnungskennzeichenEnum,
@@ -119,7 +123,7 @@ from padnext_v2_py.padx_enums_v2_12 import (
     VerwendungszweckanhangEnum,
     ZahlungsartEnum,
 )
-from padnext_v2_py.padx_qadl_v2_12 import Quittung
+from schemas.padnext_v2_py.padx_qadl_v2_12 import Quittung
 
 __all__ = [
     "Rechnungen",

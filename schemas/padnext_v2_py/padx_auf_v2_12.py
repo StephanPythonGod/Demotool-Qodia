@@ -3,13 +3,14 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
-from padnext_v2_py.padx_basis_v2_12 import (
+from xsdata.models.datatype import XmlDateTime
+
+from schemas.padnext_v2_py.padx_basis_v2_12 import (
     DateilaengeTyp,
     DokumenttypTyp,
     NachrichtentypTyp,
     TeilnehmerTyp,
 )
-from xsdata.models.datatype import XmlDateTime
 
 __NAMESPACE__ = "http://padinfo.de/ns/pad"
 

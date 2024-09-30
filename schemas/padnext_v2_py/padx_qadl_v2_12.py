@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from padnext_v2_py.padx_basis_v2_12 import FehlerTyp
 from xsdata.models.datatype import XmlDateTime
+
+from schemas.padnext_v2_py.padx_basis_v2_12 import FehlerTyp
 
 __NAMESPACE__ = "http://padinfo.de/ns/pad"
 

@@ -10,8 +10,11 @@ from utils.helpers.api import (
     check_if_default_credentials,
     ocr_pdf_to_text_api,
 )
+from utils.helpers.files import list_files_by_extension
 from utils.helpers.logger import logger
+from utils.helpers.padnext import handle_padnext_upload
 from utils.helpers.transform import annotate_text_update
+from utils.stages.pad_modal import pad_file_modal
 
 # Check for the environment variable DEPLOYMENT_ENV, default to 'local' if not set
 DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "local")
@@ -126,6 +129,11 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
         BytesIO: The uploaded or pasted file, if available.
     """
     try:
+        # If uploaded file exists in session state, it takes priority
+        if st.session_state.uploaded_file:
+            logger.info("Using uploaded file.")
+            return st.session_state.uploaded_file
+
         # If pasted image exists, it takes priority
         if paste_result.image_data:
             logger.info("Using pasted image data.")
@@ -141,6 +149,13 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
         logger.error(f"Error processing file upload or paste: {e}")
         st.error("Fehler bei der Verarbeitung der Datei oder des Bildes.")
         return None
+
+
+def handle_pad_file_selection():
+    if st.session_state.get("file_selected"):
+        st.session_state.file_selected = False  # Reset the flag
+        return True
+    return False
 
 
 def analyze_stage() -> None:
@@ -173,12 +188,12 @@ def analyze_stage() -> None:
 
     right_column.subheader("Dokument hochladen")
     right_column.markdown(
-        "Laden Sie entweder ein PDF-Dokument oder ein Bild hoch oder fügen Sie ein Bild aus der Zwischenablage ein."
+        "Laden Sie entweder ein PDF-Dokument, ein Bild oder eine PADnext Datei hoch oder fügen Sie ein Bild aus der Zwischenablage ein."
     )
 
     file_upload = right_column.file_uploader(
         "PDF Dokument auswählen",
-        type=["pdf", "png", "jpg"],
+        type=["pdf", "png", "jpg", "zip"],
         label_visibility="collapsed",
     )
 
@@ -186,13 +201,33 @@ def analyze_stage() -> None:
         paste_result = pbutton(
             label="Aus Zwischenablage einfügen",
             text_color="#ffffff",
-            background_color="#FF3333",
-            hover_background_color="#FF4B4B",
+            background_color="#FF4B4B",
+            hover_background_color="#FF3333",
         )
 
     uploaded_file = handle_file_upload(file_upload, paste_result)
 
-    if uploaded_file:
+    if (
+        uploaded_file
+        and uploaded_file.name.split(".")[-1].lower() in ["zip"]
+        and not st.session_state.uploaded_file
+    ):
+        try:
+            padx_folder_path = handle_padnext_upload(uploaded_file)
+            st.session_state.pad_data_path = padx_folder_path
+            all_files = list_files_by_extension(padx_folder_path, ["pdf", "png", "jpg"])
+            pad_file_modal(all_files)
+        except Exception as e:
+            logger.error(f"Error handling PADnext file: {e}")
+            st.error(f"Fehler beim Verarbeiten der PADnext-Datei: {e}")
+
+    if handle_pad_file_selection():
+        st.rerun()
+
+    def is_valid_file(file):
+        return file and file.name.split(".")[-1].lower() in ["pdf", "png", "jpg"]
+
+    if is_valid_file(uploaded_file) or is_valid_file(st.session_state.uploaded_file):
         st.session_state.uploaded_file = uploaded_file
 
         # Cloud environment logic

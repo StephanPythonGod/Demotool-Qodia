@@ -54,6 +54,10 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("pdf_data", None)
     st.session_state.setdefault("analyze_api_response", None)
     st.session_state.setdefault("ocr_api_response", None)
+    st.session_state.setdefault("user_comment", None)
+    st.session_state.setdefault("pad_ready", False)
+    st.session_state.setdefault("pad_data_path", None)
+    st.session_state.setdefault("pad_data_ready", False)
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(

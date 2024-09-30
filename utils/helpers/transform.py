@@ -1,9 +1,13 @@
 import locale
+from datetime import date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import streamlit as st
+from xsdata.models.datatype import XmlDateTime  # Import the XmlDateTime class
 
+from schemas.padnext_v2_py.padx_basis_v2_12 import GozifferTyp, LeistungspositionTyp
 from utils.helpers.db import read_in_goa
 from utils.helpers.logger import logger
 from utils.utils import find_zitat_in_text
@@ -80,7 +84,7 @@ def df_to_processdocumentresponse(df: pd.DataFrame, ocr_text: str) -> Dict[str, 
 
 def format_ziffer_to_4digits(ziffer: str) -> str:
     """
-    Format a billing code (ziffer) to a 4-digit format.
+    Format a billing code (ziffer) to a 4-digit format, preserving alphabetic characters and spaces.
 
     Args:
         ziffer (str): The billing code to format.
@@ -88,15 +92,35 @@ def format_ziffer_to_4digits(ziffer: str) -> str:
     Returns:
         str: The formatted billing code.
     """
-    ziffer_parts = ziffer.split(" ", 1)[1]
-    numeric_part = "".join(filter(str.isdigit, ziffer_parts))
-    alpha_part = "".join(filter(lambda x: not x.isdigit(), ziffer_parts))
 
-    try:
-        result = f"{int(numeric_part):04d}{alpha_part}"
-    except ValueError:
-        result = ziffer_parts
-    return result
+    # Remove the initial 'z ' if it exists
+    ziffer_parts = ziffer.split(" ", 1)[1] if ziffer.startswith("z ") else ziffer
+
+    # Split numeric and alphabetic parts while preserving spaces
+    numeric_part = ""
+    alpha_part = ""
+    space_between = ""
+
+    # Traverse through ziffer_parts and separate numeric and alphabetic parts
+    for i, char in enumerate(ziffer_parts):
+        if char.isdigit():
+            numeric_part += char
+        elif char.isalpha():
+            alpha_part = ziffer_parts[i:]
+            break
+        elif char == " " and not numeric_part:  # If space before numeric part
+            continue
+        elif char == " " and numeric_part:  # If space after numeric part
+            space_between = " "
+            alpha_part = ziffer_parts[i + 1 :]
+            break
+
+    # Format numeric part to be 4 digits
+    if numeric_part:
+        numeric_part = f"{int(numeric_part):04d}"
+
+    # Return the formatted string, preserving the space between numeric and alpha part
+    return f"{numeric_part}{space_between}{alpha_part}".strip()
 
 
 def df_to_items(df: pd.DataFrame) -> List[Dict[str, Any]]:
@@ -219,3 +243,184 @@ def format_euro(value):
 
     # Return the formatted value with Euro symbol
     return f"{formatted_value} €"
+
+
+def transform_df_to_goziffertyp(df: pd.DataFrame) -> List[GozifferTyp]:
+    """
+    Transforms a pandas DataFrame into a list of GozifferTyp objects.
+
+    Each row of the DataFrame is converted into a GozifferTyp object, which represents
+    a Leistungsposition nach jeweiliger Gebührenordnung. The function performs error handling
+    to ensure that invalid rows are skipped and logs errors using the logger. A warning is
+    also displayed in Streamlit for each invalid row.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing GOZ data.
+
+    Returns:
+        List[GozifferTyp]: A list of successfully created GozifferTyp objects.
+    """
+    today = date.today().strftime("%Y-%m-%d")  # Format today's date as 'YYYY-MM-DD'
+    goziffer_objects = []
+
+    for idx, row in df.iterrows():
+        try:
+            # Extract mandatory fields
+            positionsnr = idx  # The row index will be used as positionsnr
+            go = row.get("go", None)
+            ziffer = row.get("ziffer", None)
+            anzahl = row.get("anzahl", None)
+            text = row.get("text", None)
+            gesamtbetrag = row.get("gesamtbetrag", None)
+            faktor = row.get("faktor", None)
+            einzelbetrag = row.get("einzelbetrag", None)
+
+            # Check for missing mandatory fields
+            missing_fields = [
+                required_field
+                for required_field in ["go", "ziffer", "anzahl", "text", "gesamtbetrag"]
+                if row.get(required_field) is None
+            ]
+            if missing_fields:
+                raise ValueError(
+                    f"Missing mandatory fields in row {idx}: {', '.join(missing_fields)}"
+                )
+
+            # Ensure at least one of 'faktor' or 'einzelbetrag' is present
+            if not (faktor or einzelbetrag):
+                raise ValueError(
+                    f"Missing both 'faktor' and 'einzelbetrag' in row {idx}"
+                )
+
+            # Convert 'gesamtbetrag' and 'einzelbetrag' to Decimal with two decimal places
+            gesamtbetrag = Decimal(gesamtbetrag).quantize(
+                Decimal("0.00"), rounding=ROUND_HALF_UP
+            )
+
+            if faktor:
+                # 'faktor' should have one decimal place
+                faktor = Decimal(faktor).quantize(
+                    Decimal("0.0"), rounding=ROUND_HALF_UP
+                )
+                einzelbetrag = None
+            elif einzelbetrag:
+                # 'einzelbetrag' should have two decimal places
+                einzelbetrag = Decimal(einzelbetrag).quantize(
+                    Decimal("0.00"), rounding=ROUND_HALF_UP
+                )
+
+            # Create the GozifferTyp object
+            goziffer_obj = GozifferTyp(
+                faktor=faktor,
+                einzelbetrag=einzelbetrag,
+                gesamtbetrag=gesamtbetrag,
+                beteiligung=[],  # Default to empty list
+                anteil=None,  # Default as None
+                begruendung=row.get("begruendung", None),
+                mwstsatz=None,  # Set to None, could be populated if needed
+                minderungssatz=None,  # Could be handled if provided
+                ambo=None,  # Set to None as a placeholder
+                punktwert=None,  # Set to None unless provided
+                punktzahl=None,  # Set to None unless provided
+                berechnung=None,  # Default to None
+                go=go,  # Required field
+                goversion=row.get("goversion", None),
+                analog=row.get("analog", None),
+                ziffer=ziffer,  # Required field
+            )
+
+            # Create the LeistungspositionTyp object, which is the parent class
+            leistung_obj = LeistungspositionTyp(
+                leistungserbringerid=row.get("leistungserbringerid", None),
+                datum=today,  # Use today's date in the required format
+                uhrzeit=None,  # Set to None unless time data is provided
+                anzahl=int(anzahl),  # Convert 'anzahl' to integer
+                text=text,  # Required field
+                zusatztext=row.get("zusatztext", None),
+                positionsnr=positionsnr,  # Use row index as positionsnr
+                id=row.get("id", None),  # Optional unique identifier
+                idref=row.get("idref", None),  # Optional reference to other positions
+            )
+
+            # Assign the LeistungspositionTyp fields to the GozifferTyp object
+            goziffer_obj.datum = leistung_obj.datum
+            goziffer_obj.anzahl = leistung_obj.anzahl
+            goziffer_obj.text = leistung_obj.text
+            goziffer_obj.positionsnr = leistung_obj.positionsnr
+
+            # Append the valid GozifferTyp object
+            goziffer_objects.append(goziffer_obj)
+
+        except Exception as e:
+            # Log the error using the provided logger and display a warning in Streamlit
+            error_message = f"Error processing row {idx}: {str(e)}"
+            logger.error(error_message)
+            st.warning(f"Error in row {idx}: {str(e)}")
+            continue
+
+    print("Length of goziffer_objects: ", len(goziffer_objects))
+    return goziffer_objects
+
+
+def format_erstellungsdatum(erstellungsdatum):
+    """
+    Converts the erstellungsdatum to the JJJJMMTT (YYYYMMDD) format.
+    Handles both datetime objects and strings in ISO format.
+    """
+    try:
+        # If erstellungsdatum is already a datetime object, format it
+        if isinstance(erstellungsdatum, datetime):
+            return erstellungsdatum.strftime("%Y%m%d")
+
+        # If it's a string, attempt to parse it
+        if isinstance(erstellungsdatum, str):
+            # Try parsing the string in ISO 8601 format
+            parsed_date = datetime.fromisoformat(erstellungsdatum)
+            return parsed_date.strftime("%Y%m%d")
+
+        # If erstellungsdatum is an instance of XmlDateTime, convert it to a Python datetime
+        if isinstance(erstellungsdatum, XmlDateTime):
+            # Convert XmlDateTime to a standard Python datetime object
+            parsed_date = erstellungsdatum.to_datetime()
+            return parsed_date.strftime("%Y%m%d")
+
+        # If it's neither, raise an error (you could adjust to handle more formats if needed)
+        raise ValueError(
+            f"Unexpected type for erstellungsdatum: {type(erstellungsdatum)}"
+        )
+
+    except (ValueError, TypeError) as e:
+        # Handle parsing or type errors
+        logger.error(f"Error processing erstellungsdatum: {e}")
+        # Optionally, you can return a default or error string in the file name if the date is invalid
+        return "00000000"  # A fallback value, can be customized
+
+
+def format_kundennummer(kundennummer):
+    """
+    Converts the kundennummer to a 8-digit format.
+    The original kundennummer will be padded with zeros to the left.
+    """
+
+    # Convert the kundennummer to a string
+    kundennummer_str = str(kundennummer)
+
+    # Pad the kundennummer with zeros to the left
+    kundennummer_padded = kundennummer_str.zfill(8)
+
+    return kundennummer_padded
+
+
+def format_transfernummer(transfernummer):
+    """
+    Converts the transfernummer to a 6-digit format.
+    The original transfernummer will be padded with zeros to the left.
+    """
+
+    # Convert the transfernummer to a string
+    transfernummer_str = str(transfernummer)
+
+    # Pad the transfernummer with zeros to the left
+    transfernummer_padded = transfernummer_str.zfill(6)
+
+    return transfernummer_padded
