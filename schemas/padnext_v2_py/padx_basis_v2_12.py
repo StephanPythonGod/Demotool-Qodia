@@ -3,7 +3,9 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, List, Optional
 
-from padnext_v2_py.padx_enums_v2_12 import (
+from xsdata.models.datatype import XmlDate, XmlTime
+
+from schemas.padnext_v2_py.padx_enums_v2_12 import (
     BehandlungsartEnum,
     BelegartEnum,
     BerechnungskennzeichenEnum,
@@ -34,7 +36,6 @@ from padnext_v2_py.padx_enums_v2_12 import (
     VerwendungszweckanhangEnum,
     ZahlungsartEnum,
 )
-from xsdata.models.datatype import XmlDate, XmlTime
 
 __NAMESPACE__ = "http://padinfo.de/ns/pad"
 

@@ -257,6 +257,9 @@ def display_analog_selection(
 ) -> Optional[str]:
     cleaned_ziffer_options = [ziffer.split(" - ")[0] for ziffer in ziffer_options]
 
+    if current_value not in cleaned_ziffer_options:
+        current_value = None
+
     analog = st.selectbox(
         "Analog auswählen",
         options=["Keine Auswahl"] + ziffer_options,

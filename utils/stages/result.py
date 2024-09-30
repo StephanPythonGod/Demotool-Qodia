@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -6,11 +7,17 @@ from annotated_text import annotated_text
 
 from utils.helpers.api import generate_pdf, send_feedback_api
 from utils.helpers.logger import logger
+from utils.helpers.padnext import (
+    create_positionen_object,
+    update_padnext_positionen,
+    write_object_to_xml,
+)
 from utils.helpers.transform import (
     annotate_text_update,
     df_to_processdocumentresponse,
     format_euro,
     format_ziffer_to_4digits,
+    transform_df_to_goziffertyp,
 )
 from utils.session import reset
 from utils.stages.modal import create_new_data, modal_dialog
@@ -108,11 +115,47 @@ def apply_sorting():
     st.session_state.selected_ziffer = None  # Reset selection
 
 
+def generate_pad():
+    # Generate PAD positions
+    goziffern = transform_df_to_goziffertyp(st.session_state.df)
+    positionen_obj = create_positionen_object(goziffern)
+    output_path = "./data/pad_positionen.xml"
+    output_path = write_object_to_xml(positionen_obj, output_path=output_path)
+    with open(output_path, "r", encoding="iso-8859-15") as f:
+        xml_object = f.read()
+    return xml_object
+
+
+def generate_padnext():
+    with st.spinner("Generiere PADnext Datei..."):
+        # Generate PADnext file based on uploaded PADnext file
+        goziffern = transform_df_to_goziffertyp(st.session_state.df)
+        positionen_obj = create_positionen_object(goziffern)
+        pad_data_ready = update_padnext_positionen(
+            padnext_folder=st.session_state.pad_data_path, positionen=positionen_obj
+        )
+        if isinstance(pad_data_ready, Path):
+            return pad_data_ready
+        else:
+            return False
+
+
 def handle_feedback_submission():
     try:
-        send_feedback_api(
-            df_to_processdocumentresponse(st.session_state.df, st.session_state.text)
+        # Include the user comment from the text area in the feedback data
+        feedback_data = df_to_processdocumentresponse(
+            st.session_state.df, st.session_state.text
         )
+
+        # Access the user comment from session state
+        user_comment = st.session_state.get("user_comment", "")
+        feedback_with_comment = {
+            "feedback_data": feedback_data,
+            "user_comment": user_comment,  # Include the comment if provided
+        }
+
+        send_feedback_api(feedback_with_comment)  # Pass the data to the API
+
         st.success("Feedback successfully sent!")
     except Exception as e:
         logger.error(f"Failed to send feedback: {e}")
@@ -134,7 +177,7 @@ def result_stage():
         st.session_state.adding_new_ziffer = False
 
     left_column, right_column = st.columns(2)
-    left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 3, 2, 1])
+    left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 2, 2, 1])
 
     # Left Column: Display the text with highlighting
     with left_column:
@@ -238,6 +281,15 @@ def result_stage():
         if button_col.button("➕", key="add_new_ziffer", type="secondary"):
             add_new_ziffer()
 
+        # Add a text area for the user comment under the table
+        st.text_area(
+            "Optional: Add any comments or feedback here",
+            key="user_comment",
+            height=100,
+            placeholder="(Optional) Fügen Sie hier Kommentare oder Feedback hinzu ...",
+            label_visibility="collapsed",
+        )
+
     # Rest of the layout
     with left_outer_column:
         st.button(
@@ -267,4 +319,43 @@ def result_stage():
                 data=st.session_state.pdf_data,
                 file_name="generated_pdf.pdf",
                 mime="application/pdf",
+            )
+
+        if st.button(
+            "PAD Positionen generieren", type="primary", use_container_width=True
+        ):
+            st.session_state.pad_data = generate_pad()
+            st.session_state.pad_ready = True
+
+        if st.session_state.pad_ready:
+            st.download_button(
+                label="Download PAD Positionen",
+                data=st.session_state.pad_data,
+                file_name="pad_positionen.xml",
+                mime="application/xml",
+            )
+
+        if st.button(
+            "PADnext Datei generieren",
+            type="primary",
+            use_container_width=True,
+            disabled=(st.session_state.pad_data_path is None),
+            help="PADnext Datei kann nur generiert werden, wenn eine PADnext Datei hochgeladen wurde.",
+        ):
+            pad_data_ready = generate_padnext()
+            st.session_state.pad_data_ready = pad_data_ready
+            print("PADnext Datei generiert")
+            print(pad_data_ready)
+
+        if st.session_state.pad_data_ready:
+            # Read the .zip file as binary data
+            with open(st.session_state.pad_data_ready, "rb") as f:
+                padnext_file_data = f.read()
+
+            # Now, pass the binary data to the download button
+            st.download_button(
+                label="Download PADnext Datei",
+                data=padnext_file_data,  # Binary data
+                file_name=st.session_state.pad_data_ready.name,  # Extract the filename from the Path object
+                mime="application/zip",  # Adjust MIME type for a .zip file
             )
