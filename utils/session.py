@@ -58,6 +58,8 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("pad_ready", False)
     st.session_state.setdefault("pad_data_path", None)
     st.session_state.setdefault("pad_data_ready", False)
+    st.session_state.setdefault("arzt_hash", None)
+    st.session_state.setdefault("kassenname_hash", None)
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(
@@ -87,6 +89,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
             "einzelbetrag": [],
             "gesamtbetrag": [],
             "go": [],
+            "confidence_reason": [],
         }
         df = pd.DataFrame(data)
         st.session_state.df = df.astype(

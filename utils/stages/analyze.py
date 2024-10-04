@@ -42,6 +42,7 @@ def analyze_add_data(data: list[dict]) -> dict:
             "einzelbetrag": [],
             "gesamtbetrag": [],
             "go": [],
+            "confidence_reason": [],
         }
 
         for entry in data:
@@ -56,6 +57,7 @@ def analyze_add_data(data: list[dict]) -> dict:
             new_data["einzelbetrag"].append(entry.get("einzelbetrag", 0))
             new_data["gesamtbetrag"].append(entry.get("gesamtbetrag", 0))
             new_data["go"].append(entry.get("go", ""))
+            new_data["confidence_reason"].append(entry.get("confidence_reason", ""))
 
         return new_data
 

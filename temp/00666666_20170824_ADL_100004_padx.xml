@@ -1,354 +1,181 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ns0:rechnungen xmlns:ns0="http://padinfo.de/ns/pad" anzahl="1">
-  <ns0:hinweistext>test70a</ns0:hinweistext>
-  <ns0:nachrichtentyp>ADL</ns0:nachrichtentyp>
-  <ns0:rechnungsersteller>
-    <ns0:name>Dr. Dieter SchilddrÃ¼se</ns0:name>
-    <ns0:namezusatz>Graf von Sachsen</ns0:namezusatz>
-    <ns0:kundennr>666666</ns0:kundennr>
-    <ns0:anschrift>
-      <ns0:hausadresse>
-        <ns0:land>D</ns0:land>
-        <ns0:zusatz>2. Etage</ns0:zusatz>
-        <ns0:plz>21337</ns0:plz>
-        <ns0:ort>LÃ¼neburg</ns0:ort>
-        <ns0:strasse>Stadtkoppel</ns0:strasse>
-        <ns0:hausnr>45</ns0:hausnr>
-      </ns0:hausadresse>
-    </ns0:anschrift>
-    <ns0:iknr>987654321</ns0:iknr>
-    <ns0:kontakt typ="beruflich" art="telefonnr">04131 666</ns0:kontakt>
-    <ns0:ustidnr>DE813334542</ns0:ustidnr>
-  </ns0:rechnungsersteller>
-  <ns0:leistungserbringer id="B2" aisid="B2">
-    <ns0:anrede>Herr</ns0:anrede>
-    <ns0:titel>Dr.</ns0:titel>
-    <ns0:vorname>Dieter</ns0:vorname>
-    <ns0:name>SchilddrÃ¼se</ns0:name>
-    <ns0:namezusatz>Graf von Sachsen</ns0:namezusatz>
-    <ns0:anschrift>
-      <ns0:hausadresse>
-        <ns0:land>D</ns0:land>
-        <ns0:zusatz>2. Etage </ns0:zusatz>
-        <ns0:plz>21337</ns0:plz>
-        <ns0:ort>LÃ¼neburg</ns0:ort>
-        <ns0:strasse>Stadtkoppel</ns0:strasse>
-        <ns0:hausnr>45</ns0:hausnr>
-      </ns0:hausadresse>
-    </ns0:anschrift>
-    <ns0:kundennr>666666</ns0:kundennr>
-    <ns0:fachbereich>
-      <ns0:fachgebiet textname="Radiologie">28</ns0:fachgebiet>
-      <ns0:facharzt textname="SP Neuroradiologie">2</ns0:facharzt>
-    </ns0:fachbereich>
-    <ns0:lanr>123123123</ns0:lanr>
-    <ns0:betriebsstaette>
-      <ns0:bsnr>123123123</ns0:bsnr>
-    </ns0:betriebsstaette>
-    <ns0:ustidnr>DE813334542</ns0:ustidnr>
-    <ns0:hba>9999</ns0:hba>
-    <ns0:iknr>987654321</ns0:iknr>
-  </ns0:leistungserbringer>
-  <ns0:rechnung id="2-2012-B2-33" abrechnungsform="22222222" druckkennzeichen="true" eabgabe="false" aisrechnungsnr="2" aisaktenzeichen="S2/2012" aisendbetrag="301.70">
-    <ns0:rechnungsempfaenger>
-      <ns0:person>
-        <ns0:anrede>Frau</ns0:anrede>
-        <ns0:titel>Dipl.-Kauffrau</ns0:titel>
-        <ns0:vorname>Ulla</ns0:vorname>
-        <ns0:name>Organ</ns0:name>
-        <ns0:gebdatum>1946-06-02</ns0:gebdatum>
-        <ns0:anschrift>
-          <ns0:hausadresse>
-            <ns0:land>D</ns0:land>
-            <ns0:plz>21339</ns0:plz>
-            <ns0:ort>LÃ¼neburg</ns0:ort>
-            <ns0:strasse>Wiese</ns0:strasse>
-            <ns0:hausnr>8</ns0:hausnr>
-          </ns0:hausadresse>
-        </ns0:anschrift>
-        <ns0:kontakt typ="privat" art="telefonnr">04131 9999</ns0:kontakt>
-      </ns0:person>
-    </ns0:rechnungsempfaenger>
-    <ns0:abrechnungsfall>
-      <ns0:humanmedizin>
-        <ns0:leistungserbringerid>B2</ns0:leistungserbringerid>
-        <ns0:behandelter aisid="2" idbundesweit="S2000">
-          <ns0:anrede>Frau</ns0:anrede>
-          <ns0:titel>Dipl.-Kaufmann</ns0:titel>
-          <ns0:vorname>Ulla</ns0:vorname>
-          <ns0:name>Organ</ns0:name>
-          <ns0:gebname>Magen</ns0:gebname>
-          <ns0:gebdatum>1946-06-02</ns0:gebdatum>
-          <ns0:geschlecht>w</ns0:geschlecht>
-          <ns0:staat>D</ns0:staat>
-          <ns0:kontakt typ="privat" art="telefonnr">04131 9999</ns0:kontakt>
-        </ns0:behandelter>
-        <ns0:versicherter>
-          <ns0:anrede>Frau</ns0:anrede>
-          <ns0:titel>Dipl.-Kaufmann</ns0:titel>
-          <ns0:vorname>Ulla</ns0:vorname>
-          <ns0:name>Organ</ns0:name>
-          <ns0:gebname>Magen</ns0:gebname>
-          <ns0:gebdatum>1946-06-02</ns0:gebdatum>
-          <ns0:geschlecht>w</ns0:geschlecht>
-          <ns0:staat>D</ns0:staat>
-          <ns0:anschrift>
-            <ns0:hausadresse>
-              <ns0:land>D</ns0:land>
-              <ns0:plz>21339</ns0:plz>
-              <ns0:ort>LÃ¼neburg</ns0:ort>
-              <ns0:strasse>Wiese</ns0:strasse>
-              <ns0:hausnr>8</ns0:hausnr>
-            </ns0:hausadresse>
-          </ns0:anschrift>
-          <ns0:kontakt typ="privat" art="telefonnr">04131 9999</ns0:kontakt>
-        </ns0:versicherter>
-        <ns0:zeitraum>
-          <ns0:startdatum>2012-01-06</ns0:startdatum>
-          <ns0:endedatum>2012-01-06</ns0:endedatum>
-          <ns0:anzahltage>1</ns0:anzahltage>
-        </ns0:zeitraum>
-        <ns0:minderungssatz>25</ns0:minderungssatz>
-        <ns0:behandlungsart>1</ns0:behandlungsart>
-        <ns0:vertragsart>1</ns0:vertragsart>
-        <ns0:diagnose>
-          <ns0:text>LymphknotenvergrÃ¶ÃŸerung Halsbereich beidseits</ns0:text>
-          <ns0:code system="ICD-10">R59.9</ns0:code>
-          <ns0:typ>3</ns0:typ>
-          <ns0:art>H</ns0:art>
-          <ns0:datum>2011-01-06</ns0:datum>
-          <ns0:sicherheit>G</ns0:sicherheit>
-          <ns0:lokalisation>B</ns0:lokalisation>
-        </ns0:diagnose>
-        <ns0:positionen posanzahl="16">
-          <ns0:goziffer positionsnr="0" go="GOAE" ziffer="z 700">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text> Laparoskopie (mit Anlegung eines Pneumoperitoneums) oder Nephroskopie -gegebenenfalls einschließlich Probeexzision und/oder Probepunktion -</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Dokumentation beschreibt die Durchführung der Laparoskopie zur Beurteilung der Bruchlücke und zur Identifizierung von Verwachsungen.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>163.20</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="1" go="GOAE" ziffer="z 3135">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text> Eröffnung der Bauchhöhle zu diagnostischen Zwecken - gegebenenfalls einschließlich Gewebeentnahme -</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Durchführung einer diagnostischen Laparoskopie wird in der ärztlichen Dokumentation beschrieben.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>226.45</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="2" go="GOAE" ziffer="z 3284">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>OP Nabel-/ Narben-/ Mittellinienbruch: Narbenhernie</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Operation umfasste die Behandlung einer Narbenhernie mit Netzimplantation.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>510.01</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="3" go="GOAE" ziffer="z 3283">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>OP Nabel-/ Narben-/ Mittellinienbruch: Epigastrische Hernie(n)</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Leistung wurde erbracht, da eine epigastrische Hernie operativ behandelt wurde.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>226.45</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="4" go="GOAE" ziffer="z 2442">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Impl. allopl. Materials: Netzimplantation</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Leistung 'Implantation alloplastischen Materials' wurde erbracht, da ein Netz implantiert wurde.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>183.60</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="5" go="GOAE" analog="z 3172" ziffer="z 3172 A">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Omentumresektion - entspricht op. Darmmobilisation, Par. 6</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Resektion von Anteilen des Omentum Majus wurde durchgeführt.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>326.31</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="6" go="GOAE" analog="z 2392" ziffer="z 2392a">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text> Exzision einer großen, kontrakten und funktionsbehinderten Narbe - einschließlich plastischer Deckung -</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die ärztliche Dokumentation beschreibt eine Exzision der subxiphoidalen Narbe. Dies entspricht der Leistungsbeschreibung der Exzision einer großen, kontrakten und funktionsbehinderten Narbe auf der Haut.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>204.01</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="7" go="GOAE" ziffer="z 2802">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Umstechung von Blutungen entspricht: Freil. Blutgefäß Brust-/Bauch, par. 6</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Dokumentation beschreibt eine komplexe chirurgische Situation mit aufwendiger Blutstillung und erheblicher Blutungsneigung, was auf die Freilegung und/oder Unterbindung eines Blutgefäßes hinweist.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>452.89</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="8" go="GOAE" analog="z 5298" ziffer="z 5298 A">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Videodokumentation entspricht Verwend. digit. Radiographie bei digit. System mit Videochip, Par. 6</ns0:text>
-            <ns0:faktor>2.5</ns0:faktor>
-            <ns0:begruendung>Die Leistung wurde erbracht, da optische Instrumente im Rahmen eines endoskopisch assistierten Eingriffs verwendet wurden.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>0.00</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="9" go="GOAE" analog="z 700" ziffer="z 700 A">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Extraperitoneale Trokareinlage - entspricht Laparoskopie, Par. 6</ns0:text>
-            <ns0:faktor>2.3</ns0:faktor>
-            <ns0:begruendung>Das Einführen eines Trokars ist notwendig für die Durchführung der endoskopischen Operation.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>107.25</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="10" go="GOAE" ziffer="z 3172">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Operative Darmmobilisation bei Verwachsungen, als selbständige Leistung: Lösen von Verwachsungen</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Operationsdokumentation zeigt, dass Verwachsungen identifiziert und beseitigt wurden.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>326.41</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="11" go="GOAE" analog="z 706" ziffer="z 706 A">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Anwendung der Hochfrequenzchirurgie - entspricht Licht- o. Laserkoagulationen, Par. 6</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Leistung wurde zur Blutstillung mittels Hochfrequenzchirurgie erbracht.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>122.40</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="12" go="GOAE" analog="z 2073" ziffer="z 2073 A">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Peritonealnaht bei bestehenden Einrissen - entspricht Sehnennaht, Par. 6</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Dokumentation beschreibt, dass während des Eingriffs kleinere peritoneale Einrisse identifiziert und mit Einzelknopfnähten verschlossen wurden.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>132.60</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="13" go="GOAE" ziffer="z 2015">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text> Anlegen einer oder mehrerer Redondrainage(n) in Gelenke, Weichteile oder Knochen über einen gesonderten Zugang - gegebenenfalls einschließlich Spülung -</ns0:text>
-            <ns0:faktor>2.3</ns0:faktor>
-            <ns0:begruendung>Die Leistung entspricht der Leistungsbeschreibung nach GOÄ und wurde ordnungsgemäß durchgeführt.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>8.04</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="14" go="GOAE" analog="z 3284" ziffer="z 3284 A">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Abdominoplastik mit plast. Rekonstruktion des Nabels - entspricht OP Nabel- oder Narbenbruch m. Plastik, Par. 6</ns0:text>
-            <ns0:faktor>3.5</ns0:faktor>
-            <ns0:begruendung>Die Leistung der Nabelplastik mit Hautlappenplastik wurde erbracht, da die Rekonstruktion des Nabels und die Durchführung einer Cutislappenplastik dokumentiert sind.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>510.01</ns0:gesamtbetrag>
-          </ns0:goziffer>
-          <ns0:goziffer positionsnr="15" go="GOAE" ziffer="z 204">
-            <ns0:datum>2024-09-30</ns0:datum>
-            <ns0:anzahl>1</ns0:anzahl>
-            <ns0:text>Kompressionsverband</ns0:text>
-            <ns0:faktor>2.3</ns0:faktor>
-            <ns0:begruendung>Die Dokumentation enthält Hinweise darauf, dass ein Kompressionsverband angelegt wurde.
-
-Erschwerende Bedingungen:
-Aufwendige und subtile Präparation, 
-Diffuse Blutungsneigung mit besonders aufwendiger Blutstillung, 
-Ausgeprägte Verwachsungen, 
-Narbige Verhältnisse</ns0:begruendung>
-            <ns0:gesamtbetrag>12.74</ns0:gesamtbetrag>
-          </ns0:goziffer>
-        </ns0:positionen>
-        <ns0:anhangid id="00666666_100004_001.pdf" verwendungszweck="1"/>
-        <ns0:anhangid id="00666666_100004_002.jpg" verwendungszweck="2"/>
-      </ns0:humanmedizin>
-    </ns0:abrechnungsfall>
-  </ns0:rechnung>
-</ns0:rechnungen>
+<?xml version="1.0" encoding="iso-8859-15"?>
+<rechnungen xsi:schemaLocation="http://padinfo.de/ns/pad http://padinfo.de/ns/pad/padx_adl_v2.12.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://padinfo.de/ns/pad" anzahl="1">
+  <hinweistext>test70a</hinweistext>
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Dr. Dieter Schilddrüse</name>
+    <namezusatz>Graf von Sachsen</namezusatz>
+    <kundennr>666666</kundennr>
+    <anschrift>
+      <hausadresse>
+        <land>D</land>
+        <zusatz>2. Etage</zusatz>
+        <plz>21337</plz>
+        <ort>Lüneburg</ort>
+        <strasse>Stadtkoppel</strasse>
+        <hausnr>45</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>987654321</iknr>
+    <kontakt art="telefonnr" typ="beruflich">04131 666</kontakt>
+    <ustidnr>DE813334542</ustidnr>
+  </rechnungsersteller>
+  <leistungserbringer id="B2" aisid="B2">
+    <anrede>Herr</anrede>
+    <titel>Dr.</titel>
+    <vorname>Dieter</vorname>
+    <name>Schilddrüse</name>
+    <namezusatz>Graf von Sachsen</namezusatz>
+    <anschrift>
+      <hausadresse>
+        <land>D</land>
+        <zusatz>2. Etage </zusatz>
+        <plz>21337</plz>
+        <ort>Lüneburg</ort>
+        <strasse>Stadtkoppel</strasse>
+        <hausnr>45</hausnr>
+      </hausadresse>
+    </anschrift>
+    <kundennr>666666</kundennr>
+    <fachbereich>
+      <fachgebiet textname="Radiologie">28</fachgebiet>
+      <facharzt textname="SP Neuroradiologie">2</facharzt>
+    </fachbereich>
+    <lanr>123123123</lanr>
+    <betriebsstaette>
+      <bsnr>123123123</bsnr>
+    </betriebsstaette>
+    <ustidnr>DE813334542</ustidnr>
+    <hba>9999</hba>
+    <iknr>987654321</iknr>
+  </leistungserbringer>
+  <rechnung id="2-2012-B2-33" abrechnungsform="22222222" druckkennzeichen="1" eabgabe="0" aisrechnungsnr="2" aisaktenzeichen="S2/2012" aisendbetrag="301.70">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Frau</anrede>
+        <titel>Dipl.-Kauffrau</titel>
+        <vorname>Ulla</vorname>
+        <name>Organ</name>
+        <gebdatum>1946-06-02</gebdatum>
+        <anschrift>
+          <hausadresse>
+            <land>D</land>
+            <plz>21339</plz>
+            <ort>Lüneburg</ort>
+            <strasse>Wiese</strasse>
+            <hausnr>8</hausnr>
+          </hausadresse>
+        </anschrift>
+        <kontakt art="telefonnr" typ="privat">04131 9999</kontakt>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <humanmedizin>
+        <leistungserbringerid>B2</leistungserbringerid>
+        <behandelter aisid="2" idbundesweit="S2000">
+          <anrede>Frau</anrede>
+          <titel>Dipl.-Kaufmann</titel>
+          <vorname>Ulla</vorname>
+          <name>Organ</name>
+          <gebname>Magen</gebname>
+          <gebdatum>1946-06-02</gebdatum>
+          <geschlecht>w</geschlecht>
+          <staat>D</staat>
+          <kontakt art="telefonnr" typ="privat">04131 9999</kontakt>
+        </behandelter>
+        <versicherter>
+          <anrede>Frau</anrede>
+          <titel>Dipl.-Kaufmann</titel>
+          <vorname>Ulla</vorname>
+          <name>Organ</name>
+          <gebname>Magen</gebname>
+          <gebdatum>1946-06-02</gebdatum>
+          <geschlecht>w</geschlecht>
+          <staat>D</staat>
+          <anschrift>
+            <hausadresse>
+              <land>D</land>
+              <plz>21339</plz>
+              <ort>Lüneburg</ort>
+              <strasse>Wiese</strasse>
+              <hausnr>8</hausnr>
+            </hausadresse>
+          </anschrift>
+          <kontakt art="telefonnr" typ="privat">04131 9999</kontakt>
+        </versicherter>
+        <zeitraum>
+          <startdatum>2012-01-06</startdatum>
+          <endedatum>2012-01-06</endedatum>
+          <anzahltage>1</anzahltage>
+        </zeitraum>
+        <minderungssatz>25.00</minderungssatz>
+        <behandlungsart>1</behandlungsart>
+        <vertragsart>01</vertragsart>
+        <diagnose>
+          <text>Lymphknotenvergrößerung Halsbereich beidseits</text>
+          <code system="ICD-10">R59.9</code>
+          <typ>3</typ>
+          <art>H</art>
+          <datum>2011-01-06</datum>
+          <sicherheit>G</sicherheit>
+          <lokalisation>B</lokalisation>
+        </diagnose>
+        <positionen posanzahl="6">
+          <auslagen positionsnr="1" kennzeichen="M">
+            <datum>2012-01-06</datum>
+            <anzahl>1</anzahl>
+            <text>Accupaque 350 / 100 ml</text>
+            <zusatztext>Kontrastmittel</zusatztext>
+            <einzelbetrag>76.16</einzelbetrag>
+            <gesamtbetrag>76.16</gesamtbetrag>
+          </auslagen>
+          <auslagen positionsnr="2" kennzeichen="M">
+            <datum>2012-01-06</datum>
+            <anzahl>1</anzahl>
+            <text>Diazepam 10 mg, 2 ml</text>
+            <einzelbetrag>2.33</einzelbetrag>
+            <gesamtbetrag>2.33</gesamtbetrag>
+          </auslagen>
+          <goziffer positionsnr="3" go="GOAE" ziffer="1" goversion="02.01.2002">
+            <datum>2012-01-06</datum>
+            <anzahl>1</anzahl>
+            <text>Beratung - auch mittels Fernsprecher</text>
+            <faktor>2.300000</faktor>
+            <punktwert>0.0582873</punktwert>
+            <punktzahl>80</punktzahl>
+            <gesamtbetrag>10.72</gesamtbetrag>
+          </goziffer>
+          <goziffer positionsnr="4" go="GOAE" ziffer="252" goversion="02.01.2002">
+            <datum>2012-01-06</datum>
+            <anzahl>1</anzahl>
+            <text>Injektion, subkutan, submukös, intrakutan oder intramuskulär</text>
+            <faktor>2.300000</faktor>
+            <punktwert>0.0582873</punktwert>
+            <punktzahl>40</punktzahl>
+            <gesamtbetrag>5.36</gesamtbetrag>
+          </goziffer>
+          <goziffer positionsnr="5" go="GOAE" ziffer="346" goversion="02.01.2002">
+            <datum>2012-01-06</datum>
+            <anzahl>1</anzahl>
+            <text>Intravenöse Einbringung des Kontrastmittels mittels Hochdruckinjektion</text>
+            <faktor>2.300000</faktor>
+            <punktwert>0.0582873</punktwert>
+            <punktzahl>300</punktzahl>
+            <gesamtbetrag>40.22</gesamtbetrag>
+          </goziffer>
+          <goziffer positionsnr="6" go="GOAE" ziffer="5371" goversion="02.01.2002">
+            <datum>2012-01-06</datum>
+            <anzahl>1</anzahl>
+            <text>Computergesteuerte Tomographie im Hals- und/oder Thoraxbereich</text>
+            <faktor>1.800000</faktor>
+            <punktwert>0.0582873</punktwert>
+            <punktzahl>2300</punktzahl>
+            <gesamtbetrag>241.31</gesamtbetrag>
+          </goziffer>
+        </positionen>
+        <anhangid id="00666666_100004_001.pdf" verwendungszweck="1" />
+        <anhangid id="00666666_100004_002.jpg" verwendungszweck="2" />
+      </humanmedizin>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>
