@@ -80,12 +80,6 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
         "process_type": "predict",
     }
 
-    if st.session_state.arzt_hash is not None:
-        payload["arzt"] = st.session_state.arzt_hash
-
-    if st.session_state.kassenname_hash is not None:
-        payload["kassenname"] = st.session_state.kassenname_hash
-
     headers = {"x-api-key": st.session_state.api_key}
 
     try:
