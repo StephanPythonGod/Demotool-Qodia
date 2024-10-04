@@ -19,13 +19,19 @@ def update_ziffer(new_ziffer: Dict[str, Union[str, int, float, None]]) -> None:
     try:
         if st.session_state.ziffer_to_edit is None:
             new_row = pd.DataFrame(new_ziffer, index=[0])
-            new_row = new_row.apply(pd.to_numeric, errors="ignore", downcast="integer")
+            # Apply conversion without errors='ignore'
+            for col in new_row.columns:
+                try:
+                    new_row[col] = pd.to_numeric(new_row[col], downcast="integer")
+                except (ValueError, TypeError):
+                    pass  # Keep original values if conversion fails
             st.session_state.df = pd.concat(
                 [st.session_state.df, new_row], ignore_index=True
             )
         else:
+            # Use dict comprehension to convert values and handle errors
             new_ziffer = {
-                k: pd.to_numeric(v, errors="ignore", downcast="integer")
+                k: pd.to_numeric(v, downcast="integer")
                 if isinstance(v, (int, float))
                 else v
                 for k, v in new_ziffer.items()
