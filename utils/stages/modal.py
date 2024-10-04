@@ -118,6 +118,9 @@ def display_update_button(new_data: Dict[str, Union[str, int, float, None]]) -> 
 
 @st.dialog("Leistungsziffer aktualisieren", width="large")
 def modal_dialog() -> None:
+    logger.info(
+        "Opening modal dialog for Ziffer: " + str(st.session_state.ziffer_to_edit)
+    )
     try:
         ziffer_dataframe: pd.DataFrame = read_in_goa()
         ziffer_options: list = ziffer_dataframe["GOÄZiffer"].tolist()
@@ -166,6 +169,12 @@ def modal_dialog() -> None:
             f"GO: {'GOÄ' if ziffer_data.get('go') == 'GOAE' else ziffer_data.get('go', 'Nicht verfügbar')}"
         )
 
+        row_id = ziffer_data.get("row_id")
+
+        confidence = ziffer_data.get("confidence", 1.0)
+
+        confidence_reason = ziffer_data.get("confidence_reason", None)
+
         # Prepare new data for update
         new_data = create_new_data(
             ziffer,
@@ -177,6 +186,9 @@ def modal_dialog() -> None:
             begruendung,
             einzelbetrag,
             gesamtbetrag,
+            row_id,
+            confidence,
+            confidence_reason,
         )
 
         # Display the "Aktualisieren" button
@@ -287,6 +299,7 @@ def get_ziffer_data() -> Dict[str, Union[str, int, float, None]]:
             "einzelbetrag": 0.0,
             "gesamtbetrag": 0.0,
             "go": None,
+            "confidence_reason": None,
         }
 
 
@@ -395,6 +408,9 @@ def create_new_data(
     begruendung: Optional[str],
     einzelbetrag: float,
     gesamtbetrag: float,
+    row_id: Optional[int] = None,
+    confidence: float = 1.0,
+    confidence_reason: Optional[str] = None,
 ) -> Dict[str, Union[str, int, float, None]]:
     """
     Create a dictionary with the new ziffer data.
@@ -423,6 +439,9 @@ def create_new_data(
         "begruendung": begruendung,
         "einzelbetrag": einzelbetrag,
         "gesamtbetrag": gesamtbetrag,
+        "row_id": row_id,
+        "confidence": confidence,
+        "confidence_reason": confidence_reason,
     }
 
     # Add additional fields

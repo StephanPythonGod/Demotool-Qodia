@@ -1,6 +1,7 @@
 import http.client
 import json
 import os
+import pickle
 import time
 from io import BytesIO
 from typing import Dict, Optional, Union
@@ -34,13 +35,14 @@ def check_if_default_credentials() -> None:
         )
 
 
-def analyze_api_call(text: str) -> Optional[Dict]:
+def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
     """
     Analyze the given text using the API and return the prediction.
-    If a cached response exists in the data folder, return that instead.
+    If a cached response exists in the data folder and caching is enabled, return that instead.
 
     Args:
         text (str): The text to be analyzed.
+        use_cache (bool): Whether to use the cached response or not (default is True).
 
     Returns:
         Optional[Dict]: The prediction result or None if an error occurred.
@@ -54,25 +56,36 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     os.makedirs(data_folder, exist_ok=True)
 
     # Generate a filename based on the text hash
-    safe_filename = os.path.join(data_folder, f"{hash(text)}_response.json")
+    safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
 
-    # Check if a cached response exists
-    if os.path.exists(safe_filename):
+    # Check if a cached response exists and use_cache is True
+    if use_cache and os.path.exists(safe_filename):
         logger.info(f"Using cached response from {safe_filename}")
         try:
-            with open(safe_filename, "r") as file:
-                cached_response = json.load(file)
-            return cached_response
+            with open(safe_filename, "rb") as file:
+                cached_response = pickle.load(file)
+            # Reconstruct the `requests.Response` object
+            response = cached_response["response"]
+            st.session_state.analyze_api_response = response
+            return cached_response["prediction"]
         except Exception as e:
             logger.error(f"Error loading cached response: {e}")
 
-    # Perform the API call if no cached response exists
+    # Perform the API call if no cached response exists or if use_cache is False
     url = f"{st.session_state.api_url}/process_document"
+
     payload = {
         "text": text,
         "category": st.session_state.category,
         "process_type": "predict",
     }
+
+    if st.session_state.arzt_hash is not None:
+        payload["arzt"] = st.session_state.arzt_hash
+
+    if st.session_state.kassenname_hash is not None:
+        payload["kassenname"] = st.session_state.kassenname_hash
+
     headers = {"x-api-key": st.session_state.api_key}
 
     try:
@@ -104,14 +117,17 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     st.session_state.analyze_api_response = response
 
     try:
+        # Parse prediction from the response
         prediction = response.json()["result"]["prediction"]
     except KeyError:
         prediction = response.json()["prediction"]
 
-    # Save the response to a file for future use
+    # Save the full response and prediction to a file using pickle
+    cached_response = {"response": response, "prediction": prediction}
+
     try:
-        with open(safe_filename, "w") as file:
-            json.dump(prediction, file)
+        with open(safe_filename, "wb") as file:
+            pickle.dump(cached_response, file)
         logger.info(f"Response saved to {safe_filename}")
     except Exception as e:
         logger.error(f"Error saving response to file: {e}")
@@ -205,7 +221,7 @@ def send_feedback_api(response_object: Dict) -> None:
     api_request_id = analyze_api_call_response.headers.get("X-Request-ID", None)
     if api_request_id:
         url = f"{st.session_state.api_url}/feedback/{api_request_id}"
-        payload = json.dumps(response_object)  # Convert dict to JSON string
+        payload = json.dumps(response_object, indent=4)  # Convert dict to JSON string
         headers = {
             "x-api-key": st.session_state.api_key,
             "Content-Type": "application/json",  # Specify content type as JSON

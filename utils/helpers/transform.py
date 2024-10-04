@@ -62,11 +62,16 @@ def df_to_processdocumentresponse(df: pd.DataFrame, ocr_text: str) -> Dict[str, 
         result_objekt = {
             "zitat": row["zitat"],
             "begruendung": row["begruendung"],
-            "goa_ziffer": row["ziffer"],
-            "quantitaet": int(row["anzahl"]),
-            "faktor": float(row["faktor"]),
-            "beschreibung": row["text"],
-            "confidence": float(row["confidence"]),
+            "ziffer": row["ziffer"],
+            "anzahl": row["anzahl"],
+            "faktor": row["faktor"],
+            "text": row["text"],
+            "gesamtbetrag": row["gesamtbetrag"],
+            "einzelbetrag": row["einzelbetrag"],
+            "go": row["go"],
+            "analog": row["analog"],
+            "confidence": row["confidence"],
+            "confidence_reason": row["confidence_reason"],
         }
         result_objekts.append(result_objekt)
 
@@ -77,9 +82,9 @@ def df_to_processdocumentresponse(df: pd.DataFrame, ocr_text: str) -> Dict[str, 
     prediction_response = {"ocr": ocr_response, "prediction": result_objekts}
 
     # Create the final ProcessDocumentResponse
-    process_document_response = {"result": prediction_response}
+    # process_document_response = {"result": prediction_response}
 
-    return process_document_response
+    return prediction_response
 
 
 def format_ziffer_to_4digits(ziffer: str) -> str:
@@ -424,3 +429,9 @@ def format_transfernummer(transfernummer):
     transfernummer_padded = transfernummer_str.zfill(6)
 
     return transfernummer_padded
+
+
+def split_recognized_and_potential(df):
+    recognized_df = df[df["confidence"] >= 0.9]
+    potential_df = df[df["confidence"] < 0.9]
+    return recognized_df, potential_df

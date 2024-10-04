@@ -15,12 +15,12 @@
     <ns0:hersteller>PADline GmbH</ns0:hersteller>
     <ns0:zertifizierungsnr>PADx-AIS-2012-001</ns0:zertifizierungsnr>
   </ns0:system>
-  <ns0:verschluesselung verfahren="0" idcert="0"/>
+  <ns0:verschluesselung verfahren="1" idcert="7f:88:00:01:00:02:01:86:73:d0:6a:d0:8c:34"/>
   <ns0:empfangsquittung>false</ns0:empfangsquittung>
   <ns0:datei id="0001" erstellungsdatum="2017-08-24T18:13:04">
     <ns0:dokumententyp>PADneXt</ns0:dokumententyp>
     <ns0:name>00666666_20170824_ADL_100004_padx.xml</ns0:name>
-    <ns0:dateilaenge laenge="17030" pruefsumme="ee5a434cc456f8ee273ec91dbf5a73dc89f028de"/>
+    <ns0:dateilaenge laenge="6998" pruefsumme="0ea53821e02e7c80e8a296c27e7a7ae55a50a6ce"/>
   </ns0:datei>
   <ns0:datei id="0002" erstellungsdatum="2017-08-24T18:13:04">
     <ns0:dokumententyp format="pdf">Anhang</ns0:dokumententyp>
