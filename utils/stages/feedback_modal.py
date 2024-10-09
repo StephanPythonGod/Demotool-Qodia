@@ -102,7 +102,7 @@ def feedback_modal(df: pd.DataFrame) -> None:
             )
 
         error_type = st.selectbox(
-            "Select error type",
+            "Fehlertyp auswählen",
             ERROR_TYPES,
             key=f"error_type_{change['row_id']}_{change.get('column', change['type'])}",
         )

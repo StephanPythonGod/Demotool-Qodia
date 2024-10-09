@@ -1,10 +1,12 @@
 from typing import Optional
 
 import pandas as pd
+import streamlit as st
 
 from utils.helpers.logger import logger
 
 
+@st.cache_data
 def read_in_goa(
     path: str = "./data/GOA_Ziffern.csv", fully: bool = False
 ) -> pd.DataFrame:
@@ -30,7 +32,7 @@ def read_in_goa(
 
     try:
         # Read in the csv file with pandas
-        goa = pd.read_csv(path, sep=",", encoding="utf-8")
+        goa = pd.read_csv(path, sep=";", encoding="utf-8", encoding_errors="replace")
     except FileNotFoundError:
         logger.error(f"GOA file not found at {path}")
         raise
@@ -54,11 +56,14 @@ def read_in_goa(
             "Regelhöchstsatz",
             "Höchstfaktor",
             "Höchstsatz",
+            "go",
+            "ziffer",
+            "analog",
         ]
     ]
 
     # Drop rows with NaN values
-    goa = goa.dropna()
+    # goa = goa.dropna()
 
     # Cast type of "Einfachfaktor", "Einachsatz", "Regelhöchstfaktor", "Regelhöchstsatz", "Höchstfaktor", "Höchstsatz" to float
     # Replace "-" with None
@@ -81,7 +86,10 @@ def read_in_goa(
     # Replace the Beschreibung with the text "Analogziffer zu " + original GO'Ziffer
     goa_analog = goa.copy()
     goa_analog["Beschreibung"] = "Analogziffer zu " + goa_analog["GOÄZiffer"]
+    goa_analog["analog"] = goa_analog["GOÄZiffer"]
     goa_analog["GOÄZiffer"] = goa_analog["GOÄZiffer"] + " A"
+    goa_analog["ziffer"] = goa_analog["GOÄZiffer"]
+    goa_analog["go"] = goa_analog["go"]
 
     # Concatenate the original DataFrame with the analog DataFrame
     goa = pd.concat([goa, goa_analog])
