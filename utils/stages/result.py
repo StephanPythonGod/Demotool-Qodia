@@ -181,6 +181,9 @@ def result_stage():
                 "row_id"
             ].copy()
 
+    if "sort_mode" in st.session_state:
+        apply_sorting()
+
     recognized_df, potential_df = split_recognized_and_potential(st.session_state.df)
 
     left_column, right_column = st.columns(2)
@@ -241,6 +244,8 @@ def result_stage():
                 col.button(
                     sort_label.get(sort_mode, "Ziffer 🔠"), on_click=set_sort_mode
                 )
+            elif header == "":
+                pass
             else:
                 col.markdown(f"**{header}**")
 
@@ -250,7 +255,7 @@ def result_stage():
                 [0.5, 1, 1, 1, 1, 2, 0.5, 0.5]
             )  # Adjusted column widths for the new column
 
-            cols[0].write("")
+            # cols[0].write("test")
 
             # Ziffer button
             if cols[1].button(

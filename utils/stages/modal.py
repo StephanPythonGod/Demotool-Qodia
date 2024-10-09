@@ -37,7 +37,7 @@ def determine_additional_fields(
         "analog": analog,
         "einzelbetrag": einzelbetrag,
         "gesamtbetrag": gesamtbetrag,
-        "go": "GOAE",  # Default to GOAE
+        "go": ziffer_data.get("go", "GOAE"),
     }
 
 
@@ -123,7 +123,10 @@ def modal_dialog() -> None:
     )
     try:
         ziffer_dataframe: pd.DataFrame = read_in_goa()
-        ziffer_options: list = ziffer_dataframe["GOÄZiffer"].tolist()
+        ziffer_options: list = ziffer_dataframe["ziffer"].tolist()
+        ziffer_options_non_analog: list = ziffer_dataframe[
+            ziffer_dataframe["analog"].isna() | (ziffer_dataframe["analog"] == "")
+        ]["ziffer"].tolist()
         ziffer_beschreibung: list = ziffer_dataframe["Beschreibung"].tolist()
 
         ziffer_data: Dict[str, Union[str, int, float, None]] = get_ziffer_data()
@@ -137,8 +140,21 @@ def modal_dialog() -> None:
             ziffer_options, ziffer_beschreibung, ziffer_index, ziffer_data.get("text")
         )
 
+        # Get row of ziffer_dataframe for selected ziffer
+        try:
+            goa_item = ziffer_dataframe[ziffer_dataframe["ziffer"] == ziffer]
+            if (
+                ziffer_data.get("analog") is None
+                and goa_item["analog"].values[0] is not None
+            ):
+                ziffer_data["analog"] = goa_item["analog"].values[0]
+        except Exception:
+            pass
+
         st.subheader("Analog")
-        analog = display_analog_selection(ziffer_options, ziffer_data.get("analog"))
+        analog = display_analog_selection(
+            ziffer_options_non_analog, ziffer_data.get("analog")
+        )
 
         haufigkeit = display_haufigkeit_input(ziffer_data.get("anzahl"))
         intensitat = display_intensitat_input(ziffer_data.get("faktor"))
@@ -222,32 +238,37 @@ def calculate_einzelbetrag(
     goa_item = ziffer_dataframe[ziffer_dataframe["GOÄZiffer"] == ziffer_selected]
 
     if goa_item.empty:
-        logger.error(f"No matching GOÄZiffer for selected Ziffer {ziffer_selected}")
         return 0.0
-
-    regelhoechstfaktor = goa_item["Regelhöchstfaktor"].values[0]
-    regelhoechstsatz = goa_item["Regelhöchstsatz"].values[0]
-    hoechstfaktor = goa_item["Höchstfaktor"].values[0]
-    hoechstsatz = goa_item["Höchstsatz"].values[0]
-    einfachsatz = goa_item["Einfachsatz"].values[0]
-
-    if (
-        isinstance(hoechstfaktor, float)
-        and isinstance(hoechstsatz, float)
-        and faktor >= hoechstfaktor
-    ):
-        return hoechstsatz
-    elif (
-        isinstance(regelhoechstfaktor, float)
-        and isinstance(regelhoechstsatz, float)
-        and faktor >= regelhoechstfaktor
-    ):
-        return regelhoechstsatz
-    elif isinstance(einfachsatz, float):
-        return einfachsatz
     else:
-        logger.error(f"Invalid data for selected Ziffer {ziffer_selected}")
-        return 0.0
+        return goa_item["Einfachsatz"].values[0] * faktor
+
+    # if goa_item.empty:
+    #     logger.error(f"No matching GOÄZiffer for selected Ziffer {ziffer_selected}")
+    #     return 0.0
+
+    # regelhoechstfaktor = goa_item["Regelhöchstfaktor"].values[0]
+    # regelhoechstsatz = goa_item["Regelhöchstsatz"].values[0]
+    # hoechstfaktor = goa_item["Höchstfaktor"].values[0]
+    # hoechstsatz = goa_item["Höchstsatz"].values[0]
+    # einfachsatz = goa_item["Einfachsatz"].values[0]
+
+    # if (
+    #     isinstance(hoechstfaktor, float)
+    #     and isinstance(hoechstsatz, float)
+    #     and faktor >= hoechstfaktor
+    # ):
+    #     return hoechstsatz
+    # elif (
+    #     isinstance(regelhoechstfaktor, float)
+    #     and isinstance(regelhoechstsatz, float)
+    #     and faktor >= regelhoechstfaktor
+    # ):
+    #     return regelhoechstsatz
+    # elif isinstance(einfachsatz, float):
+    #     return einfachsatz
+    # else:
+    #     logger.error(f"Invalid data for selected Ziffer {ziffer_selected}")
+    #     return 0.0
 
 
 def calculate_gesamtbetrag(einzelbetrag: float, anzahl: int) -> float:

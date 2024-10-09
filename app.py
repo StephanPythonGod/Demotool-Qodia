@@ -18,12 +18,19 @@ settings = load_settings_from_cookies()
 # Now initialize the session state using the loaded settings
 initialize_session_state(settings)
 
-st.set_page_config(
-    page_title="Qodia",
-    page_icon="🔍🤖📚",
-    layout="wide",  # Set the page layout to wide
-    initial_sidebar_state="collapsed",
-)
+# Check if 'page_config_set' is in session_state, if not, it means it's the first load
+if "page_config_set" not in st.session_state:
+    initial_sidebar_state = "expanded"
+    st.set_page_config(
+        page_title="Qodia",
+        page_icon="🔍🤖📚",
+        layout="wide",  # Set the page layout to wide
+        initial_sidebar_state=initial_sidebar_state,
+    )
+    st.session_state.page_config_set = True
+    st.session_state.sidebar_state = "expanded"
+else:
+    st.session_state.sidebar_state = "collapsed"
 
 
 def main() -> None:
