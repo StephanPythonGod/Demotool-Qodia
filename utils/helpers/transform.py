@@ -1,4 +1,3 @@
-import locale
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Tuple
@@ -11,8 +10,6 @@ from schemas.padnext_v2_py.padx_basis_v2_12 import GozifferTyp, Leistungspositio
 from utils.helpers.db import read_in_goa
 from utils.helpers.logger import logger
 from utils.utils import find_zitat_in_text
-
-locale.setlocale(locale.LC_ALL, "de_DE.UTF-8")  # German locale for formatting
 
 
 def annotate_text_update() -> None:
