@@ -274,8 +274,7 @@ def analyze_stage() -> None:
                 st.rerun()
 
             if button_col2.button("Keine Anonymisierung Notwendig", type="primary"):
-                if (
-                    not st.session_state.text
-                ):  # Only run OCR if text is not already extracted
+                if not st.session_state.text:
                     if perform_ocr(uploaded_file):
                         st.rerun()
+                    pass

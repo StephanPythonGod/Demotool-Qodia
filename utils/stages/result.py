@@ -19,7 +19,6 @@ from utils.helpers.transform import (
     split_recognized_and_potential,
     transform_df_to_goziffertyp,
 )
-from utils.session import reset
 from utils.stages.feedback_modal import feedback_modal
 from utils.stages.modal import create_new_data, modal_dialog
 from utils.utils import create_tooltip, find_zitat_in_text, tooltip_css
@@ -166,7 +165,7 @@ def result_stage():
         st.session_state.adding_new_ziffer = False
 
     # Save the original DataFrame
-    if "original_df" not in st.session_state:
+    if "original_df" not in st.session_state or st.session_state.original_df is None:
         logger.info("Saving original DataFrame")
         st.session_state.original_df = st.session_state.df.copy()
         if "row_id" not in st.session_state.original_df.columns:
@@ -329,10 +328,7 @@ def result_stage():
     with left_outer_column:
         st.button(
             "Zurücksetzen",
-            on_click=lambda: (
-                handle_feedback_submission(),
-                reset(),
-            ),
+            on_click=lambda: (handle_feedback_submission(),),
             type="primary",
             use_container_width=True,
         )
