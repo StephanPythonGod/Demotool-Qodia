@@ -23,8 +23,6 @@ def annotate_text_update() -> None:
         (row["zitat"], row["ziffer"]) for _, row in st.session_state.df.iterrows()
     ]
 
-    print("zitate_to_find: ", zitate_to_find)
-
     st.session_state.annotated_text_object = find_zitat_in_text(
         zitate_to_find, st.session_state.annotated_text_object
     )
@@ -37,7 +35,7 @@ def annotate_text_update() -> None:
 
     # Order the dataframe according to the order of the ziffer in the text
     ziffer_order_dict = {ziffer: order for order, ziffer in enumerate(ziffer_order)}
-    st.session_state.df["order"] = st.session_state.df["Ziffer"].map(ziffer_order_dict)
+    st.session_state.df["order"] = st.session_state.df["ziffer"].map(ziffer_order_dict)
     st.session_state.df["order"] = st.session_state.df["order"].fillna(9999)
     st.session_state.df.sort_values("order", inplace=True)
     st.session_state.df.drop("order", axis=1, inplace=True)
