@@ -1,0 +1,3296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mit XMLSpy v2015 rel. 4 sp1 (x64) (http://www.altova.com) von Jan Brötzmann (quadcore GmbH) bearbeitet -->
+<xs:schema xmlns:pad="http://padinfo.de/ns/pad" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:altova="http://www.altova.com/xml-schema-extensions" targetNamespace="http://padinfo.de/ns/pad" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.12">
+	<xs:include schemaLocation="padx_enums_v2.12.xsd"/>
+	<!---->
+	<!--Nachrichtenspezifische Elemente-->
+	<!---->
+	<xs:complexType name="Dokumenttyp.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:Dokumenttyp.Enum">
+				<xs:attribute name="format" type="pad:Dokumentformat.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe eines MIME-Typ (z.B. msword oder pdf).</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Nachrichtentyp.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:Nachrichtentyp.Enum">
+				<xs:attribute name="version" use="required">
+					<xs:annotation>
+						<xs:documentation>Angabe der Version des Nachrichtentyps.</xs:documentation>
+						<xs:appinfo>
+							<altova:exampleValues>
+								<altova:example value="01.00"/>
+							</altova:exampleValues>
+						</xs:appinfo>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="5"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Rechnung.Typ">
+		<xs:sequence>
+			<xs:element name="rechnungsempfaenger" type="pad:Rechnungsempfaenger.Typ"/>
+			<xs:element name="zahlung" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Zusätzliche Zahlungsvereinbarungen.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="ratenzahlung" type="pad:Ratenzahlung.Typ" minOccurs="0"/>
+						<xs:element name="kontoverbindung" type="pad:Konto.Typ" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Kontoverbindung um Betrag direkt abzubuchen (Lastschrift, Ratenzahlung).</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+					<xs:attribute name="art" type="pad:Zahlungsart.Enum"/>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="rechnungsvorgaben" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe aller Beträge auf Rechnungsebene.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="direktzahlungsbetrag" type="pad:Betrag.Typ" minOccurs="0">
+							<xs:annotation>
+								<xs:documentation>Betrag, der bereits gezahlt wurde (Gesamt- oder Teilbetrag).</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="nachlass" type="pad:Nachlass.Typ" minOccurs="0"/>
+						<xs:element name="zuzahlungsbetrag" minOccurs="0">
+							<xs:complexType>
+								<xs:simpleContent>
+									<xs:extension base="pad:Betrag.Typ">
+										<xs:attribute name="kennzeichen" use="required">
+											<xs:annotation>
+												<xs:documentation>Nach Schlüssel 15 (§301 Abs. 3 SGB V)</xs:documentation>
+											</xs:annotation>
+											<xs:simpleType>
+												<xs:restriction base="xs:string">
+													<xs:length value="1"/>
+												</xs:restriction>
+											</xs:simpleType>
+										</xs:attribute>
+									</xs:extension>
+								</xs:simpleContent>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="beteiligung" type="pad:Beteiligung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="abrechnungsfall" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="bema" type="pad:Bema.Typ"/>
+						<xs:element name="bmgnormprivat" type="pad:BmgNormPrivat.Typ"/>
+						<xs:element name="bmgnormkfoprivat" type="pad:BmgNormKFOPrivat.Typ"/>
+						<xs:element name="eigenanteilsrechnung" type="pad:Eigenanteilsrechnung.Typ"/>
+						<xs:element name="eigenanteilsrechnungkfo" type="pad:EigenanteilsrechnungKFO.Typ"/>
+						<xs:element name="humanmedizin" type="pad:Humanmedizin.Typ"/>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="abrechnungsanweisung" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="anfangstext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="endetext" type="pad:Text.Typ" minOccurs="0"/>
+		</xs:sequence>
+		<xs:attribute name="id" type="pad:Id.Typ" use="required">
+			<xs:annotation>
+				<xs:documentation>Eindeutiger Bezeichner für Rechnung, wird als Referenz zur Rechnung im Arztsystem in den Quittungen angegeben.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="abrechnungsform">
+			<xs:annotation>
+				<xs:documentation>Individuelles Kennzeichen für die PVS zur Abrechnung der Arztdaten.</xs:documentation>
+				<xs:appinfo>
+					<altova:exampleValues>
+						<altova:example value="1000"/>
+					</altova:exampleValues>
+				</xs:appinfo>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:positiveInteger">
+					<xs:totalDigits value="8"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="druckkennzeichen" type="xs:boolean" default="1">
+			<xs:annotation>
+				<xs:documentation>Kennzeichen, dass Rechnung  bei der PVS gedruckt wird (Standardfall) oder beim Arzt .</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="eabgabe" type="xs:boolean">
+			<xs:annotation>
+				<xs:documentation>Kennzeichen, ob die Rechnung elektronisch versendet werden soll.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="mahnkennzeichen" type="pad:Mahnkennzeichen.Enum">
+			<xs:annotation>
+				<xs:documentation>gmv steht für gerichtliches Mahnverfahren.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="aisrechnungsnr">
+			<xs:annotation>
+				<xs:documentation>Individuelle Arzt Rechnungsnummer.</xs:documentation>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:maxLength value="14"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="aisaktenzeichen">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:maxLength value="40"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="aisendbetrag" type="pad:Betrag.Typ">
+			<xs:annotation>
+				<xs:documentation>Rechnungsbetrag, der vom AIS ermittelt wurde.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Rechnung.Liste">
+		<xs:sequence>
+			<xs:element name="hinweistext" type="pad:Text.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Hinweistext für gesamte Datenlieferung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="nachrichtentyp" type="pad:Nachrichtentyp.Typ" fixed="ADL"/>
+			<xs:element name="rechnungsersteller" type="pad:Rechnungsersteller.Typ">
+				<xs:annotation>
+					<xs:documentation>Angabe des Rechnungserstellers mit angegebener Kundenkennung der PVS, gültig für alle Rechnungen der Datenlieferung. </xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="leistungserbringer" type="pad:Leistungserbringer.Typ" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Liste aller Leistungserbringer, auf die in den Rechnungsdaten referenziert wird.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="rechnung" type="pad:Rechnung.Typ" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Wurzelelement pro Arztrechnung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="anzahl" type="xs:positiveInteger" use="required"/>
+	</xs:complexType>
+	<xs:complexType name="Anhangid.Typ">
+		<xs:attribute name="id" type="pad:Id.Typ" use="required">
+			<xs:annotation>
+				<xs:documentation>Eindeutiger Bezeichner für Anhangsdokument (kann ID oder Dateiname sein).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="verwendungszweck" type="pad:Verwendungszweckanhang.Enum"/>
+		<xs:attribute name="belegart" type="pad:Belegart.Enum">
+			<xs:annotation>
+				<xs:documentation>Eigenlabor, Fremdlabor, Material, Materialpass, Mehrkostenaufstellung</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<!---->
+	<!--Anschriften und Personen-->
+	<!---->
+	<xs:complexType name="Anschrift.Typ">
+		<xs:annotation>
+			<xs:documentation>Komplexer Anschriftstyp</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="hausadresse" type="pad:Hausadresse.Typ"/>
+			<xs:element name="postfach" type="pad:Postfach.Typ"/>
+			<xs:element name="packstation" type="pad:Packstation.Typ"/>
+			<xs:element name="grossempfaenger">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="plz" type="pad:Plz.Typ"/>
+						<xs:element name="ort" type="pad:Ort.Typ"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="auslandsadresse" type="pad:Auslandadresse.Typ"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="Anschrift2.Typ">
+		<xs:complexContent>
+			<xs:restriction base="pad:Anschrift.Typ">
+				<xs:choice>
+					<xs:element name="hausadresse" type="pad:Hausadresse.Typ"/>
+					<xs:element name="postfach" type="pad:Postfach.Typ"/>
+					<xs:element name="auslandsadresse" type="pad:Auslandadresse.Typ"/>
+				</xs:choice>
+			</xs:restriction>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Anschrift3.Typ">
+		<xs:choice>
+			<xs:element name="hausadresse" type="pad:Hausadresse.Typ"/>
+			<xs:element name="postfach" type="pad:Postfach.Typ"/>
+			<xs:element name="auslandsadresse" type="pad:Auslandadresse.Typ"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="Auslandadresse.Typ">
+		<xs:sequence>
+			<xs:element name="land" type="pad:Land.Enum"/>
+			<xs:element name="plz" type="pad:Plz.Typ" minOccurs="0"/>
+			<xs:element name="ort" type="pad:Ort.Typ"/>
+			<xs:element name="strasse" type="pad:Strasse.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Hausadresse.Typ">
+		<xs:sequence>
+			<xs:element name="land" type="pad:Land.Enum" minOccurs="0"/>
+			<xs:element name="zusatz" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>z.B. co, Etage...</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="40"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="plz" type="pad:Plz.Typ"/>
+			<xs:element name="ort" type="pad:Ort.Typ"/>
+			<xs:element name="strasse" type="pad:Strasse.Typ"/>
+			<xs:element name="hausnr" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="10"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="Ort.Typ">
+		<xs:restriction base="pad:String_NichtLeer.Typ">
+			<xs:maxLength value="40"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Postfach.Typ">
+		<xs:sequence>
+			<xs:element name="postfachnr" type="pad:Plz.Typ"/>
+			<xs:element name="plz" type="pad:Plz.Typ"/>
+			<xs:element name="ort" type="pad:Ort.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Packstation.Typ">
+		<xs:sequence>
+			<xs:element name="postnr" type="pad:Plz.Typ"/>
+			<xs:element name="packstationnr" type="pad:Plz.Typ"/>
+			<xs:element name="plz" type="pad:Plz.Typ"/>
+			<xs:element name="ort" type="pad:Ort.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="Plz.Typ">
+		<xs:restriction base="pad:String_NichtLeer.Typ">
+			<xs:maxLength value="10"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Strasse.Typ">
+		<xs:restriction base="pad:String_NichtLeer.Typ">
+			<xs:maxLength value="40"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<!---->
+	<xs:complexType name="Behandelter.Typ">
+		<xs:complexContent>
+			<xs:restriction base="pad:Person.Typ">
+				<xs:sequence>
+					<xs:element name="anrede" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="titel" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="vorname" type="pad:String_1_40.Typ"/>
+					<xs:element name="name" type="pad:String_1_40.Typ"/>
+					<xs:element name="namezusatz" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="gebname" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="gebdatum" type="xs:date"/>
+					<xs:element name="geschlecht" type="pad:Geschlecht.Enum"/>
+					<xs:element name="staat" type="pad:Land.Enum" minOccurs="0"/>
+				</xs:sequence>
+			</xs:restriction>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EmpfaengerPerson.Typ">
+		<xs:complexContent>
+			<xs:restriction base="pad:Person.Typ">
+				<xs:sequence>
+					<xs:element name="anrede">
+						<xs:simpleType>
+							<xs:restriction base="pad:String_1_40.Typ">
+								<xs:maxLength value="40"/>
+								<xs:pattern value="Ohne Anrede"/>
+								<xs:pattern value="Frau"/>
+								<xs:pattern value="Herr"/>
+								<xs:pattern value="Herr / Frau"/>
+								<xs:pattern value="Familie"/>
+								<xs:pattern value="An die Angehörigen von"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="titel" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="vorname" type="pad:String_1_40.Typ"/>
+					<xs:element name="name" type="pad:String_1_40.Typ"/>
+					<xs:element name="namezusatz" type="pad:String_1_40.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>z.Hd., vertraulich,...</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gebdatum" type="xs:date" minOccurs="0"/>
+				</xs:sequence>
+			</xs:restriction>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Kontakt.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:String_1_40.Typ">
+				<xs:attribute name="typ">
+					<xs:simpleType>
+						<xs:restriction base="pad:Kontakttyp.Enum">
+							<xs:maxLength value="15"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="art" use="required">
+					<xs:simpleType>
+						<xs:restriction base="pad:Kontaktart.Enum">
+							<xs:maxLength value="15"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Leistungserbringer.Typ">
+		<xs:complexContent>
+			<xs:extension base="pad:LEPerson.Typ">
+				<xs:sequence>
+					<xs:element name="anschrift" type="pad:Anschrift2.Typ" minOccurs="0"/>
+					<xs:element name="kundennr" type="pad:PVSkundennr.Typ" minOccurs="0"/>
+					<xs:element name="fachbereich" type="pad:Fachbereich.Typ" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>Pro Fachgruppe besitzt der Arzt eine lebenslange Arztnummer (LANR).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="betriebsstaette" type="pad:Behandlungsort.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Über diese Nummer wird der Ort der Leistungserbingung angegeben.</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="kzvnr" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>KZV-Nummer Zahnarzt</xs:documentation>
+						</xs:annotation>
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="10"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="ustidnr" type="pad:Ustidnr.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Umsatzsteueridentifikationsnummer des LE.</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="hba" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Heilberufsausweisnummer</xs:documentation>
+						</xs:annotation>
+						<xs:simpleType>
+							<xs:restriction base="xs:string">
+								<xs:maxLength value="40"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="iknr" type="pad:IKnr.Typ" minOccurs="0"/>
+				</xs:sequence>
+				<xs:attribute name="id" type="pad:Id.Typ" use="required">
+					<xs:annotation>
+						<xs:documentation>Eindeutiger Bezeichner für LE, wird als Referenz in den Rechnungen angegeben.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="aisid" type="pad:Id.Typ">
+					<xs:annotation>
+						<xs:documentation>Eindeutige Referenz für den Leistungserbringer im Arztinformationssystem.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="LEPerson.Typ">
+		<xs:complexContent>
+			<xs:restriction base="pad:Person.Typ">
+				<xs:sequence>
+					<xs:element name="anrede" minOccurs="0">
+						<xs:simpleType>
+							<xs:restriction base="pad:String_1_40.Typ">
+								<xs:pattern value="Ohne Anrede"/>
+								<xs:pattern value="Frau"/>
+								<xs:pattern value="Herr"/>
+								<xs:pattern value="Herr / Frau"/>
+								<xs:pattern value="Praxis"/>
+								<xs:pattern value="Labor"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="titel" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="vorname" type="pad:String_1_40.Typ"/>
+					<xs:element name="name" type="pad:String_1_40.Typ"/>
+					<xs:element name="namezusatz" type="pad:String_1_40.Typ" minOccurs="0"/>
+				</xs:sequence>
+			</xs:restriction>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Organisation.Typ">
+		<xs:sequence>
+			<xs:element name="name">
+				<xs:simpleType>
+					<xs:restriction base="pad:String_NichtLeer.Typ">
+						<xs:maxLength value="120"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="namezusatz" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Abteilungsleitung Nicola Meyer</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="40"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="anschrift" type="pad:Anschrift.Typ"/>
+			<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="iknr" type="pad:IKnr.Typ" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Person.Typ">
+		<xs:sequence>
+			<xs:element name="anrede" type="pad:String_1_40.Typ" minOccurs="0"/>
+			<xs:element name="titel" type="pad:String_1_40.Typ" minOccurs="0"/>
+			<xs:element name="vorname" type="pad:String_1_40.Typ"/>
+			<xs:element name="name" type="pad:String_1_40.Typ"/>
+			<xs:element name="namezusatz" type="pad:String_1_40.Typ" minOccurs="0"/>
+			<xs:element name="gebname" type="pad:String_1_40.Typ" minOccurs="0"/>
+			<xs:element name="gebdatum" type="xs:date" minOccurs="0"/>
+			<xs:element name="geschlecht" type="pad:Geschlecht.Enum" minOccurs="0"/>
+			<xs:element name="staat" type="pad:Land.Enum" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Rechnungsersteller.Typ">
+		<xs:sequence>
+			<xs:element name="name">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="40"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="namezusatz" minOccurs="0" maxOccurs="unbounded">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="40"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="kundennr" type="pad:PVSkundennr.Typ"/>
+			<xs:element name="anschrift" type="pad:Anschrift2.Typ"/>
+			<xs:element name="iknr" type="pad:IKnr.Typ" minOccurs="0"/>
+			<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="ustidnr" type="pad:Ustidnr.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Umsatzsteueridentifikationsnummer des Rechnungserstellers.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="glaeubigerid" type="pad:String_1_40.Typ" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Rechnungsempfaenger.Typ">
+		<xs:annotation>
+			<xs:documentation>Kann eine Person oder eine Organisation sein.</xs:documentation>
+		</xs:annotation>
+		<xs:choice>
+			<xs:element name="person">
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:EmpfaengerPerson.Typ">
+							<xs:sequence>
+								<xs:element name="anschrift" type="pad:Anschrift.Typ"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="organisation" type="pad:Organisation.Typ"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="Ueberweiser.Typ">
+		<xs:complexContent>
+			<xs:restriction base="pad:LEPerson.Typ">
+				<xs:sequence>
+					<xs:element name="vorname" type="pad:String_1_40.Typ"/>
+					<xs:element name="name" type="pad:String_1_40.Typ"/>
+				</xs:sequence>
+			</xs:restriction>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Versicherter.Typ">
+		<xs:complexContent>
+			<xs:restriction base="pad:Person.Typ">
+				<xs:sequence>
+					<xs:element name="anrede" minOccurs="0">
+						<xs:simpleType>
+							<xs:restriction base="pad:String_1_40.Typ">
+								<xs:pattern value="Ohne Anrede"/>
+								<xs:pattern value="Frau"/>
+								<xs:pattern value="Herr"/>
+								<xs:pattern value="Herr / Frau"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="titel" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="vorname" type="pad:String_1_40.Typ"/>
+					<xs:element name="name" type="pad:String_1_40.Typ"/>
+					<xs:element name="namezusatz" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="gebname" type="pad:String_1_40.Typ" minOccurs="0"/>
+					<xs:element name="gebdatum" type="xs:date" minOccurs="0"/>
+					<xs:element name="geschlecht" type="pad:Geschlecht.Enum" minOccurs="0"/>
+					<xs:element name="staat" type="pad:Land.Enum" minOccurs="0"/>
+				</xs:sequence>
+			</xs:restriction>
+		</xs:complexContent>
+	</xs:complexType>
+	<!---->
+	<!--Abrechnungsfälle-->
+	<!---->
+	<xs:complexType name="Bema.Typ">
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Leistungserbringers für diese Behandlung. Gültig für alle Posiionen innerhalb der Rechnung. Abweichungen sind in den entspr. Positionen anzugeben.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ueberweiser" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe eines Überweisers, der u.U. für die Abrechnung relevant ist.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Ueberweiser.Typ">
+							<xs:sequence>
+								<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Angabe der Arztnummer.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="behandelter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Patienten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Behandelter.Typ">
+							<xs:sequence>
+								<xs:element name="verwandtschaft" type="pad:Verwandtschaftskennung.Enum" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Verwandtschaftsverhältnis zum Versicherten.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+							<xs:attribute name="aisid" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation im Arztsystem.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="idbundesweit" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation, die bundesweit gültig ist.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="versicherter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Versicherten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Versicherter.Typ">
+							<xs:sequence>
+								<xs:element name="versicherung" type="pad:Versicherung.Typ" minOccurs="0"/>
+								<xs:element name="anschrift" type="pad:Anschrift2.Typ" minOccurs="0"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zeitraum" type="pad:Zeitraum.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Zeitraumes. Bei stationärer Behandlung, Angabe des Aufnahme- und Entlassungsdatums.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="behandlungsart" type="pad:Behandlungsart.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe, ob es sich um eine ambulante, stationäre oder eine weitere Behandlung handelt.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="kvkartendaten" type="pad:KVKartendaten.Typ"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="bema" type="pad:BemaZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockBema.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="BmgNormPrivat.Typ">
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Leistungserbringers für diese Behandlung. Gültig für alle Posiionen innerhalb der Rechnung. Abweichungen sind in den entspr. Positionen anzugeben.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ueberweiser" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe eines Überweisers, der u.U. für die Abrechnung relevant ist.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Ueberweiser.Typ">
+							<xs:sequence>
+								<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Angabe der Arztnummer.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="behandelter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Patienten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Behandelter.Typ">
+							<xs:sequence>
+								<xs:element name="verwandtschaft" type="pad:Verwandtschaftskennung.Enum" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Verwandtschaftsverhältnis zum Versicherten.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+							<xs:attribute name="aisid" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation im Arztsystem.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="idbundesweit" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation, die bundesweit gültig ist.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="versicherter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Versicherten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Versicherter.Typ">
+							<xs:sequence>
+								<xs:element name="versicherung" type="pad:Versicherung.Typ" minOccurs="0"/>
+								<xs:element name="anschrift" type="pad:Anschrift2.Typ" minOccurs="0"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zeitraum" type="pad:Zeitraum.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Zeitraumes. Bei stationärer Behandlung, Angabe des Aufnahme- und Entlassungsdatums.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="minderungssatz" type="pad:Minderungssatz.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Minderungssatz, um den dieser Abrechnungsfall gemindert wird.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="behandlungsart" type="pad:Behandlungsart.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe, ob es sich um eine ambulante, stationäre oder eine weitere Behandlung handelt.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="diagnose" type="pad:Diagnose.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Diagnosen können sowohl kodiert als auch als Text angegeben werden.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="goziffer" type="pad:GOZiffer.Typ"/>
+						<xs:element name="entschaedigung" type="pad:Entschaedigung.Typ"/>
+						<xs:element name="auslagen" type="pad:Auslagen.Typ"/>
+						<xs:element name="sonstigeshonorar">
+							<xs:complexType>
+								<xs:complexContent>
+									<xs:extension base="pad:Honorar.Typ">
+										<xs:sequence>
+											<xs:element name="leistungskuerzel" minOccurs="0"/>
+										</xs:sequence>
+									</xs:extension>
+								</xs:complexContent>
+							</xs:complexType>
+						</xs:element>
+						<xs:element name="gozziffer" type="pad:GOZZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockBmg.Typ"/>
+			<xs:element name="begruendung" type="pad:Begruendung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="anhangid" type="pad:Anhangid.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Verweis auf Dateianhang innerhalb der Datenlieferung (Referenz zur Angabe in Auftragsdatei).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="beleg" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="eigenlabor" type="pad:Eigenlabor.Typ"/>
+						<xs:element name="fremdlabor" type="pad:Fremdlabor.Typ"/>
+						<xs:element name="material" type="pad:Material.Typ"/>
+						<xs:element name="materialpass" type="pad:Materialpass.Typ"/>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="BmgNormKFOPrivat.Typ">
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Leistungserbringers für diese Behandlung. Gültig für alle Posiionen innerhalb der Rechnung. Abweichungen sind in den entspr. Positionen anzugeben.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ueberweiser" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe eines Überweisers, der u.U. für die Abrechnung relevant ist.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Ueberweiser.Typ">
+							<xs:sequence>
+								<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Angabe der Arztnummer.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="behandelter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Patienten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Behandelter.Typ">
+							<xs:sequence>
+								<xs:element name="verwandtschaft" type="pad:Verwandtschaftskennung.Enum" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Verwandtschaftsverhältnis zum Versicherten.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+							<xs:attribute name="aisid" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation im Arztsystem.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="idbundesweit" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation, die bundesweit gültig ist.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="versicherter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Versicherten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Versicherter.Typ">
+							<xs:sequence>
+								<xs:element name="versicherung" type="pad:Versicherung.Typ" minOccurs="0"/>
+								<xs:element name="anschrift" type="pad:Anschrift.Typ" minOccurs="0"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zeitraum" type="pad:Zeitraum.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Zeitraumes. Bei stationärer Behandlung, Angabe des Aufnahme- und Entlassungsdatums.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="diagnose" type="pad:Diagnose.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Diagnosen können sowohl kodiert als auch als Text angegeben werden.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="kfoplandaten" type="pad:Kfoplandaten.Typ"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="goziffer" type="pad:GOZiffer.Typ"/>
+						<xs:element name="entschaedigung" type="pad:Entschaedigung.Typ"/>
+						<xs:element name="auslagen" type="pad:Auslagen.Typ"/>
+						<xs:element name="sonstigeshonorar" type="pad:Honorar.Typ"/>
+						<xs:element name="gozziffer" type="pad:GOZZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockBmg.Typ"/>
+			<xs:element name="begruendung" type="pad:Begruendung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="anhangid" type="pad:Anhangid.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Verweis auf Dateianhang innerhalb der Datenlieferung (Referenz zur Angabe in Auftragsdatei).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="beleg" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="eigenlabor" type="pad:Eigenlabor.Typ"/>
+						<xs:element name="fremdlabor" type="pad:Fremdlabor.Typ"/>
+						<xs:element name="material" type="pad:Material.Typ"/>
+						<xs:element name="materialpass" type="pad:Materialpass.Typ"/>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Eigenanteilsrechnung.Typ">
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Leistungserbringers für diese Behandlung. Gültig für alle Posiionen innerhalb der Rechnung. Abweichungen sind in den entspr. Positionen anzugeben.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ueberweiser" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe eines Überweisers, der u.U. für die Abrechnung relevant ist.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Ueberweiser.Typ">
+							<xs:sequence>
+								<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Angabe der Arztnummer.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="behandelter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Patienten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Behandelter.Typ">
+							<xs:sequence>
+								<xs:element name="verwandtschaft" type="pad:Verwandtschaftskennung.Enum" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Verwandtschaftsverhältnis zum Versicherten.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+							<xs:attribute name="aisid" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation im Arztsystem.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="idbundesweit" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation, die bundesweit gültig ist.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="versicherter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Versicherten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Versicherter.Typ">
+							<xs:sequence>
+								<xs:element name="versicherung" type="pad:Versicherung.Typ" minOccurs="0"/>
+								<xs:element name="anschrift" type="pad:Anschrift.Typ" minOccurs="0"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zeitraum" type="pad:Zeitraum.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Zeitraumes. Bei stationärer Behandlung, Angabe des Aufnahme- und Entlassungsdatums.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="diagnose" type="pad:Diagnose.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Diagnosen können sowohl kodiert als auch als Text angegeben werden.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="goziffer" type="pad:GOZiffer.Typ"/>
+						<xs:element name="entschaedigung" type="pad:Entschaedigung.Typ"/>
+						<xs:element name="auslagen" type="pad:Auslagen.Typ"/>
+						<xs:element name="sonstigeshonorar" type="pad:Honorar.Typ"/>
+						<xs:element name="bema" type="pad:BemaZiffer.Typ"/>
+						<xs:element name="gozziffer" type="pad:GOZZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockEigenanteil.Typ"/>
+			<xs:element name="begruendung" type="pad:Begruendung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="anhangid" type="pad:Anhangid.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Verweis auf Dateianhang innerhalb der Datenlieferung (Referenz zur Angabe in Auftragsdatei).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="beleg" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="eigenlabor" type="pad:Eigenlabor.Typ"/>
+						<xs:element name="fremdlabor" type="pad:Fremdlabor.Typ"/>
+						<xs:element name="material" type="pad:Material.Typ"/>
+						<xs:element name="materialpass" type="pad:Materialpass.Typ"/>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="EigenanteilsrechnungKFO.Typ">
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Leistungserbringers für diese Behandlung. Gültig für alle Posiionen innerhalb der Rechnung. Abweichungen sind in den entspr. Positionen anzugeben.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ueberweiser" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe eines Überweisers, der u.U. für die Abrechnung relevant ist.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Ueberweiser.Typ">
+							<xs:sequence>
+								<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Angabe der Arztnummer.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="behandelter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Patienten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Behandelter.Typ">
+							<xs:sequence>
+								<xs:element name="verwandtschaft" type="pad:Verwandtschaftskennung.Enum" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Verwandtschaftsverhältnis zum Versicherten.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+							<xs:attribute name="aisid" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation im Arztsystem.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="idbundesweit" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation, die bundesweit gültig ist.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="versicherter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Versicherten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Versicherter.Typ">
+							<xs:sequence>
+								<xs:element name="versicherung" type="pad:Versicherung.Typ" minOccurs="0"/>
+								<xs:element name="anschrift" type="pad:Anschrift.Typ" minOccurs="0"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zeitraum" type="pad:Zeitraum.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Zeitraumes. Bei stationärer Behandlung, Angabe des Aufnahme- und Entlassungsdatums.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="diagnose" type="pad:Diagnose.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Diagnosen können sowohl kodiert als auch als Text angegeben werden.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="kfokopfdaten" type="pad:KVKartendaten.Typ"/>
+			<xs:element name="kfoplandaten" type="pad:Kfoplandaten.Typ"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="bema" type="pad:BemaZiffer.Typ"/>
+						<xs:element name="bemakfo" type="pad:BemaKFOZiffer.Typ"/>
+						<xs:element name="eigenlaborkfo" type="pad:EigenlaborKFOZiffer.Typ"/>
+						<xs:element name="bemakfozwsumme" type="pad:BemaKFOZwSumme.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockEigenanteilKFO.Typ"/>
+			<xs:element name="anhangid" type="pad:Anhangid.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Verweis auf Dateianhang innerhalb der Datenlieferung (Referenz zur Angabe in Auftragsdatei).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="beleg" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="eigenlabor" type="pad:Eigenlabor.Typ"/>
+						<xs:element name="fremdlabor" type="pad:Fremdlabor.Typ"/>
+						<xs:element name="material" type="pad:Material.Typ"/>
+						<xs:element name="materialpass" type="pad:Materialpass.Typ"/>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Humanmedizin.Typ">
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Leistungserbringers für diese Behandlung. Gültig für alle Posiionen innerhalb der Rechnung. Abweichungen sind in den entspr. Positionen anzugeben.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ueberweiser" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe eines Überweisers, der u.U. für die Abrechnung relevant ist.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Ueberweiser.Typ">
+							<xs:sequence>
+								<xs:element name="lanr" type="pad:Lanr.Typ" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Angabe der Arztnummer.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="behandelter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Patienten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Behandelter.Typ">
+							<xs:sequence>
+								<xs:element name="verwandtschaft" type="pad:Verwandtschaftskennung.Enum" minOccurs="0">
+									<xs:annotation>
+										<xs:documentation>Verwandtschaftsverhältnis zum Versicherten.</xs:documentation>
+									</xs:annotation>
+								</xs:element>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+							<xs:attribute name="aisid" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation im Arztsystem.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+							<xs:attribute name="idbundesweit" type="pad:Id.Typ">
+								<xs:annotation>
+									<xs:documentation>Patientenidentifikation, die bundesweit gültig ist.</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="versicherter" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Falls alle Leistungen in der gesamten Rechnung nur einen Versicherten betreffen, so braucht dieser nur bei dem ersten Behandlungsfall angegeben zu werden.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:complexContent>
+						<xs:extension base="pad:Versicherter.Typ">
+							<xs:sequence>
+								<xs:element name="versicherung" type="pad:Versicherung.Typ" minOccurs="0"/>
+								<xs:element name="anschrift" type="pad:Anschrift.Typ" minOccurs="0"/>
+								<xs:element name="kontakt" type="pad:Kontakt.Typ" minOccurs="0" maxOccurs="unbounded"/>
+							</xs:sequence>
+						</xs:extension>
+					</xs:complexContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zeitraum" type="pad:Zeitraum.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Zeitraumes. Bei stationärer Behandlung, Angabe des Aufnahme- und Entlassungsdatums.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe des Umsatzsteuersatzes des Abrechnungsfalls (wird von Angaben auf Positionsebene überschrieben).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="minderungssatz" type="pad:Minderungssatz.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Minderungssatz, um den dieser Abrechnungsfall gemindert wird.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="behandlungsart" type="pad:Behandlungsart.Enum">
+				<xs:annotation>
+					<xs:documentation>Angabe, ob es sich um eine ambulante, stationäre oder eine weitere Behandlung handelt.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="vertragsart" type="pad:Vertragsart.Typ">
+				<xs:annotation>
+					<xs:documentation>Vertragsart für Abrechnungsfall.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="beschreibung" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Beschreibungszeile zur Behandlung.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="beteiligung" type="pad:Beteiligung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="aktenzeichen" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Aktenzeichen oder Fallnummer.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="40"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="unfalldaten" type="pad:Unfalldaten.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Unfallinformationen bei Rechnungen an die Berufsgenossenschaft.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="diagnose" type="pad:Diagnose.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Diagnosen können sowohl kodiert als auch als Text angegeben werden.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="klasse" type="pad:Unterkunftstationaer.Enum" minOccurs="0"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="goziffer" type="pad:GOZiffer.Typ"/>
+						<xs:element name="entschaedigung" type="pad:Entschaedigung.Typ"/>
+						<xs:element name="auslagen" type="pad:Auslagen.Typ"/>
+						<xs:element name="sonstigeshonorar" type="pad:Honorar.Typ"/>
+						<xs:element name="gozziffer" type="pad:GOZZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="anhangid" type="pad:Anhangid.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Verweis auf Dateianhang innerhalb der Datenlieferung (Referenz zur Angabe in Auftragsdatei).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="rechnungssondertyp" type="pad:Rechnungssondertyp.Enum"/>
+	</xs:complexType>
+	<!---->
+	<!--Elektronische Belege-->
+	<!---->
+	<xs:complexType name="Eigenlabor.Typ">
+		<xs:sequence>
+			<xs:element name="anfangstext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="endetext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="eigenlabor" type="pad:LaborZiffer.Typ"/>
+						<xs:element name="material" type="pad:MaterialZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockBeleg.Typ"/>
+		</xs:sequence>
+		<xs:attribute name="id" type="pad:Id.Typ" use="required">
+			<xs:annotation>
+				<xs:documentation>Eindeutiger Bezeichner f?r Rechnung, wird als Referenz zur Rechnung im Arztsystem in den Quittungen angegeben.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="belegdatum" type="xs:date" use="required"/>
+		<xs:attribute name="belegnr" type="pad:String_1-15.Typ"/>
+		<xs:attribute name="ustidnr" type="pad:String_1-15.Typ">
+			<xs:annotation>
+				<xs:documentation>Umsatzsteuer ID-Nummer</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Fremdlabor.Typ">
+		<xs:sequence>
+			<xs:element name="anschrift" type="pad:Anschrift2.Typ"/>
+			<xs:element name="anfangstext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="endetext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="fremdlabor" type="pad:LaborZiffer.Typ"/>
+						<xs:element name="material" type="pad:MaterialZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockBeleg.Typ"/>
+		</xs:sequence>
+		<xs:attribute name="id" type="pad:Id.Typ" use="required">
+			<xs:annotation>
+				<xs:documentation>Eindeutiger Bezeichner f?r Rechnung, wird als Referenz zur Rechnung im Arztsystem in den Quittungen angegeben.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="belegdatum" type="xs:date" use="required"/>
+		<xs:attribute name="aisrechnungsnr">
+			<xs:annotation>
+				<xs:documentation>Individuelle Arzt Rechnungsnummer.</xs:documentation>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:maxLength value="14"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="aisauftragsnr">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:maxLength value="40"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="aisendbetrag" type="pad:Betrag.Typ">
+			<xs:annotation>
+				<xs:documentation>Rechnungsbetrag, der vom AIS ermittelt wurde.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Material.Typ">
+		<xs:sequence>
+			<xs:element name="anfangstext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="endetext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="material" type="pad:MaterialZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summenblock" type="pad:SummenblockBeleg.Typ"/>
+		</xs:sequence>
+		<xs:attribute name="id" type="pad:Id.Typ" use="required">
+			<xs:annotation>
+				<xs:documentation>Eindeutiger Bezeichner f?r Rechnung, wird als Referenz zur Rechnung im Arztsystem in den Quittungen angegeben.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="belegdatum" type="xs:date" use="required"/>
+		<xs:attribute name="belegnr" type="pad:String_1-15.Typ"/>
+		<xs:attribute name="belegaktenzeichen" type="pad:String_1_40.Typ"/>
+		<xs:attribute name="ustidnr" type="pad:String_1-15.Typ">
+			<xs:annotation>
+				<xs:documentation>Umsatzsteuer ID-Nummer</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Materialpass.Typ">
+		<xs:sequence>
+			<xs:element name="anfangstext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="endetext" type="pad:Text.Typ" minOccurs="0"/>
+			<xs:element name="positionen">
+				<xs:complexType>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="materialpass" type="pad:MaterialpassZiffer.Typ"/>
+						<xs:element name="text" type="pad:Textzeile.Typ"/>
+					</xs:choice>
+					<xs:attribute name="posanzahl" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="4"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="id" type="pad:Id.Typ" use="required">
+			<xs:annotation>
+				<xs:documentation>Eindeutiger Bezeichner f?r Rechnung, wird als Referenz zur Rechnung im Arztsystem in den Quittungen angegeben.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="belegdatum" type="xs:date" use="required"/>
+		<xs:attribute name="aisrechnungsnr">
+			<xs:annotation>
+				<xs:documentation>Individuelle Arzt Rechnungsnummer.</xs:documentation>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:maxLength value="14"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="aisaktenzeichen">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:maxLength value="40"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="SummenblockBeleg.Typ" mixed="false">
+		<xs:sequence>
+			<xs:choice maxOccurs="unbounded">
+				<xs:element name="belegsumme" minOccurs="0">
+					<xs:complexType>
+						<xs:simpleContent>
+							<xs:extension base="pad:Betrag.Typ">
+								<xs:attribute name="text" type="pad:String_1_40.Typ" use="required"/>
+							</xs:extension>
+						</xs:simpleContent>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="belegmwstbetrag" type="pad:BetragSatz.Typ" minOccurs="0"/>
+			</xs:choice>
+			<xs:element name="belegrechnungsbetrag" type="pad:Betrag.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<!---->
+	<!--Fachliche Datentypen-->
+	<!---->
+	<xs:complexType name="Begruendung.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:Text.Typ">
+				<xs:attribute name="id" type="pad:Id.Typ" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Behandlungsort.Typ">
+		<xs:sequence>
+			<xs:element name="bsnr">
+				<xs:annotation>
+					<xs:documentation>Die Betriebsstättennummer ist der Vertragsarztsitz.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="9"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="nbsnr" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Die Nebenbetriebsstättennr. gibt weitere Tätigkeitsorte an.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="9"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Beteiligung.Typ">
+		<xs:sequence>
+			<xs:choice>
+				<xs:element name="betrag" type="pad:Betrag.Typ">
+					<xs:annotation>
+						<xs:documentation>Höhe der Beteiligung in Euro.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="prozent" type="pad:Prozent.Typ">
+					<xs:annotation>
+						<xs:documentation>Höhe der Beteiligung in Prozent.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="lautverrechnungsstelle" type="xs:boolean"/>
+			</xs:choice>
+			<xs:element name="beteiligter">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Diagnose.Typ">
+		<xs:sequence>
+			<xs:element name="text">
+				<xs:annotation>
+					<xs:documentation>Angabe der Diagnose als Freitext.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="4000"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="code" type="pad:Diagnosecode.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe der Diagnose als codierter Wert.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="typ" type="pad:Diagnosetyp.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe Diagnosetyp (Behandlung, Überweisung,...).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="art" type="pad:Diagnoseart.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Weitere Klassifizierung der Diagnose, z.B. in Haupt- und Nebendiagnosen.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="datum" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Das Diagnosedatum gibt an, wann die Krankheit diagnostiziert wurde.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="sicherheit" type="pad:Diagnosesicherheit.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Kennzeichen für die Angabe wie sicher die Diagnose zu werten ist.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="lokalisation" type="pad:Lokalisation.Enum" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe einer Lokalisation für die Diagnose (rechts, links, beidseitig).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Diagnosecode.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:String_1-15.Typ">
+				<xs:attribute name="system" type="pad:Diagnosesystem.Enum" use="required"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Fachangabe.Typ">
+		<xs:simpleContent>
+			<xs:extension base="xs:positiveInteger">
+				<xs:attribute name="textname">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="40"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Fachbereich.Typ">
+		<xs:sequence>
+			<xs:element name="fachgebiet">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:restriction base="pad:Fachangabe.Typ">
+							<xs:totalDigits value="2"/>
+						</xs:restriction>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="facharzt" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:restriction base="pad:Fachangabe.Typ">
+							<xs:totalDigits value="2"/>
+						</xs:restriction>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="IKnr.Typ">
+		<xs:restriction base="xs:positiveInteger">
+			<xs:totalDigits value="9" fixed="true"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Konto.Typ">
+		<xs:sequence>
+			<xs:element name="inhaber">
+				<xs:annotation>
+					<xs:documentation>Name des Kontoinhabers.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="pad:String_NichtLeer.Typ">
+						<xs:maxLength value="27"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="bank" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Name der Bank.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="27"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="blz" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="8"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="kontonr" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="10"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="bic" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="11"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="iban">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:length value="22"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="mandatsreferenz" type="pad:String_1_40.Typ" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="KVKartendaten.Typ">
+		<xs:sequence>
+			<xs:element name="kassenname" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Name der Krankenkasse (KRK).</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="2"/>
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="kassennr" type="xs:unsignedLong">
+				<xs:annotation>
+					<xs:documentation>Nummer der Krankenkasse (KRK-Nr.)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="versichertennr">
+				<xs:annotation>
+					<xs:documentation>Krankenversichertennummer </xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="12"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="versichertenart" type="pad:Versichertenart.Enum"/>
+			<xs:element name="bpersonenkreis" type="pad:Besondererpersonenkreis.Enum" minOccurs="0"/>
+			<xs:element name="dmpteilnahme" type="pad:DMPkennzeichen.Enum" minOccurs="0"/>
+			<xs:element name="kzvnr">
+				<xs:annotation>
+					<xs:documentation>Abrechnungsnummer</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="2"/>
+						<xs:maxLength value="28"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="gueltigbis" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Datum des Versicherungsende.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="einlesedatum" type="xs:date" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Kfoplandaten.Typ">
+		<xs:sequence>
+			<xs:element name="leistungsquartal">
+				<xs:annotation>
+					<xs:documentation>1</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:minInclusive value="1"/>
+						<xs:maxInclusive value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="leistungsjahr">
+				<xs:annotation>
+					<xs:documentation>2013</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="leerquartal" type="xs:boolean"/>
+			<xs:element name="abschlagsnr" type="pad:String_1-8.Typ">
+				<xs:annotation>
+					<xs:documentation>99</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="planungsdatum" type="xs:date"/>
+			<xs:element name="verlaengerungsdatum" type="xs:date" minOccurs="0"/>
+			<xs:element name="behandlungsbeginn" type="xs:date"/>
+			<xs:element name="behandlungsende" type="xs:date" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="Lanr.Typ">
+		<xs:annotation>
+			<xs:documentation>Lebenslange Arztnummer, die die KV an den Arzt vergibt, der an der vertragsärztlichen Versorgung teilnimmt.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:positiveInteger">
+			<xs:totalDigits value="9"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Nachlass.Typ">
+		<xs:choice>
+			<xs:element name="betrag" type="pad:Betrag.Typ"/>
+			<xs:element name="prozent" type="pad:Prozent.Typ"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="OPS.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:String_1-11.Typ">
+				<xs:attribute name="lokalisation" type="pad:Lokalisation.Enum"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:simpleType name="PVSkundennr.Typ">
+		<xs:restriction base="xs:positiveInteger">
+			<xs:totalDigits value="20"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Ratenzahlung.Typ">
+		<xs:sequence>
+			<xs:element name="vereinbarung" type="pad:Ratenvereinbarung.Enum" minOccurs="0"/>
+			<xs:element name="ersterbetrag" type="pad:Betrag.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Abweichender erster Ratenbetrag.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="startdatum" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Datum der ersten Rate.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:choice>
+				<xs:element name="betrag" type="pad:Betrag.Typ">
+					<xs:annotation>
+						<xs:documentation>Ratenbetrag pro Monat.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="anzahl">
+					<xs:annotation>
+						<xs:documentation>Anzahl der Monatsraten.</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:positiveInteger">
+							<xs:totalDigits value="3"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:element>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SummenblockBema.Typ">
+		<xs:sequence>
+			<xs:element name="summehonorarbema" type="pad:BetragBezeichnung.Typ"/>
+			<xs:element name="summezahlbetrag" type="pad:BetragBezeichnung.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SummenblockBmg.Typ">
+		<xs:sequence>
+			<xs:element name="gozeigenlabor" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozfremdlabor" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozzwischensummehonorar" type="pad:Betrag.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>ohne Umsatzsteuer</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="gozauslagen" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozwegegeld" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozrechnungsbetrag" type="pad:Betrag.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>inkl. Umsatzsteuer</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="gozvorauszahlung" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozminderungsbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozvorleistung" type="pad:Betrag.Typ" minOccurs="0"/>
+			<xs:element name="gozzahlbetrag" type="pad:Betrag.Typ">
+				<xs:annotation>
+					<xs:documentation>Inklusive Umsatzsteuer</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="gozustvoll" type="pad:Betrag.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Umsatzsteuer bei Verlangensleistung (voll)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="gozustgemindert" type="pad:Betrag.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Umsatzsteuer bei verlangensleistung (gemindert)</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SummenblockEigenanteil.Typ">
+		<xs:sequence>
+			<xs:element name="summehonorarbema" type="pad:BetragBezeichnung.Typ" maxOccurs="unbounded"/>
+			<xs:element name="summehonorargoz" type="pad:BetragBezeichnung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="summeeigenlabor" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summefremdlabor" type="pad:BetragBezeichnung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="summeverbrauchsmaterial" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summeeigenlabormehrkosten" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summefremdlabormehrkosten" type="pad:BetragBezeichnung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="summeverbrauchsmaterialmehrkosten" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summegesamt" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summekassenanteil" type="pad:BetragBezeichnungSatz.Typ" minOccurs="0"/>
+			<xs:element name="summeeigenanteil" type="pad:BetragBezeichnungSatz.Typ" minOccurs="0"/>
+			<xs:element name="summezahlbetrag" type="pad:BetragBezeichnung.Typ"/>
+			<xs:element name="summeabzug" minOccurs="0">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:restriction base="pad:BetragBezeichnung.Typ">
+							<xs:attribute name="bezeichnung" type="pad:String_1_80.Typ" use="required"/>
+						</xs:restriction>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="summeauslagen" minOccurs="0">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:restriction base="pad:BetragBezeichnung.Typ">
+							<xs:attribute name="bezeichnung" type="pad:String_1_80.Typ" use="required"/>
+						</xs:restriction>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SummenblockEigenanteilKFO.Typ">
+		<xs:sequence>
+			<xs:element name="summehonorarbema" type="pad:BetragBezeichnung.Typ"/>
+			<xs:element name="summeeigenlabor" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summefremdlabor" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summeverbrauchsmaterial" type="pad:BetragBezeichnung.Typ" minOccurs="0"/>
+			<xs:element name="summeversichertenanteil" type="pad:BetragBezeichnungSatz.Typ"/>
+			<xs:element name="summekassenanteil" type="pad:BetragBezeichnungSatz.Typ"/>
+			<xs:element name="summemehrkosten" type="pad:BetragBezeichnung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="summezahlbetrag" type="pad:BetragBezeichnung.Typ"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Unfallarbeitgeber.Typ">
+		<xs:sequence>
+			<xs:element name="name">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="80"/>
+						<xs:minLength value="1"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="anschrift" type="pad:Anschrift2.Typ"/>
+			<xs:element name="berufsgruppe" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Berufsgruppe des Versicherten</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="30"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="einstellungsdatum" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Angabe, seit wann der Versicherte beim Arbeitgeber angestellt ist.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Unfalldaten.Typ">
+		<xs:sequence>
+			<xs:element name="unfalltag" type="xs:date"/>
+			<xs:element name="aktenzeichen" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="65"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="unfallhergang" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="80"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="personalunfall" type="xs:boolean">
+				<xs:annotation>
+					<xs:documentation>Ist der Versicherte bei einem Unfallversicherungsträger beschäftigt: true</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="arbeitgeber" type="pad:Unfallarbeitgeber.Typ"/>
+			<xs:element name="refarztbericht" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Verweis auf einen Arztbericht. Z.B. die Refernznummer eines D-Arztbericht im Dale-UV Vaerfahren.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="pad:String_1-15.Typ">
+							<xs:attribute name="typ" type="xs:string">
+								<xs:annotation>
+									<xs:documentation>Bezeichner für Arztbericht (Bsp.: DABE, HABE, NASB, ZWIB, HAVB, KOEB, KNEB, STEB, VEEB)</xs:documentation>
+								</xs:annotation>
+							</xs:attribute>
+						</xs:extension>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="Ustidnr.Typ">
+		<xs:annotation>
+			<xs:documentation>Umsatzsteueridentifikationsnummer</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="15"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Versicherung.Typ">
+		<xs:sequence>
+			<xs:element name="kassenname" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Name der Versicherung.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="2"/>
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="iknr" type="pad:IKnr.Typ">
+				<xs:annotation>
+					<xs:documentation>Institutionskennzeichen der Krankenkasse.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="kvnr" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Krankenversichertennummer der KVK bzw. eGK.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="12"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="versichertenart" type="pad:Versichertenart.Enum" minOccurs="0"/>
+			<xs:element name="bpersonenkreis" type="pad:Besondererpersonenkreis.Enum" minOccurs="0"/>
+			<xs:element name="dmpteilnahme" type="pad:DMPkennzeichen.Enum" minOccurs="0"/>
+			<xs:element name="gueltigab" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Beginn des Versicherungsschutzes.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="gueltigbis" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datum des Versicherungsende.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="khkennzeichen" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Krankenhaus-internes Kennzeichen des Versicherten.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="15"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="Vertragsart.Typ">
+		<xs:restriction base="xs:positiveInteger">
+			<xs:totalDigits value="3"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<!---->
+	<!--Definition von Leistungspositionen-->
+	<!---->
+	<xs:complexType name="Leistungsposition.Typ">
+		<xs:annotation>
+			<xs:documentation>Basistyp für alle GO Leistungspositionen.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Identifizierung des LE für die angegebene Leistung (falls abweichend von der übergreifenden Angabe).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="datum" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Datum der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="uhrzeit" type="xs:time" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Uhrzeit der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="anzahl">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="text" type="pad:Text.Typ">
+				<xs:annotation>
+					<xs:documentation>Positionstext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="zusatztext" type="pad:Text.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Zusatztext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="positionsnr" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Legt die Reihenfolge bei Ausdrudck der Positionen fest.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="id" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler eindeutiger Bezeichner für Position (für Gruppierungen und Verweise zw. Positionen).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="idref" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler Bezeichner zum Setzen einer Referenz zu einer anderen Position (id Attribut).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Leistungsposition2.Typ">
+		<xs:annotation>
+			<xs:documentation>Basistyp für alle GO Leistungspositionen.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Identifizierung des LE für die angegebene Leistung (falls abweichend von der übergreifenden Angabe).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="datum" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datum der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="uhrzeit" type="xs:time" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Uhrzeit der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="anzahl">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="text" type="pad:Text.Typ">
+				<xs:annotation>
+					<xs:documentation>Positionstext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="zusatztext" type="pad:Text.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Zusatztext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="positionsnr" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Legt die Reihenfolge bei Ausdrudck der Positionen fest.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="id" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler eindeutiger Bezeichner für Position (für Gruppierungen und Verweise zw. Positionen).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="idref" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler Bezeichner zum Setzen einer Referenz zu einer anderen Position (id Attribut).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Ziffer.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:String_1-8.Typ">
+				<xs:attribute name="go" type="pad:Gebuehrenordnung.Enum" use="required"/>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="analog" type="xs:boolean"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BemaZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>Leistungsposition BEMA</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Leistungsposition.Typ">
+				<xs:sequence>
+					<xs:element name="anteil" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Wird eine Leistung nur zum Teil in Rechnung gestellt, wird hier der Anteil angegeben.</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:attribute name="zaehler" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="1"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+							<xs:attribute name="nenner" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="2"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+						</xs:complexType>
+					</xs:element>
+					<xs:element name="zahnangabe" type="pad:Zahnangabe.Typ" minOccurs="0"/>
+					<xs:element name="punktwert">
+						<xs:simpleType>
+							<xs:restriction base="xs:decimal">
+								<xs:totalDigits value="9"/>
+								<xs:fractionDigits value="7" fixed="true"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="punktzahl">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="5"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+				</xs:sequence>
+				<xs:attribute name="berechnung" type="pad:Berechnungskennzeichen.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet, nur das Honorar oder die Sachkosten berechnet werden.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="go" type="pad:Gebuehrenordnung.Enum" use="required" fixed="BEMA"/>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="ziffer" type="pad:String_1-8.Typ" use="required"/>
+				<xs:attribute name="abzug" type="xs:boolean" use="required">
+					<xs:annotation>
+						<xs:documentation>z. B. bei Mehrkosten bei Füllungstherapie</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="BemaKFOZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>KFO Leistungsposition BEMA</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Leistungsposition2.Typ">
+				<xs:sequence>
+					<xs:element name="anteil" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Wird eine Leistung nur zum Teil in Rechnung gestellt, wird hier der Anteil angegeben.</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:attribute name="zaehler" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="1"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+							<xs:attribute name="nenner" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="2"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+						</xs:complexType>
+					</xs:element>
+					<xs:element name="zahnangabe" type="pad:Zahnangabe.Typ" minOccurs="0"/>
+					<xs:element name="leistungsart" type="pad:Leistungsartkfo.Enum"/>
+					<xs:element name="edv-nr">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:maxInclusive value="9999"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="punktwert">
+						<xs:simpleType>
+							<xs:restriction base="xs:decimal">
+								<xs:totalDigits value="9"/>
+								<xs:fractionDigits value="7" fixed="true"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="punktzahl">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="5"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="punktzahlgesamt">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="5"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+				</xs:sequence>
+				<xs:attribute name="berechnung" type="pad:Berechnungskennzeichen.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet, nur das Honorar oder die Sachkosten berechnet werden.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="go" type="pad:Gebuehrenordnung.Enum" use="required" fixed="BEMA"/>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="ziffer" type="pad:String_1-8.Typ" use="required"/>
+				<xs:attribute name="abzug" type="xs:boolean" use="required">
+					<xs:annotation>
+						<xs:documentation>z. B. bei Mehrkosten bei Füllungstherapie</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="BemaKFOZwSumme.Typ">
+		<xs:annotation>
+			<xs:documentation>KFO Zwischensumme BEMA</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="text" type="pad:Text.Typ">
+				<xs:annotation>
+					<xs:documentation>Text für Zwischensumme</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="leistungsart" type="pad:Leistungsartkfo.Enum"/>
+			<xs:element name="punktwert">
+				<xs:simpleType>
+					<xs:restriction base="xs:decimal">
+						<xs:totalDigits value="9"/>
+						<xs:fractionDigits value="7" fixed="true"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="punktzahlgesamt">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="5"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="gesamtbetrag" type="pad:Betrag.Typ"/>
+		</xs:sequence>
+		<xs:attribute name="positionsnr" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Legt die Reihenfolge bei Ausdrudck der Positionen fest.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="GOZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>Leistungsposition nach jeweiliger Gebührenordnung.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Leistungsposition.Typ">
+				<xs:sequence>
+					<xs:choice>
+						<xs:element name="faktor">
+							<xs:annotation>
+								<xs:documentation>Faktor für erbrachte Leistung nach der jeweiligen Gebührenordnung.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:decimal">
+									<xs:fractionDigits value="6"/>
+									<xs:totalDigits value="8"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="einzelbetrag" type="pad:Betrag.Typ">
+							<xs:annotation>
+								<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:choice>
+					<xs:element name="beteiligung" type="pad:Beteiligung.Typ" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="anteil" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Wird eine Leistung nur zum Teil in Rechnung gestellt, wird hier der Anteil angegeben (z.B. Abrechnung eines halben Zuschlags nach Ziffer D GOÄ, wenn die Leistung innerhalb der Sprechstunde an Samstagen erbracht wurde).</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:attribute name="zaehler" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="1"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+							<xs:attribute name="nenner" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="2"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+						</xs:complexType>
+					</xs:element>
+					<xs:element name="begruendung" type="pad:Text.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Begründungstext für erbrachte Leistung (z.B. bei Verwendung von höheren Faktoren als der Regelhöchstsatz).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="minderungssatz" type="pad:Minderungssatz.Enum" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Minderungssatz, um den das Honorar ggf. zu mindern ist (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="ambo" type="pad:Ambo.Typ" minOccurs="0"/>
+					<xs:element name="punktwert" minOccurs="0">
+						<xs:simpleType>
+							<xs:restriction base="xs:decimal">
+								<xs:totalDigits value="9"/>
+								<xs:fractionDigits value="7" fixed="true"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="punktzahl" minOccurs="0">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="5"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ"/>
+				</xs:sequence>
+				<xs:attribute name="berechnung" type="pad:Berechnungskennzeichen.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet, nur das Honorar oder die Sachkosten berechnet werden.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="go" use="required">
+					<xs:simpleType>
+						<xs:restriction base="pad:Gebuehrenordnung.Enum">
+							<xs:pattern value="GOAE"/>
+							<xs:pattern value="UVGOAE"/>
+							<xs:pattern value="EBM"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="analog" type="pad:String_1-8.Typ"/>
+				<xs:attribute name="ziffer" type="pad:String_1-8.Typ" use="required"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="GOZZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>Leistungsposition GOZ</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Leistungsposition.Typ">
+				<xs:sequence>
+					<xs:choice>
+						<xs:element name="faktor">
+							<xs:annotation>
+								<xs:documentation>Faktor für erbrachte Leistung nach der jeweiligen Gebührenordnung.</xs:documentation>
+							</xs:annotation>
+							<xs:simpleType>
+								<xs:restriction base="xs:decimal">
+									<xs:fractionDigits value="6"/>
+									<xs:totalDigits value="8"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+						<xs:element name="vorgabebetrag" type="pad:Betrag.Typ">
+							<xs:annotation>
+								<xs:documentation>Vorgabe des Einzelbetrages für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:choice>
+					<xs:element name="anteil" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Wird eine Leistung nur zum Teil in Rechnung gestellt, wird hier der Anteil angegeben (z.B. Abrechnung eines halben Zuschlags nach Ziffer D GOÄ, wenn die Leistung innerhalb der Sprechstunde an Samstagen erbracht wurde).</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:attribute name="zaehler" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="1"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+							<xs:attribute name="nenner" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="2"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+						</xs:complexType>
+					</xs:element>
+					<xs:element name="minderungssatz" type="pad:Minderungssatz.Enum" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Minderungssatz, um den das Honorar ggf. zu mindern ist (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="zahnangabe" type="pad:Zahnangabe.Typ" minOccurs="0"/>
+					<xs:element name="punktwert" minOccurs="0">
+						<xs:simpleType>
+							<xs:restriction base="xs:decimal">
+								<xs:totalDigits value="9"/>
+								<xs:fractionDigits value="7" fixed="true"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="punktzahl" minOccurs="0">
+						<xs:simpleType>
+							<xs:restriction base="xs:positiveInteger">
+								<xs:totalDigits value="5"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:element>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ"/>
+					<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:choice>
+						<xs:element name="begruendungstext" type="pad:Text.Typ" minOccurs="0"/>
+						<xs:element name="begruendungsrefid" type="pad:Id.Typ" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:choice>
+				</xs:sequence>
+				<xs:attribute name="berechnung" type="pad:Berechnungskennzeichen.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet, nur das Honorar oder die Sachkosten berechnet werden.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="abzug" type="xs:boolean" use="required">
+					<xs:annotation>
+						<xs:documentation>z. B. bei Mehrkosten bei Füllungstherapie</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="go" type="pad:Gebuehrenordnung.Enum" use="required" fixed="GOZ"/>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="analog" type="pad:String_1-8.Typ"/>
+				<xs:attribute name="ziffer" type="pad:String_1-8.Typ" use="required"/>
+				<xs:attribute name="verlangensleistung" type="xs:boolean" use="optional" default="false"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="LaborZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>Ziffer Beleg Eigenlabor</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Leistungsposition2.Typ">
+				<xs:sequence>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ">
+						<xs:annotation>
+							<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ"/>
+					<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="berechnung" type="pad:Berechnungskennzeichen.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet, nur das Honorar oder die Sachkosten berechnet werden.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="go">
+					<xs:simpleType>
+						<xs:restriction base="pad:Gebuehrenordnung.Enum">
+							<xs:pattern value="BEB"/>
+							<xs:pattern value="BEL"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="ziffer" type="pad:String_1-8.Typ"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="EigenlaborKFOZiffer.Typ">
+		<xs:complexContent>
+			<xs:extension base="pad:Leistungsposition2.Typ">
+				<xs:sequence>
+					<xs:element name="einheit" type="xs:string" minOccurs="0"/>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ"/>
+					<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="berechnung" type="pad:Berechnungskennzeichen.Enum">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet, nur das Honorar oder die Sachkosten berechnet werden.</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="go">
+					<xs:simpleType>
+						<xs:restriction base="pad:Gebuehrenordnung.Enum">
+							<xs:pattern value="BEB"/>
+							<xs:pattern value="BEL"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="ziffer" type="pad:String_1-8.Typ"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="MaterialZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>Ziffer Beleg Material</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="datum" type="xs:date" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Datum der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="menge" type="xs:decimal"/>
+			<xs:element name="einheit" type="xs:string" minOccurs="0"/>
+			<xs:element name="text" type="pad:Text.Typ">
+				<xs:annotation>
+					<xs:documentation>Positionstext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="einzelbetrag" type="pad:Betrag.Typ">
+				<xs:annotation>
+					<xs:documentation>Einzelbetrag für Leistung (ohne Minderungen und Umsatzsteuer).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="gesamtbetrag" type="pad:Betrag.Typ"/>
+			<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="positionsnr" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Legt die Reihenfolge bei Ausdrudck der Positionen fest.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="MaterialpassZiffer.Typ">
+		<xs:annotation>
+			<xs:documentation>Ziffer Beleg Materialpass</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="bezeichnung">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="hersteller">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="seriennr">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="chargennr">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="bestandteile">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="erklaerung">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:maxLength value="100"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Ambo.Typ">
+		<xs:sequence>
+			<xs:element name="ops" type="pad:OPS.Typ" minOccurs="0"/>
+			<xs:element name="doppeluntersuchung" type="xs:boolean" fixed="1" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Kennzeichen, wenn in medizinisch begründeten Fällen bereits durchgeführte Untersuchungen nochmals veranlasst und in Rechnung gestellt werden.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="einzelverguetung" minOccurs="0">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="pad:Betrag.Typ">
+							<xs:attribute name="kennzeichen" use="required">
+								<xs:annotation>
+									<xs:documentation>Nach Schlüssel 3 (§301 Abs. 3 SGB V).</xs:documentation>
+								</xs:annotation>
+								<xs:simpleType>
+									<xs:restriction base="xs:string">
+										<xs:length value="2"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+						</xs:extension>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="zusatzebm" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Zusatzkennzeichen EBM, nach Schlüssel 19 (§301 Abs. 3 SGB V)</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:length value="3"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Auslagen.Typ">
+		<xs:annotation>
+			<xs:documentation>Auslagen nach §10 GOÄ/GOZ.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Auslagenposition.Typ">
+				<xs:sequence>
+					<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ">
+						<xs:annotation>
+							<xs:documentation>Vorgabe des Einzelbetrages für Leistung (ohne Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+				</xs:sequence>
+				<xs:attribute name="kennzeichen" type="pad:Positionskennzeichen.Enum" use="required">
+					<xs:annotation>
+						<xs:documentation>Kennzeichen zur Klassifizierung der Position (Medikament, Porto, ...).</xs:documentation>
+					</xs:annotation>
+				</xs:attribute>
+				<xs:attribute name="berechnung">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet werden soll.</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="K">
+								<xs:annotation>
+									<xs:documentation>Keine Berechnung der Leistung</xs:documentation>
+								</xs:annotation>
+							</xs:enumeration>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Auslagenposition.Typ">
+		<xs:annotation>
+			<xs:documentation>Basistyp für alle Nicht-GO Leistungspositionen.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="leistungserbringerid" type="pad:Id.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Identifizierung des LE für die angegebene Leistung (falls abweichend von der übergreifenden Angabe).</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="datum" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Datum der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="uhrzeit" type="xs:time" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Uhrzeit der Leistungserbingung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="anzahl">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="text" type="pad:Text.Typ">
+				<xs:annotation>
+					<xs:documentation>Positionstext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="zusatztext" type="pad:Text.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Zusatztext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="beteiligung" type="pad:Beteiligung.Typ" minOccurs="0" maxOccurs="unbounded">
+				<xs:annotation>
+					<xs:documentation>Angabe von Arztbeteiligungen auf Positionsebene.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="positionsnr" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Legt die Reihenfolge bei Ausdrudck der Positionen fest.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="id" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler eindeutiger Bezeichner für Position (für Gruppierungen und Verweise zw. Positionen).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="idref" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler Bezeichner zum Setzen einer Referenz zu einer anderen Position (id Attribut).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Entschaedigung.Typ">
+		<xs:annotation>
+			<xs:documentation>Entschädigung, entweder Wegegeld oder Reiseentschädigung.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="pad:Auslagenposition.Typ">
+				<xs:sequence>
+					<xs:choice>
+						<xs:element name="wegegeld" type="pad:Wegegeld.Typ">
+							<xs:annotation>
+								<xs:documentation>Angaben nach §8 GOÄ/GOZ zur Entschädigung für Besuche.</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+						<xs:element name="reisekosten" type="pad:Reisekosten.Typ">
+							<xs:annotation>
+								<xs:documentation>Angaben nach §9 GOÄ oder §8 GOZ Abs.3 zur Erstattung von Reiseaufwendungen.</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:choice>
+					<xs:element name="anteil" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Anteilige Berechnung der Entschädigung, wenn mehrere Patienten besucht werden (z.B. Besuch eines Altenheimes).</xs:documentation>
+						</xs:annotation>
+						<xs:complexType>
+							<xs:attribute name="teiler" use="required">
+								<xs:simpleType>
+									<xs:restriction base="xs:positiveInteger">
+										<xs:totalDigits value="2"/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:attribute>
+						</xs:complexType>
+					</xs:element>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+				</xs:sequence>
+				<xs:attribute name="go" use="required">
+					<xs:annotation>
+						<xs:documentation>Angabe der Gebührenordnung, nach der die Entschädigung berechnet werden soll.</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="pad:Gebuehrenordnung.Enum">
+							<xs:pattern value="GOAE"/>
+							<xs:pattern value="GOZ"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+				<xs:attribute name="goversion">
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:maxLength value="10"/>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Honorar.Typ">
+		<xs:complexContent>
+			<xs:extension base="pad:Auslagenposition.Typ">
+				<xs:sequence>
+					<xs:element name="mwstsatz" type="pad:Prozent.Typ" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Kennzeichen für den Umsatzsteuersatz der Position (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="minderungssatz" type="pad:Minderungssatz.Enum" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>Minderungssatz, um den das Honorar ggf. gemindert wurde (ist nicht in den anderen Beträgen enthalten).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="einzelbetrag" type="pad:Betrag.Typ">
+						<xs:annotation>
+							<xs:documentation>Vorgabe des Einzelbetrages für Leistung (ohne Umsatzsteuer).</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+					<xs:element name="gesamtbetrag" type="pad:Betrag.Typ" minOccurs="0"/>
+				</xs:sequence>
+				<xs:attribute name="berechnung">
+					<xs:annotation>
+						<xs:documentation>Angabe, ob die Leistung nicht berechnet werden soll.</xs:documentation>
+					</xs:annotation>
+					<xs:simpleType>
+						<xs:restriction base="xs:string">
+							<xs:enumeration value="K">
+								<xs:annotation>
+									<xs:documentation>Keine Berechnung der Leistung</xs:documentation>
+								</xs:annotation>
+							</xs:enumeration>
+						</xs:restriction>
+					</xs:simpleType>
+				</xs:attribute>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Reisekosten.Typ">
+		<xs:annotation>
+			<xs:documentation>Reiseentschädigung nach §8 GOÄ.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="wegstrecke">
+				<xs:annotation>
+					<xs:documentation>Angabe der zurückgelegten Kilometer.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="uebernachtungskosten" type="pad:Betrag.Typ" minOccurs="0">
+				<xs:annotation>
+					<xs:documentation>Betrag für notwendige Übernachtungen.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="abwesenheit" use="required">
+			<xs:annotation>
+				<xs:documentation>Kennzeichen für Abwesenheit in Stunden.</xs:documentation>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:length value="1"/>
+					<xs:enumeration value="0">
+						<xs:annotation>
+							<xs:documentation>Abwesenheit bis zu 8 Stunden.</xs:documentation>
+						</xs:annotation>
+					</xs:enumeration>
+					<xs:enumeration value="1">
+						<xs:annotation>
+							<xs:documentation>Abwesenheit von mehr als 8 Stunden.</xs:documentation>
+						</xs:annotation>
+					</xs:enumeration>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:simpleType name="Zahnangabe.Typ">
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="100"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Wegegeld.Typ">
+		<xs:annotation>
+			<xs:documentation>Wegegeld nach §8 GOÄ/GOZ.</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="radius">
+				<xs:annotation>
+					<xs:documentation>Angabe des Radius in km um die Praxisstelle oder Wohnort des Arztes.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="2"/>
+						<xs:enumeration value="2"/>
+						<xs:enumeration value="5"/>
+						<xs:enumeration value="10"/>
+						<xs:enumeration value="25"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="tageszeit" use="required">
+			<xs:annotation>
+				<xs:documentation>Angabe, ob Besuch am Tag oder bei Nacht erfolgte.</xs:documentation>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:length value="1"/>
+					<xs:enumeration value="T"/>
+					<xs:enumeration value="N"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Textzeile.Typ">
+		<xs:annotation>
+			<xs:documentation>Textposition ohne Bezug zu einer Leistungsziffer</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="text" type="pad:Text.Typ">
+				<xs:annotation>
+					<xs:documentation>Positionstext für erbrachte Leistung.</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="id" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler eindeutiger Bezeichner für Position (für Gruppierungen und Verweise zw. Positionen).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="idref" type="pad:Id.Typ">
+			<xs:annotation>
+				<xs:documentation>Optionaler Bezeichner zum Setzen einer Referenz zu einer anderen Position (id Attribut).</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="positionsnr" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Legt die Reihenfolge bei Ausdrudck der Positionen fest.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<!---->
+	<!--Allgemeine Hilfstypen-->
+	<!---->
+	<xs:simpleType name="Betrag.Typ">
+		<xs:restriction base="xs:decimal">
+			<xs:totalDigits value="9"/>
+			<xs:fractionDigits value="2"/>
+			<xs:minInclusive value="0.00"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="BetragSatz.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:Betrag.Typ">
+				<xs:attribute name="satz" type="pad:Prozent.Typ"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BetragBezeichnung.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:Betrag.Typ">
+				<xs:attribute name="bezeichnung" type="pad:String_1_80.Typ"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="BetragBezeichnungSatz.Typ">
+		<xs:simpleContent>
+			<xs:extension base="pad:Betrag.Typ">
+				<xs:attribute name="bezeichnung" type="pad:String_1_40.Typ"/>
+				<xs:attribute name="satz" type="pad:Prozent.Typ"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="Dateilaenge.Typ">
+		<xs:attribute name="laenge" type="xs:unsignedLong" use="required">
+			<xs:annotation>
+				<xs:documentation>Angabe in Bytes.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="pruefsumme" use="required">
+			<xs:annotation>
+				<xs:documentation>Verwendet wird das SHA-1 Verfahren.</xs:documentation>
+			</xs:annotation>
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:length value="40"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="Fehler.Typ">
+		<xs:attribute name="code" type="xs:positiveInteger" use="required">
+			<xs:annotation>
+				<xs:documentation>Fehlercode.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="text" type="xs:string" use="required">
+			<xs:annotation>
+				<xs:documentation>Fehlertext.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+		<xs:attribute name="hinweis" type="xs:string">
+			<xs:annotation>
+				<xs:documentation>Weitere Hinweise.</xs:documentation>
+			</xs:annotation>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:simpleType name="Id.Typ">
+		<xs:annotation>
+			<xs:documentation>Datentyp für eindeutigen Bezeichner, z.B. Angabe einer GUID (Globally Unique Identifier).</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:maxLength value="40"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Prozent.Typ">
+		<xs:restriction base="xs:decimal">
+			<xs:fractionDigits value="2"/>
+			<xs:minInclusive value="0.00"/>
+			<xs:maxInclusive value="100.00"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="String_NichtLeer.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:pattern value=".*[^\s].*"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="String_1-8.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="8"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="String_1-11.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="11"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="String_1-15.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="15"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="String_1_40.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="40"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="String_1_80.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="80"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Teilnehmer.Typ">
+		<xs:sequence>
+			<xs:element name="logisch">
+				<xs:annotation>
+					<xs:documentation>Angabe des Eigners der Daten.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="pad:String_1_40.Typ">
+							<xs:attribute name="kundennr" type="pad:PVSkundennr.Typ"/>
+							<xs:attribute name="rzid" type="pad:PvsIds.Enum"/>
+							<xs:attribute name="iknr" type="pad:IKnr.Typ"/>
+						</xs:extension>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="physikalisch">
+				<xs:annotation>
+					<xs:documentation>Angabe des Partners, der die Daten tatsächlich empfängt bzw. versendet.</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="pad:String_1_40.Typ">
+							<xs:attribute name="kundennr" type="pad:PVSkundennr.Typ"/>
+							<xs:attribute name="rzid" type="pad:PvsIds.Enum"/>
+							<xs:attribute name="iknr" type="pad:IKnr.Typ"/>
+						</xs:extension>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="Text.Typ">
+		<xs:restriction base="xs:string">
+			<xs:minLength value="1"/>
+			<xs:maxLength value="4000"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Zeitraum.Typ">
+		<xs:all>
+			<xs:element name="startdatum" type="xs:date" minOccurs="0"/>
+			<xs:element name="endedatum" type="xs:date" minOccurs="0"/>
+			<xs:element name="anzahltage" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:all>
+	</xs:complexType>
+</xs:schema>

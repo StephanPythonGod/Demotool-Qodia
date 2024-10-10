@@ -12,3 +12,6 @@ deploy.sh
 !/data/GOA_Ziffern.csv
 !/data/template_rechnung.html
 .env
+
+# Ignore all pkl files
+*.pkl

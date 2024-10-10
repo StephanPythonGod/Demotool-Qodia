@@ -1,0 +1,216 @@
+<?xml version="1.0"?>
+<!-- Mit XMLSpy v2015 rel. 4 sp1 (x64) (http://www.altova.com) von Jan Brötzmann (quadcore GmbH) bearbeitet -->
+<xsd:schema xmlns="http://padinfo.de/ns/pad" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:pad="http://padinfo.de/ns/pad" xmlns:altova="http://www.altova.com/xml-schema-extensions" targetNamespace="http://padinfo.de/ns/pad" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.12">
+	<xsd:include schemaLocation="padx_basis_v2.12.xsd"/>
+	<xsd:element name="auftrag">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="empfaenger" type="Teilnehmer.Typ">
+					<xsd:annotation>
+						<xsd:documentation>Empfänger der Datenlieferung.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+				<xsd:element name="absender" type="pad:Teilnehmer.Typ">
+					<xsd:annotation>
+						<xsd:documentation>Absender der Datenlieferung.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+				<xsd:element name="nachrichtentyp" type="pad:Nachrichtentyp.Typ"/>
+				<xsd:element name="system">
+					<xsd:annotation>
+						<xsd:documentation>Angaben über das System, dass die Daten erstellt hat.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:element name="produkt">
+								<xsd:annotation>
+									<xsd:appinfo>
+										<altova:exampleValues>
+											<altova:example value="PAD Comfort"/>
+										</altova:exampleValues>
+									</xsd:appinfo>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:maxLength value="40"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="version">
+								<xsd:annotation>
+									<xsd:appinfo>
+										<altova:exampleValues>
+											<altova:example value="1.00"/>
+										</altova:exampleValues>
+									</xsd:appinfo>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:maxLength value="20"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="hersteller">
+								<xsd:annotation>
+									<xsd:appinfo>
+										<altova:exampleValues>
+											<altova:example value="PVS"/>
+										</altova:exampleValues>
+									</xsd:appinfo>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:maxLength value="40"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="zertifizierungsnr" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>Diese Nummer wird beim Zertifizierungsprozess für das jeweilige System vergeben.</xsd:documentation>
+									<xsd:appinfo>
+										<altova:exampleValues>
+											<altova:example value="PADx-AIS-2009-001"/>
+										</altova:exampleValues>
+									</xsd:appinfo>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:maxLength value="20"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+						</xsd:sequence>
+					</xsd:complexType>
+				</xsd:element>
+				<xsd:element name="verschluesselung">
+					<xsd:complexType>
+						<xsd:attribute name="verfahren" use="required">
+							<xsd:annotation>
+								<xsd:documentation>PKCS7, keine.</xsd:documentation>
+							</xsd:annotation>
+							<xsd:simpleType>
+								<xsd:restriction base="xsd:decimal">
+									<xsd:totalDigits value="1"/>
+									<xsd:enumeration value="0">
+										<xsd:annotation>
+											<xsd:documentation>Keine Verschlüsselung.</xsd:documentation>
+										</xsd:annotation>
+									</xsd:enumeration>
+									<xsd:enumeration value="1">
+										<xsd:annotation>
+											<xsd:documentation>PKCS#7 Verfahren.</xsd:documentation>
+										</xsd:annotation>
+									</xsd:enumeration>
+								</xsd:restriction>
+							</xsd:simpleType>
+						</xsd:attribute>
+						<xsd:attribute name="idcert" use="required">
+							<xsd:annotation>
+								<xsd:documentation>Kennung für Empfänger Zertifikat (enthält öffentlichen Schlüssel).</xsd:documentation>
+							</xsd:annotation>
+							<xsd:simpleType>
+								<xsd:restriction base="xsd:string">
+									<xsd:maxLength value="128"/>
+								</xsd:restriction>
+							</xsd:simpleType>
+						</xsd:attribute>
+					</xsd:complexType>
+				</xsd:element>
+				<xsd:element name="empfangsquittung">
+					<xsd:annotation>
+						<xsd:documentation>Ist eine Empfangsbestätigung für diese Datenlieferung erwünscht? Mit email Adresse.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:complexType>
+						<xsd:simpleContent>
+							<xsd:extension base="xsd:boolean">
+								<xsd:attribute name="email">
+									<xsd:simpleType>
+										<xsd:restriction base="xsd:string">
+											<xsd:maxLength value="100"/>
+										</xsd:restriction>
+									</xsd:simpleType>
+								</xsd:attribute>
+							</xsd:extension>
+						</xsd:simpleContent>
+					</xsd:complexType>
+				</xsd:element>
+				<xsd:element name="datei" type="pad:Datei.Typ" maxOccurs="9999">
+					<xsd:annotation>
+						<xsd:documentation>Informationen über alle Nutzdateien der Datenlieferung.</xsd:documentation>
+					</xsd:annotation>
+				</xsd:element>
+			</xsd:sequence>
+			<xsd:attribute name="erstellungsdatum" type="xsd:dateTime" use="required">
+				<xsd:annotation>
+					<xsd:documentation>Erstellungsdatum mit Uhrzeit des Auftrages.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
+			<xsd:attribute name="transfernr" use="required">
+				<xsd:annotation>
+					<xsd:documentation>Pro Empfänger wird eine laufende Nummer hochgezählt</xsd:documentation>
+				</xsd:annotation>
+				<xsd:simpleType>
+					<xsd:restriction base="xsd:positiveInteger">
+						<xsd:totalDigits value="6"/>
+					</xsd:restriction>
+				</xsd:simpleType>
+			</xsd:attribute>
+			<xsd:attribute name="echtdaten" type="xsd:boolean" use="required">
+				<xsd:annotation>
+					<xsd:documentation>Kennug, ob es sich um Echt- oder Testdaten handelt.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
+			<xsd:attribute name="dateianzahl" use="required">
+				<xsd:annotation>
+					<xsd:documentation>Anzahl der Dateien pro Datenlieferung (ohne Auftragsdatei).</xsd:documentation>
+				</xsd:annotation>
+				<xsd:simpleType>
+					<xsd:restriction base="xsd:positiveInteger">
+						<xsd:totalDigits value="4"/>
+					</xsd:restriction>
+				</xsd:simpleType>
+			</xsd:attribute>
+		</xsd:complexType>
+		<xsd:unique name="Datei.Key">
+			<xsd:selector xpath="pad:datei"/>
+			<xsd:field xpath="@id"/>
+		</xsd:unique>
+	</xsd:element>
+	<xsd:complexType name="Datei.Typ">
+		<xsd:sequence>
+			<xsd:element name="dokumententyp" type="pad:Dokumenttyp.Typ"/>
+			<xsd:element name="name">
+				<xsd:annotation>
+					<xsd:documentation>Dateiname, ohne Pfadangaben.</xsd:documentation>
+				</xsd:annotation>
+				<xsd:simpleType>
+					<xsd:restriction base="xsd:string">
+						<xsd:maxLength value="40"/>
+					</xsd:restriction>
+				</xsd:simpleType>
+			</xsd:element>
+			<xsd:element name="beschreibung" minOccurs="0">
+				<xsd:simpleType>
+					<xsd:restriction base="xsd:string">
+						<xsd:maxLength value="60"/>
+					</xsd:restriction>
+				</xsd:simpleType>
+			</xsd:element>
+			<xsd:element name="dateilaenge" type="pad:Dateilaenge.Typ">
+				<xsd:annotation>
+					<xsd:documentation>Dateigröße unverschlüsselt und unkomprimiert.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+		<xsd:attribute name="id" type="pad:Id.Typ" use="required">
+			<xsd:annotation>
+				<xsd:documentation>Eindeutige Identifikation für Datei innerhalb einer Datenlieferung.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="erstellungsdatum" type="xsd:dateTime" use="required">
+			<xsd:annotation>
+				<xsd:documentation>Erstellungsdatum mit Uhrzeit der Datei.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+	</xsd:complexType>
+</xsd:schema>

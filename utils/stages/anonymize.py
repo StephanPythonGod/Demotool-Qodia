@@ -1,3 +1,5 @@
+import hashlib
+import io
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -12,60 +14,102 @@ from utils.helpers.logger import logger
 from utils.helpers.ocr import perform_ocr_on_file
 
 
+def load_image(
+    file_content: bytes, file_type: str, page_number: int = 0
+) -> Image.Image:
+    """Load image from file content, with error handling."""
+    try:
+        if file_type == "application/pdf":
+            return convert_from_bytes(file_content)[page_number]
+        elif file_type.startswith("image"):
+            return Image.open(io.BytesIO(file_content))
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}")
+    except Exception as e:
+        logger.error(f"Failed to load image on page {page_number}: {e}")
+        raise e  # Re-raise to handle upstream
+
+
 def display_file_selection_interface(
     uploaded_file: UploadedFile,
 ) -> Optional[List[List[Dict[str, float]]]]:
     """
     Display the file selection interface and handle user selections.
-
-    Args:
-        uploaded_file (st.UploadedFile): The uploaded file to process.
-
-    Returns:
-        Optional[List[List[Dict[str, float]]]]: A list of normalized selections for each page,
-        or None if there was an error processing the file.
     """
-    pages = []
+    if "file_content" not in st.session_state or "file_hash" not in st.session_state:
+        # Only read the file content if it hasn't been processed yet
+        uploaded_file.seek(0)
+        file_content = uploaded_file.read()
+        file_hash = hashlib.md5(file_content).hexdigest()
+        st.session_state["file_content"] = file_content
+        st.session_state["file_hash"] = file_hash
+        st.session_state["loaded_pages"] = {}
 
-    try:
-        if isinstance(uploaded_file, Image.Image):
-            pages.append(uploaded_file)
-        else:
-            uploaded_file.seek(0)
-            if uploaded_file.type == "application/pdf":
-                pages = convert_from_bytes(uploaded_file.read())
-            elif uploaded_file.type.startswith("image"):
-                image = Image.open(uploaded_file)
-                pages.append(image)
-    except Exception as e:
-        logger.error(f"Error processing uploaded file: {e}")
-        st.error(f"Fehler beim Verarbeiten der Datei: {e}")
-        return None
+    file_content = st.session_state["file_content"]
+    file_hash = st.session_state["file_hash"]
 
     all_selections = []
     left_column, right_column = st.columns([1, 1])
 
     with left_column:
-        for i, page_image in enumerate(pages):
-            st.subheader(f"Seite {i + 1}")
-            display_width, display_height = _calculate_display_dimensions(page_image)
+        if uploaded_file is None:
+            st.warning("Please upload a file first.")
+            return None
 
-            canvas_result = st_canvas(
-                fill_color=None,
-                stroke_width=2,
-                stroke_color="red",
-                background_image=page_image,
-                update_streamlit=True,
-                height=display_height,
-                width=display_width,
-                drawing_mode="rect",
-                key=f"canvas_{i}",
-            )
+        try:
+            if uploaded_file.type == "application/pdf":
+                num_pages = len(convert_from_bytes(file_content))
+            else:
+                num_pages = 1
 
-            normalized_selections = _process_canvas_result(
-                canvas_result, display_width, display_height
-            )
-            all_selections.append(normalized_selections)
+            for i in range(num_pages):
+                st.subheader(f"Page {i + 1}")
+
+                # Check if the page has already been loaded
+                page_key = f"{file_hash}_page_{i}"
+                if page_key not in st.session_state["loaded_pages"]:
+                    with st.spinner(f"Lade Seite {i + 1}..."):
+                        # Try loading the image
+                        try:
+                            page_image = load_image(file_content, uploaded_file.type, i)
+                            (
+                                display_width,
+                                display_height,
+                            ) = _calculate_display_dimensions(page_image)
+                            st.session_state["loaded_pages"][page_key] = {
+                                "image": page_image,
+                                "width": display_width,
+                                "height": display_height,
+                            }
+                        except Exception:
+                            st.error(
+                                f"Fehler beim Laden von Seite {i + 1}. Bitte einfach die Webseite neu laden."
+                            )
+                            continue  # Skip to the next page if loading fails
+
+                if page_key in st.session_state["loaded_pages"]:
+                    page_data = st.session_state["loaded_pages"][page_key]
+                    canvas_result = st_canvas(
+                        fill_color=None,
+                        stroke_width=2,
+                        stroke_color="red",
+                        background_image=page_data["image"],
+                        update_streamlit=True,
+                        height=page_data["height"],
+                        width=page_data["width"],
+                        drawing_mode="rect",
+                        key=f"canvas_{i}",
+                    )
+
+                    normalized_selections = _process_canvas_result(
+                        canvas_result, page_data["width"], page_data["height"]
+                    )
+                    all_selections.append(normalized_selections)
+
+        except Exception as e:
+            st.error(f"Error processing the file: {e}")
+            logger.error(f"Error processing file for selection: {e}")
+            return None
 
     _display_instructions(right_column)
 
