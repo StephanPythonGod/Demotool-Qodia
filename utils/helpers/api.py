@@ -94,8 +94,8 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
     except Exception as e:
         logger.error(f"Error calling API for text analysis: {e}")
         st.error(
-            f"Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes. "
-            f"Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
+            "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes. "
+            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
             f"Fehlerdetails: {e}"
         )
         return None
@@ -106,8 +106,8 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
             f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
         )
         st.error(
-            f"Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes.\n\n"
-            f"API-Fehler:\n"
+            "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes.\n\n"
+            "API-Fehler:\n"
             f"Status Code: {response.status_code}\n"
             f"Nachricht: {response.text}\n"
             f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {request_id}"
@@ -172,8 +172,8 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
     except Exception as e:
         logger.error(f"Error calling API for OCR: {e}")
         st.error(
-            f"Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
-            f"Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
+            "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
+            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
             f"Fehlerdetails: {e}"
         )
         return None
@@ -361,10 +361,7 @@ def test_api() -> bool:
         if response.status_code == 401:
             logger.error("API authentication failed: Incorrect API key")
             st.error(
-                (
-                    "Der API-Key ist nicht korrekt. Bitte überprüfen Sie den API-Key "
-                    "und speichern Sie die Einstellungen erneut."
-                )
+                "Der API-Key ist nicht korrekt. Bitte überprüfen Sie den API-Key und speichern Sie die Einstellungen erneut."
             )
             return False
         elif response.status_code not in (200, 201):
@@ -376,22 +373,21 @@ def test_api() -> bool:
                 )
             )
             st.error(
-                f"Ein unerwarteter Fehler ist beim Aufrufen der API aufgetreten. "
-                f"Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.\n\n"
-                f"Fehlerdetails:\n"
+                "Ein unerwarteter Fehler ist beim Aufrufen der API aufgetreten. "
+                "Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.\n\n"
+                "Fehlerdetails:\n"
                 f"Status Code: {response.status_code}\n"
-                f"Nachricht: {response.text}\n"(
-                    f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): "
-                    f"{response.headers.get('X-Request-ID', 'nicht-vorhanden')}"
-                )
+                f"Nachricht: {response.text}\n"
+                f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): "
+                f"{response.headers.get('X-Request-ID', 'nicht-vorhanden')}"
             )
             return False
     except Exception as e:
         logger.error(f"Error connecting to API: {e}")
         st.error(
-            f"Ein Fehler ist beim Aufrufen der API aufgetreten. "
-            f"Bitte überprüfen Sie die URL und den API-Key und speichern Sie die Einstellungen erneut.\n\n"
-            f"Fehlerdetails: {e}"
+            "Ein Fehler ist beim Aufrufen der API aufgetreten. "
+            "Bitte überprüfen Sie die URL und den API-Key und speichern Sie die Einstellungen erneut.\n\n"
+            f"Fehlerdetails:\n{e}"
         )
         return False
 
