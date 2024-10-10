@@ -80,6 +80,12 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
         "process_type": "predict",
     }
 
+    if st.session_state.arzt_hash is not None:
+        payload["arzt"] = st.session_state.arzt_hash
+
+    if st.session_state.kassenname_hash is not None:
+        payload["kassenname"] = st.session_state.kassenname_hash
+
     headers = {"x-api-key": st.session_state.api_key}
 
     try:
@@ -215,7 +221,7 @@ def send_feedback_api(response_object: Dict) -> None:
     api_request_id = analyze_api_call_response.headers.get("X-Request-ID", None)
     if api_request_id:
         url = f"{st.session_state.api_url}/feedback/{api_request_id}"
-        payload = json.dumps(response_object)  # Convert dict to JSON string
+        payload = json.dumps(response_object, indent=4)  # Convert dict to JSON string
         headers = {
             "x-api-key": st.session_state.api_key,
             "Content-Type": "application/json",  # Specify content type as JSON
@@ -273,8 +279,8 @@ def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
                 else:
                     item[key] = str(value)
         item["ziffer"] = format_ziffer_to_4digits(item["ziffer"])
-        if int(item["Häufigkeit"]) > 1:
-            item["ziffer"] = f"{item['Häufigkeit']}x {item['ziffer']}"
+        if int(item["anzahl"]) > 1:
+            item["ziffer"] = f"{item['anzahl']}x {item['ziffer']}"
 
     data["total"] = f"{data['total']:.2f} €".replace(".", ",")
     data["discount"] = f"{data['discount']:.2f} €".replace(".", ",")

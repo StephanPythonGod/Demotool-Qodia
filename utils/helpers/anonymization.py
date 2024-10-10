@@ -14,13 +14,22 @@ from presidio_anonymizer import AnonymizerEngine
 
 from utils.helpers.logger import logger
 
-ENTITIES = ["LOCATION", "PERSON", "ORGANIZATION", "DATE_TIME"]
+ENTITIES = [
+    "LOCATION",
+    "PERSON",
+    "ORGANIZATION",
+    "DATE_TIME",
+    "GENDER_WORD",
+    "ID_NUMBER",
+]
 
 PRESIDIO_EQUIVALENCES = {
     "PER": "PERSON",
     "LOC": "LOCATION",
     "ORG": "ORGANIZATION",
     "DATE_TIME": "DATE_TIME",
+    "GENDER_WORD": "GENDER_WORD",
+    "ID_NUMBER": "ID_NUMBER",
 }
 
 CHECK_LABEL_GROUPS = [
@@ -39,6 +48,21 @@ DATE_PATTERNS = [
     r"\b(?:\d{1,2}\.){1,2}\d{2,4}\b",  # Matches 12.04.2020, 12.04., 12.2020
     r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b",  # Matches 12-04-2020, 12/04/20
     r"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b",  # Matches 2020-04-12
+]
+
+GENDER_WORDS = [
+    "frau",
+    "frauen",
+    "mann",
+    "männer",
+    "herr",
+    "herren",
+    "fräulein",
+    "mädchen",
+    "jung",
+    "junge",
+    "dame",
+    "damen",
 ]
 
 
@@ -217,6 +241,70 @@ def setup_analyzer(use_spacy: bool = True, use_flair: bool = True) -> AnalyzerEn
     return analyzer
 
 
+def _anonymize_continuous_numbers(
+    text: str, detected_entities: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Anonymize continuous numbers of length 5 or more (e.g., IDs) in the text.
+
+    Args:
+        text (str): The input text to process.
+        detected_entities (List[Dict[str, Any]]): The list to store detected entities.
+
+    Returns:
+        List[Dict[str, Any]]: Updated list of detected entities.
+    """
+    # Regex to match continuous digits with length of 5 or more
+    number_pattern = re.compile(r"\b\d{5,}\b")
+
+    # Find all matches in the text
+    for match in number_pattern.finditer(text):
+        # Add the detected number to the list of detected entities
+        detected_entities.append(
+            {
+                "original_word": match.group(0),
+                "entity_type": "ID_NUMBER",
+                "start": match.start(),
+                "end": match.end(),
+                "score": 1.0,  # High confidence as it's an exact match for the pattern
+            }
+        )
+
+    # Return updated detected_entities
+    return detected_entities
+
+
+def _anonymize_gender_words(text: str, detected_entities: List[Dict[str, Any]]) -> str:
+    words = []
+    index = 0  # To track the position of the next word
+    # Split the text while keeping track of the index of each word
+    for word in text.split():
+        start_idx = text.index(
+            word, index
+        )  # Find the word starting at the current index
+        words.append((word, start_idx))
+        index = start_idx + len(word)  # Move index to the end of the word
+
+    # Iterate over the words and check if they are gender-related words
+    for word, start_idx in words:
+        # Normalize the word to lowercase for matching and strip punctuation
+        normalized_word = word.lower().strip(",.!?;:")
+        if normalized_word in GENDER_WORDS:
+            # Add the detected gender word to the list of detected entities
+            detected_entities.append(
+                {
+                    "original_word": word,
+                    "entity_type": "GENDER_WORD",
+                    "start": start_idx,
+                    "end": start_idx + len(word),
+                    "score": 1.0,  # High confidence for exact match
+                }
+            )
+
+    # Return updated detected_entities, no need to modify the text here
+    return detected_entities
+
+
 def anonymize_text_german(
     text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.8
 ) -> Dict[str, Any]:
@@ -246,6 +334,16 @@ def anonymize_text_german(
                     "score": 1.0,  # Assign a high confidence for regex matches
                 }
             )
+
+    # Apply gender-word anonymization
+    detected_entities = _anonymize_gender_words(
+        text, detected_entities=detected_entities
+    )
+
+    # Apply continuous number anonymization
+    detected_entities = _anonymize_continuous_numbers(
+        text, detected_entities=detected_entities
+    )
 
     if use_flair and not use_spacy:
         return _anonymize_flair_only(text, threshold, detected_entities)

@@ -1,3 +1,5 @@
+from html import escape
+from pathlib import Path
 from typing import Any, List, Tuple, Union
 
 from Levenshtein import distance as levenshtein_distance
@@ -162,3 +164,74 @@ def ziffer_from_options(ziffer_option: Union[List[str], str]) -> List[str]:
     elif isinstance(ziffer_option, str):
         return [ziffer_option.split(" - ")[0]]
     return []
+
+
+def validate_filenames_match(auf_xml_path: Path, padx_xml_path: Path):
+    """
+    Validates that the filenames of the provided XML paths match after removing specific suffixes.
+
+    This function checks if the filenames (excluding the '_auf' and '_padx' suffixes) of the provided
+    `auf_xml_path` and `padx_xml_path` are identical. If they do not match, a ValueError is raised.
+
+    Args:
+        auf_xml_path (Path): The path to the '_auf' XML file.
+        padx_xml_path (Path): The path to the '_padx' XML file.
+
+    Raises:
+        ValueError: If the filenames do not match after removing the '_auf' and '_padx' suffixes.
+    """
+    if auf_xml_path.stem.replace("_auf", "") != padx_xml_path.stem.replace("_padx", ""):
+        raise ValueError("Mismatch between _auf.xml and _padx.xml filenames.")
+
+
+def get_confidence_emoji(confidence):
+    if 0.5 <= confidence:
+        return "⚠️"  # Warning sign for moderate confidence
+    else:
+        return "❌"  # Red cross for low confidence
+
+
+def create_tooltip(confidence, confidence_reason):
+    emoji = get_confidence_emoji(confidence)
+    if confidence_reason:
+        escaped_reason = escape(confidence_reason)
+        return f"""
+            <span class="tooltip">
+                {emoji}
+                <span class="tooltiptext">{escaped_reason}</span>
+            </span>
+        """
+    return emoji
+
+
+tooltip_css = """
+<style>
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 240px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 150%; /* Position tooltip above the emoji */
+    left: 50%;
+    margin-left: -70px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+</style>
+"""
