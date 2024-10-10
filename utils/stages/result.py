@@ -92,8 +92,6 @@ def sort_ziffer(ascending=True):
     st.session_state.df.drop(
         columns=["numeric_ziffer"], inplace=True
     )  # Remove helper column
-    # Do not reset the index here
-    st.session_state.selected_ziffer = None
 
 
 def reset_ziffer_order():
@@ -120,7 +118,6 @@ def apply_sorting():
         sort_ziffer(ascending=False)
     # Reset index and clear the selected ziffer
     st.session_state.df.reset_index(drop=True, inplace=True)
-    st.session_state.selected_ziffer = None  # Reset selection
 
 
 def generate_pad(df):
@@ -180,6 +177,8 @@ def result_stage():
             st.session_state.df["row_id"] = st.session_state.original_df[
                 "row_id"
             ].copy()
+        if len(st.session_state.original_df) == 0:
+            st.warning("Die KI hat keine Leistungsziffern erkannt.", icon="⚠️")
 
     if "sort_mode" in st.session_state:
         apply_sorting()
@@ -234,6 +233,8 @@ def result_stage():
 
         for i, (col, header) in enumerate(zip(header_cols, headers)):
             if header == "Ziffer":
+                # Set selected_ziffer to None
+
                 # Set the button label based on the current sort_mode
                 sort_label = {"ask": "Ziffer ⬆️", "desc": "Ziffer ⬇️"}
 
@@ -242,7 +243,8 @@ def result_stage():
 
                 # Display the button and set the sort mode accordingly
                 col.button(
-                    sort_label.get(sort_mode, "Ziffer 🔠"), on_click=set_sort_mode
+                    sort_label.get(sort_mode, "Ziffer 🔠"),
+                    on_click=lambda: (set_selected_ziffer(None), set_sort_mode()),
                 )
             elif header == "":
                 pass
@@ -251,11 +253,7 @@ def result_stage():
 
         # Display table rows, now including "Gesamtbetrag" in the table
         for index, row in recognized_df.iterrows():
-            cols = right_column.columns(
-                [0.5, 1, 1, 1, 1, 2, 0.5, 0.5]
-            )  # Adjusted column widths for the new column
-
-            # cols[0].write("test")
+            cols = right_column.columns([0.5, 1, 1, 1, 1, 2, 0.5, 0.5])
 
             # Ziffer button
             if cols[1].button(

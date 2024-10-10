@@ -47,7 +47,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
 
     # Initialize or reset session state variables if they do not exist
     st.session_state.setdefault("stage", "analyze")
-    st.session_state.setdefault("text", "")
+    st.session_state.setdefault("text", None)
     st.session_state.setdefault("annotated_text_object", [])
     st.session_state.setdefault("ziffer_to_edit", None)
     st.session_state.setdefault("pdf_ready", False)
@@ -74,6 +74,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
 
     st.session_state.setdefault("selected_ziffer", None)
     st.session_state.setdefault("uploaded_file", None)
+    st.session_state.setdefault("sidebar_state", None)
 
     # Initialize an empty DataFrame with specific columns and types
     if "df" not in st.session_state:
@@ -101,3 +102,26 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
             },
             errors="ignore",
         )
+
+
+def configure_page():
+    if "page_setting_count" not in st.session_state:
+        st.session_state.page_setting_count = 0
+    # Determine the initial sidebar state based on the presence of uploaded_file
+    if st.session_state.uploaded_file is not None or st.session_state.text is not None:
+        st.session_state.initial_sidebar_state = "collapsed"
+    else:
+        st.session_state.initial_sidebar_state = "expanded"
+
+    if (
+        st.session_state.sidebar_state != st.session_state.initial_sidebar_state
+        and st.session_state.page_setting_count <= 1
+    ):
+        st.set_page_config(
+            page_title="Qodia",
+            page_icon="🔍🤖📚",
+            layout="wide",
+            initial_sidebar_state=st.session_state.initial_sidebar_state,
+        )
+        st.session_state.sidebar_state = st.session_state.initial_sidebar_state
+        st.session_state.page_setting_count += 1

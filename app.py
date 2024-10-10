@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 from utils.helpers.logger import logger
 from utils.helpers.settings import load_settings_from_cookies, settings_sidebar
-from utils.session import initialize_session_state
+from utils.session import configure_page, initialize_session_state
 from utils.stages.analyze import analyze_stage
 from utils.stages.anonymize import anonymize_stage
 from utils.stages.edit_anonymized import edit_anonymized_stage
@@ -18,24 +18,15 @@ settings = load_settings_from_cookies()
 # Now initialize the session state using the loaded settings
 initialize_session_state(settings)
 
-# Check if 'page_config_set' is in session_state, if not, it means it's the first load
-if "page_config_set" not in st.session_state:
-    initial_sidebar_state = "expanded"
-    st.set_page_config(
-        page_title="Qodia",
-        page_icon="🔍🤖📚",
-        layout="wide",  # Set the page layout to wide
-        initial_sidebar_state=initial_sidebar_state,
-    )
-    st.session_state.page_config_set = True
-    st.session_state.sidebar_state = "expanded"
-else:
-    st.session_state.sidebar_state = "collapsed"
+# Configure the Streamlit app
+configure_page()
 
 
 def main() -> None:
     """Main function to control the app stages based on session state."""
-    st.title("Qodia")
+    # Display the logo
+    st.image("data/logo.png")
+    # st.title("Qodia")
 
     # Display the settings sidebar
     settings_sidebar()
