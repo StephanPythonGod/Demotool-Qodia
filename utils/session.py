@@ -47,13 +47,19 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
 
     # Initialize or reset session state variables if they do not exist
     st.session_state.setdefault("stage", "analyze")
-    st.session_state.setdefault("text", "")
+    st.session_state.setdefault("text", None)
     st.session_state.setdefault("annotated_text_object", [])
     st.session_state.setdefault("ziffer_to_edit", None)
     st.session_state.setdefault("pdf_ready", False)
     st.session_state.setdefault("pdf_data", None)
     st.session_state.setdefault("analyze_api_response", None)
     st.session_state.setdefault("ocr_api_response", None)
+    st.session_state.setdefault("user_comment", None)
+    st.session_state.setdefault("pad_ready", False)
+    st.session_state.setdefault("pad_data_path", None)
+    st.session_state.setdefault("pad_data_ready", False)
+    st.session_state.setdefault("arzt_hash", None)
+    st.session_state.setdefault("kassenname_hash", None)
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(
@@ -68,18 +74,54 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
 
     st.session_state.setdefault("selected_ziffer", None)
     st.session_state.setdefault("uploaded_file", None)
+    st.session_state.setdefault("sidebar_state", None)
 
     # Initialize an empty DataFrame with specific columns and types
     if "df" not in st.session_state:
         data = {
-            "Ziffer": [],
-            "Häufigkeit": [],
-            "Intensität": [],
-            "Beschreibung": [],
-            "Zitat": [],
-            "Begründung": [],
+            "ziffer": [],
+            "anzahl": [],
+            "faktor": [],
+            "text": [],
+            "zitat": [],
+            "begruendung": [],
+            "confidence": [],
+            "analog": [],
+            "einzelbetrag": [],
+            "gesamtbetrag": [],
+            "go": [],
+            "confidence_reason": [],
         }
         df = pd.DataFrame(data)
         st.session_state.df = df.astype(
-            {"Häufigkeit": "int", "Intensität": "int"}, errors="ignore"
+            {
+                "anzahl": "int",
+                "faktor": "int",
+                "einzelbetrag": "float",
+                "gesamtbetrag": "float",
+            },
+            errors="ignore",
         )
+
+
+def configure_page():
+    if "page_setting_count" not in st.session_state:
+        st.session_state.page_setting_count = 0
+    # Determine the initial sidebar state based on the presence of uploaded_file
+    if st.session_state.uploaded_file is not None or st.session_state.text is not None:
+        st.session_state.initial_sidebar_state = "collapsed"
+    else:
+        st.session_state.initial_sidebar_state = "expanded"
+
+    if (
+        st.session_state.sidebar_state != st.session_state.initial_sidebar_state
+        and st.session_state.page_setting_count <= 1
+    ):
+        st.set_page_config(
+            page_title="Qodia",
+            page_icon="🔍🤖📚",
+            layout="wide",
+            initial_sidebar_state=st.session_state.initial_sidebar_state,
+        )
+        st.session_state.sidebar_state = st.session_state.initial_sidebar_state
+        st.session_state.page_setting_count += 1

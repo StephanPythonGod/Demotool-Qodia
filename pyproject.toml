@@ -24,6 +24,11 @@ flair = "^0.14.0"
 streamlit-paste-button = "^0.1.2"
 python-dotenv = "^1.0.1"
 python-levenshtein = "^0.25.1"
+xsdata = "^24.9"
+pyopenssl = "^24.2.1"
+cryptography = "^43.0.1"
+xmlschema = "^3.4.2"
+pypdf2 = "^3.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

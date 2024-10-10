@@ -1,0 +1,250 @@
+15.10.2015
+v2.12
+Belege:
+- Materialpass.Typ: Element Rechnungsempfänger entfernt
+. Material.Typ: Element Rechnungsempfänger entfernt
+
+12.10.2015
+v2.12
+- Konto.Typ: IBAN/BIC nun Pflichtfelder, BLZ/KontoNr. optional
+- Organisations.Typ: Name auf 120 Stellen erweitert (vorher 100 Stellen)
+- Wegegeld.Typ: Choice durch Sequence ersetzt, für Element radius
+- Versicherung.Typ, KVKartendaten.Typ: Kassenname auf 100 Stellen erweitert (vorher 28 Stellen)
+- Anredekennung bei Rechnngsempfänger Person um die folgenden Werte erweitert: "Familie", "An die Angehörigen von", Element Anredetext entfernt
+- Packstation.Typ: Erweiterung  mit Element Postnummer
+- Neue Elemente unter versicherung, KVkartendaten.typ: versichertenart, bpersonenkreis, dmpteilnahme (jeweils mit entsprechenden Enums, erweitert um Wert 9 für Auslandsversicherte)
+
+
+29.09.2015
+v2.12-RC3
+- Dokumenttyp.Enum: Erweitert mit PADdent
+- SummenblockBema.Typ: Die optionalen Elemente summeeigenlabor, summefremdlabor und summeverbrauchsmaterial entfernt.
+
+
+21.09.2015
+v2.12-RC2
+- GOZiffer.Typ: Pipe-Symbol unter Patterns entfernt
+- Auslagen: Element umsatzsteuer wird durch mwstsatz ersetzt
+- SonstigesHonorar: Element umsatzsteuer wird durch mwstsatz ersetzt
+- Humanmedizin: Element umsatzsteuer wird durch mwstsatz ersetzt
+- Umsatzsteuer.Enum fällt weg
+
+
+09.03.2015
+v2.12-RC1
+- auftrag: max. Anzahl von Element datei von unbounded auf 9999
+- Geschlecht.Enum: neuer Wert u für unbestimmt
+- Rechnungsempfänger Person: neues optionales Element anredetext. Hier können Anredetexte wie z.B. "Liebe Kollegin" angegeben werden. In dem Element anrede ist dann ggf. der Wert "Ohne Anrede" anzugeben. 
+- Beträge können mit 0.00 angegeben werden (vorher > 0)
+
+
+03.09.2014
+v2.11
+- Freigabe und Release der Version
+
+26.08.2014
+v2.11
+- SummenblockEigenanteil.Typ: Elemente summehonorarbema und summehonorargoz auf unbounded gesetzt
+- SummenblockEigenanteil.Typ: Neues Element summeauslagen (optional, 0..1, mit Attribut bezeichnung)
+- MaterialZiffer.Typ (wird vom Belegtyp Material genutzt, kommt in allen Abrechnungsfällen mit Belegen vor): neu definiert (kein Basistyp mehr!)
+- LaborZiffer.Typ (wird vom Belegtyp Eigenlabor und Fremdlabor) genutzt, kommt in allen Abrechnungsfällen mit Belegen vor): Element einheit entfernt
+
+11.08.2014
+v2.11
+- SummenblockBeleg.Typ: Attribut mixed auf false gesetzt
+
+08.05.2014
+v2.11
+- KVKartendaten.Typ: einlesedatum nun optional
+- Anschriftsdaten: Mussfelder, die nicht leer sein dürfen definiert (Strasse, Ort, ...)
+- Humanmedizin\GOZiffer: Element beteiligung fehlt auf Positionsebene im Schema (hinzugefügt)
+
+
+07.04.2014
+v2.10
+- Abrechungsfall Bema: neues Element kvkartendaten.
+
+25.03.2014
+v2.10
+- Versichertenstatus nun max. 5 Stellen
+
+
+10.03.2014
+v2.01
+- Umbenennung Elemente (nr): abschlagsnummer, edv-nummer, seriennummer, chargennummer, positionsnummer, aisauftragsnummer, nummer bei Postfach und Packstation
+- Umbenennung Element: pvsabrechnungsform in abrechnungsform
+- Element Konto: mandatsreferenz nun optional
+- Doku: RZ ID für mediserv
+ 
+28.01.2014
+v2.01
+- summefremdlabor, summefremdlabormehrkosten: Attribut bezeichnung auf optional
+- wegegeld.typ: Element wegstrecke entfällt
+- Entschaedigung.Typ: aisbetrag entfällt. Neu: einzelbetrag, gesamtbetrag
+- Attribut aisrechnungsnr: Typ ist nun alphanumerisch und 14 Zeichen
+- Beleg-Typen: Neues Attribut belegdatum (Mussfeld)
+- GOZiffer.typ: aisbewertung fällt weg, Felder wie in GOZZiffer definiert (punktwert, punktzahl, einzelbetrag, gesamtbetrag).
+- Auslagen.Typ, Honorar.Typ: vorgabebetrag entfällt. Neu: einzelbetrag, gesamtbetrag
+- Neuer Typ: BetragBezeichnung.Typ (Betragsfeld mit optionalen Attribut Bezeichnung). Wird in einigen Feldern unter den Summenblöcken verwendet.
+- FremdlaborZiffer.Typ, EigenlaborZiffer.Typ: entfällt. Dafür LaborZiffer.Typ mit Def. EigenlaborZiffer.
+- Neuer Typ: Textzeile.Typ (Textposition ohne Bezug zu einer Leistungsziffer). Gültig für alle Abrechnungsfälle und Belegarten.
+- SummenblockEigenanteil.Typ: summeeigenanteil und summekassenanteil mit Attribut bezeichnung.
+- SummenblockEigenanteilKFO.Typ: Betragsfelder angepasst nach Definition oben.
+- Leistungserbringer.Typ: neues Element: kzvnr
+
+
+26.11.2013
+v1.94
+- Begriffe umbenennen: pvskundennr = kundennr, pvsid = rzid
+
+
+30.07.2013
+v1.93
+- EigenlaborZiffer.Typ, BemaKFOZiffer.Typ, EigenlaborKFOZiffer.Typ, FremdlaborZiffer.Typ, MaterialZiffer.Typ: Datum nun optional
+- BemaKFOZwSumme.Typ: neu (Element unter EigenanteilsrechnungKFO.Typ)
+
+
+26.07.2013
+v1.92
+- KFOPlandaten: Typ für abschlagnummer auf string(8)
+- BemaKFOZiffer: neues Feld punktzahlgesamt
+- Leistungsartkfo.Enum: nur noch einmal Sachleistung IP (vorher IP1 und IP2)
+- Neuer Typ: Kfokopfdaten (mit entspr. Elementen), neues Element für EigenanteilsrechnungKFO
+- MaterialZiffer.Typ: einheit nun optional
+
+
+25.07.2013
+v1.91
+- Typ EigenlaborKFOZiffer: Benennung und Kardinalitäten wie bei den anderen Ziffertypen
+- Neuer Typ SummenbockEigenanteilKFO (mit fehlenden Typen für einzelne Elemente)
+- Elemente summeversichertenanteil und summekassenanteil mit Prozentangabe
+- Kfoplandaten.Typ: behandlungsende nun optional
+
+
+23.07.2013
+- Neues Element für Belege: summenblock (entspr. neuer Typ), mit Angabe von individ. Texten und Summen, MwSt und Rechnungsbetrag
+- Reihenfolge bei Abrechnungsfällen: Element beleg ans Ende (summenblock für Rechnung steht nun vor dem Beleg).
+- Umbenennung Element umsatzsteuer in mwstsatz (unter den versch. Ziffertypen).
+- Umbenennung Element aispositionsbetrag in gesamtbetrag (unter den versch. Ziffertypen).
+- Element einheit und mwstsatz auf optional, Reihenfolge geändert
+- Beleg: aisrechnungsnr in belegnr, aisaktenzeichen in belegaktenzeichen
+- Zahnangabe.Typ: Länge auf 100 erweitert
+
+
+03.07.2013
+- idcert aus Auftragsdatei: Datentyp auf string(128)
+- Bema.Typ: behandlungsart hinzugefügt
+
+
+19.06.2013
+- Abrechnungsfall heilpraktiker entfernt
+- Element Auftrag umbenannt in auftrag
+- Attribut dateianzahl auf 4 Stellen erhöht
+- Längenangaben für string-Datentypen bei Anrede, Kontakttyp und -art
+- Element minderungsatz umbenannt in minderungssatz
+
+
+hier nun eine neue Version der Schemata. Ich habe alle Anmerkungen von Herrn Hahn umgesetzt, so dass wir die Dateien verteilen können. Nur mit dem Element Summenblock bin ich noch nicht ganz zufrieden:
+- Stimmen die Elemente und Kardinaltäten vom Element summenblock beim Bema.Typ?
+- Ist das Element summenblock für Eigenanteilsrechnung und EigenanteilsrechnungKFO tatsächlich unterschiedlich? Oder kann man diese angleichen?
+
+Änderungsliste 
+- Constraints an neues Model anpassen (LE) 
+- Enums: Schreibweisen angepasst 
+- Neue Anschriftsuntertypen (Vererbung) 
+- Neue Typen für Summenblöcke für einzelne Abrechnungsfälle
+- Anpassen der Angabe der Gebührenordnung (Attribut go) für alle Ziffertypen.
+- Anpassen der Anredekennungen für Rechnungsempfänger und Leistungserbringer
+
+- Humanmedizin:
+Elemente kfoplandaten und begruendung gelöscht
+Element positionen angepasst: nur noch goziffer, entschaedigung, auslagen, sonstigeshonorar und gozziffer
+Element beleg entfernt
+
+- Anhangid:
+Attribute: Kardinalität., Typen (neues Typ Anhangid.Typ, wird nun von allen Elementen ref.)
+
+- Entschaedigung:
+nur für go=GOAE, GOZ
+
+- beleg:
+Datentyp angepasst bei BmgNormKFPPrivat, Eigenanteilsrechnung, EigenanteilsrechnungKFO, Heilpraktiker(?)
+
+- Überflüssige Typen entfernt: BelegartRechnungsTyp 
+
+- kfoplandaten: Datentypen angepasst 
+
+- Neuer Typ: Kfoplandaten.Typ (leistungsquartal: 1-4 möglich, richtig?) 
+- Neuer Typ: Begruendung.Typ 
+- Neuer Typ: Zahnangabe.Typ
+
+- GOZZiffer.Typ:
+aispositionsbetrag? Ein Einzelbetrag ist schon unter aisbewertung vorhanden. War vorher nicht für GOOÄ Leistungen definiert.
+aispositionsbetrag Datentypen auf Betrag.Typ gesetzt
+aisbewertung als Mussfeld? Elemente punktwert, punktzahl und einzelbetrag sind dann auch für GOZZiffern unter Humanmedizin zwingend anzugeben.
+
+- BemaZiffer.Typ, BemaKFOZiffer.Typ:
+aispositionsbetrag? Ein Einzelbetrag ist schon unter aisbewertung vorhanden. War vorher nicht für GOOÄ Leistungen definiert.
+aispositionsbetrag Datentypen auf Betrag.Typ gesetzt
+
+- EigenlaborKFOZiffer.Typ:
+aispositionsbetrag Datentypen auf Betrag.Typ gesetzt
+
+- FremdlaborZiffer.Typ:
+Attribut analog gelöscht
+Element ambo gelöscht
+
+- Auftrag:
+neues Attribut unter verschluesselung: idcert (Seriennummer des Empfänger Zertifikats).
+
+
+
+27.05.2013
+- summenblock: teilweise unterschiedliche Elemente, kann man die vereinheitlichen?
+  Beispiel: eigenanteilsrechnung\summenblock\summefremdlabor besteht aus betrag und bezeichnung
+	    bmgnormprivat\summenblock\gozfremdlabor besteht nur aus Betrag
+
+
+24.05.2013
+- Auftrag: neues Attribut unter verschluesselung: idcert (Seriennummer des Empfänger Zertifikats).
+- Enums: Schreibweisen angepasst
+- kfoplandaten: Datentypen angepasst
+- BmgNormKFOPrivat: Kein Datentyp für summenblock\gozustvoll und gozustgemindert (Betrag.Typ?)
+- BmgNormPrivat: Kein Datentyp für summenblock\gozustvoll und gozustgemindert (Betrag.Typ?)
+- Neuer Typ: Kfoplandaten.Typ (leistungsquartal: 1-4 möglich, richtig?)
+- Neuer Typ: Begruendung.Typ
+- GOZZiffer.Typ: 
+	- aispositionsbetrag? Ein Einzelbetrag ist schon unter aisbewertung vorhanden. War vorher nicht für GOOÄ Leistungen definiert.
+	- aispositionsbetrag Datentypen auf Betrag.Typ gesetzt
+	- Datentyp zahnangabe?
+	- aisbewertung als Mussfeld? Elemente punktwert, punktzahl und einzelbetrag sind dann auch für GOZZiffern unter Humanmedizin 
+	  zwingend anzugeben.
+- BemaZiffer.Typ, BemaKFOZiffer.Typ:
+	- aispositionsbetrag? Ein Einzelbetrag ist schon unter aisbewertung vorhanden. War vorher nicht für GOOÄ Leistungen definiert.
+	- aispositionsbetrag Datentypen auf Betrag.Typ gesetzt
+	- Datentyp zahnangabe?
+- FremdlaborZiffer.Typ ? (analog?, ambo?)
+- EigenlaborKFOZiffer.Typ:
+	- aispositionsbetrag Datentypen auf Betrag.Typ gesetzt
+
+
+21.05.2013
+- Anhangid: Attribute: Kard., Typen (neues Typ Anhangid.Typ, wird nun von allen Elementen ref.)
+- Attribut go für Ziffer-Typen: Aufteilung in GOAE, UVGOAE und EBM?
+	- GO?	
+	  - BemaKFOZiffer?
+	  - Fremdlabor?
+	  - EigenlaborZiffer?
+	  - EigenlaborKFOZiffer?
+- Entschaedigung: nur für go=GOAE, GOZ
+- Humanmedizin: Element beleg entfernt
+- Element beleg: Datentyp angepasst bei BmgNormKFPPrivat, Eigenanteilsrechnung, EigenanteilsrechnungKFO, Heilpraktiker(?)
+- Überflüssige Typen entfernt: BelegartRechnungsTyp
+- Neue Anschriftsuntertypen
+
+
+17.05.2013
+- Constraints an neues Model anpassen (LE)
+- Humanmedizin: kfoplandaten gelöscht
+		begruendung gelöscht
+		positionen angepasst: nur noch goziffer, entschaedigung, auslagen, sonstigeshonorar und gozziffer

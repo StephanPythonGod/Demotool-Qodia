@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="iso-8859-15"?>
+<rechnungen xsi:schemaLocation="http://padinfo.de/ns/pad http://padinfo.de/ns/pad/padx_adl_v2.12.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://padinfo.de/ns/pad" anzahl="1">
+  <hinweistext>Test PADnext</hinweistext>
+  <nachrichtentyp version="02.12">ADL</nachrichtentyp>
+  <rechnungsersteller>
+    <name>Dr. Dieter Schilddrüse</name>
+    <namezusatz>Graf von Sachsen</namezusatz>
+    <kundennr>666666</kundennr>
+    <anschrift>
+      <hausadresse>
+        <land>D</land>
+        <zusatz>2. Etage</zusatz>
+        <plz>21337</plz>
+        <ort>Lüneburg</ort>
+        <strasse>Stadtkoppel</strasse>
+        <hausnr>45</hausnr>
+      </hausadresse>
+    </anschrift>
+    <iknr>987654321</iknr>
+    <kontakt art="telefonnr" typ="beruflich">04131 666</kontakt>
+    <ustidnr>DE813334542</ustidnr>
+  </rechnungsersteller>
+  <leistungserbringer id="B2" aisid="B2">
+    <anrede>Herr</anrede>
+    <titel>Dr.</titel>
+    <vorname>Dieter</vorname>
+    <name>Schilddrüse</name>
+    <namezusatz>Graf von Sachsen</namezusatz>
+    <anschrift>
+      <hausadresse>
+        <land>D</land>
+        <zusatz>2. Etage </zusatz>
+        <plz>21337</plz>
+        <ort>Lüneburg</ort>
+        <strasse>Stadtkoppel</strasse>
+        <hausnr>45</hausnr>
+      </hausadresse>
+    </anschrift>
+    <kundennr>666666</kundennr>
+    <fachbereich>
+      <fachgebiet textname="Radiologie">28</fachgebiet>
+      <facharzt textname="SP Neuroradiologie">2</facharzt>
+    </fachbereich>
+    <lanr>123123123</lanr>
+    <betriebsstaette>
+      <bsnr>123123123</bsnr>
+    </betriebsstaette>
+    <ustidnr>DE813334542</ustidnr>
+    <hba>9999</hba>
+    <iknr>987654321</iknr>
+  </leistungserbringer>
+  <rechnung id="2-2012-B2-33" abrechnungsform="22222222" druckkennzeichen="1" eabgabe="0" aisrechnungsnr="2" aisaktenzeichen="S2/2012" aisendbetrag="301.70">
+    <rechnungsempfaenger>
+      <person>
+        <anrede>Frau</anrede>
+        <titel>Dipl.-Kauffrau</titel>
+        <vorname>Ulla</vorname>
+        <name>Organ</name>
+        <gebdatum>1946-06-02</gebdatum>
+        <anschrift>
+          <hausadresse>
+            <land>D</land>
+            <plz>21339</plz>
+            <ort>Lüneburg</ort>
+            <strasse>Wiese</strasse>
+            <hausnr>8</hausnr>
+          </hausadresse>
+        </anschrift>
+        <kontakt art="telefonnr" typ="privat">04131 9999</kontakt>
+      </person>
+    </rechnungsempfaenger>
+    <abrechnungsfall>
+      <humanmedizin>
+        <leistungserbringerid>B2</leistungserbringerid>
+        <behandelter aisid="2" idbundesweit="S2000">
+          <anrede>Frau</anrede>
+          <titel>Dipl.-Kaufmann</titel>
+          <vorname>Ulla</vorname>
+          <name>Organ</name>
+          <gebname>Magen</gebname>
+          <gebdatum>1946-06-02</gebdatum>
+          <geschlecht>w</geschlecht>
+          <staat>D</staat>
+          <kontakt art="telefonnr" typ="privat">04131 9999</kontakt>
+        </behandelter>
+        <versicherter>
+          <anrede>Frau</anrede>
+          <titel>Dipl.-Kaufmann</titel>
+          <vorname>Ulla</vorname>
+          <name>Organ</name>
+          <gebname>Magen</gebname>
+          <gebdatum>1946-06-02</gebdatum>
+          <geschlecht>w</geschlecht>
+          <staat>D</staat>
+          <anschrift>
+            <hausadresse>
+              <land>D</land>
+              <plz>21339</plz>
+              <ort>Lüneburg</ort>
+              <strasse>Wiese</strasse>
+              <hausnr>8</hausnr>
+            </hausadresse>
+          </anschrift>
+          <kontakt art="telefonnr" typ="privat">04131 9999</kontakt>
+        </versicherter>
+        <zeitraum>
+          <startdatum>2012-01-06</startdatum>
+          <endedatum>2012-01-06</endedatum>
+          <anzahltage>1</anzahltage>
+        </zeitraum>
+        <minderungssatz>25.00</minderungssatz>
+        <behandlungsart>1</behandlungsart>
+        <vertragsart>01</vertragsart>
+        <diagnose>
+          <text>Lymphknotenvergrößerung Halsbereich beidseits</text>
+          <code system="ICD-10">R59.9</code>
+          <typ>3</typ>
+          <art>H</art>
+          <datum>2011-01-06</datum>
+          <sicherheit>G</sicherheit>
+          <lokalisation>B</lokalisation>
+        </diagnose>
+        <positionen posanzahl="0">
+        </positionen>
+        <anhangid id="00666666_100004_001.pdf" verwendungszweck="1" />
+      </humanmedizin>
+    </abrechnungsfall>
+  </rechnung>
+</rechnungen>

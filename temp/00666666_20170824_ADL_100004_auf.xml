@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns0:auftrag xmlns:ns0="http://padinfo.de/ns/pad" erstellungsdatum="2017-08-24T18:13:04" transfernr="100004" echtdaten="false" dateianzahl="3">
+  <ns0:empfaenger>
+    <ns0:logisch kundennr="565454" rzid="300" iknr="660330076">PADline GmbH</ns0:logisch>
+    <ns0:physikalisch kundennr="565454" rzid="300" iknr="660330076">PADline GmbH</ns0:physikalisch>
+  </ns0:empfaenger>
+  <ns0:absender>
+    <ns0:logisch kundennr="666666">Dr. Dieter Schilddrï¿œse </ns0:logisch>
+    <ns0:physikalisch kundennr="666666">Dr. Dieter Schilddrï¿œse</ns0:physikalisch>
+  </ns0:absender>
+  <ns0:nachrichtentyp version="02.12">ADL</ns0:nachrichtentyp>
+  <ns0:system>
+    <ns0:produkt>PADmaker</ns0:produkt>
+    <ns0:version>1.0</ns0:version>
+    <ns0:hersteller>PADline GmbH</ns0:hersteller>
+    <ns0:zertifizierungsnr>PADx-AIS-2012-001</ns0:zertifizierungsnr>
+  </ns0:system>
+  <ns0:verschluesselung verfahren="1" idcert="7f:88:00:01:00:02:01:86:73:d0:6a:d0:8c:34"/>
+  <ns0:empfangsquittung>false</ns0:empfangsquittung>
+  <ns0:datei id="0001" erstellungsdatum="2017-08-24T18:13:04">
+    <ns0:dokumententyp>PADneXt</ns0:dokumententyp>
+    <ns0:name>00666666_20170824_ADL_100004_padx.xml</ns0:name>
+    <ns0:dateilaenge laenge="6998" pruefsumme="0ea53821e02e7c80e8a296c27e7a7ae55a50a6ce"/>
+  </ns0:datei>
+  <ns0:datei id="0002" erstellungsdatum="2017-08-24T18:13:04">
+    <ns0:dokumententyp format="pdf">Anhang</ns0:dokumententyp>
+    <ns0:name>00666666_100004_001.pdf</ns0:name>
+    <ns0:dateilaenge laenge="38686" pruefsumme="0d34623c1b2976b07b86d79efe553a96a2b3c7ec"/>
+  </ns0:datei>
+</ns0:auftrag>
