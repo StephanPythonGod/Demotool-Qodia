@@ -4,6 +4,7 @@ import streamlit as st
 from utils.helpers.api import send_feedback_api
 from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_processdocumentresponse
+from utils.session import reset
 
 # Define error types
 ERROR_TYPES = [
@@ -149,4 +150,5 @@ def feedback_modal(df: pd.DataFrame) -> None:
         except Exception as e:
             logger.error(f"Failed to send feedback: {e}")
             st.error("Failed to send feedback")
+        reset()
         st.rerun()
