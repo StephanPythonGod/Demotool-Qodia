@@ -59,25 +59,34 @@ def _process_pdf(pdf_file: UploadedFile, selections: Optional[List[dict]]) -> st
     pdf_file.seek(0)
     pages = convert_from_bytes(pdf_file.read())
 
+    total_pages = len(pages)  # Get the total number of pages
+    results = [""] * total_pages  # Initialize results with the total number of pages
+
     with ThreadPoolExecutor() as executor:
         futures = {
+            # Only process pages if selections for that page are present
             executor.submit(
                 perform_ocr_on_image,
                 page,
-                selections[i] if selections and len(selections) > i else None,
+                selections[i]
+                if selections and len(selections) > i and selections[i]
+                else None,
             ): i
             for i, page in enumerate(pages)
+            if selections and len(selections) > i and selections[i]
         }
 
-        results = [None] * len(pages)
         for future in as_completed(futures):
-            page_index = futures[future]
+            page_index = futures[future]  # Get the page index for this future
             try:
-                results[page_index] = future.result()
+                results[
+                    page_index
+                ] = future.result()  # Assign result to the correct page index
             except Exception as e:
                 logger.error(f"Error processing page {page_index}: {str(e)}")
-                results[page_index] = ""
+                results[page_index] = ""  # Leave the page blank in case of an error
 
+    # Concatenate only non-empty results
     return "\n".join(filter(None, results))
 
 
@@ -94,7 +103,11 @@ def _process_image(image_file: UploadedFile, selections: Optional[List[dict]]) -
     """
     logger.info("Processing image file")
     image = Image.open(image_file)
-    return perform_ocr_on_image(image, selections[0] if selections else None)
+
+    # Only perform OCR if selections are provided
+    if selections and selections[0]:
+        return perform_ocr_on_image(image, selections[0])
+    return ""  # Skip if no selections
 
 
 def perform_ocr_on_image(image: Image.Image, selections: Optional[List[dict]]) -> str:
@@ -111,7 +124,8 @@ def perform_ocr_on_image(image: Image.Image, selections: Optional[List[dict]]) -
     logger.info(f"Performing OCR on image of size: {image.size}")
 
     if not selections:
-        return pytesseract.image_to_string(image, lang="deu")
+        # Skip OCR if no selections
+        return ""
 
     results = []
     for selection in selections:
@@ -156,28 +170,3 @@ def process_selection(image: Image.Image, selection: dict) -> str:
 
     cropped_image = image.crop((left, top, right, bottom))
     return pytesseract.image_to_string(cropped_image, lang="deu")
-
-
-def convert_selections_to_image_space(
-    selections: List[dict], original_width: int, original_height: int
-) -> List[dict]:
-    """
-    Convert the canvas selection box coordinates to the original image's pixel coordinates.
-
-    Args:
-        selections (List[dict]): List of selection areas.
-        original_width (int): The original image width.
-        original_height (int): The original image height.
-
-    Returns:
-        List[dict]: List of converted selection areas.
-    """
-    return [
-        {
-            "left": selection["left"] * original_width,
-            "top": selection["top"] * original_height,
-            "width": selection["width"] * original_width,
-            "height": selection["height"] * original_height,
-        }
-        for selection in selections
-    ]

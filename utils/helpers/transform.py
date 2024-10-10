@@ -26,6 +26,8 @@ def annotate_text_update() -> None:
         (row["zitat"], row["ziffer"]) for _, row in st.session_state.df.iterrows()
     ]
 
+    print("zitate_to_find: ", zitate_to_find)
+
     st.session_state.annotated_text_object = find_zitat_in_text(
         zitate_to_find, st.session_state.annotated_text_object
     )

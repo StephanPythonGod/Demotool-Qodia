@@ -8,6 +8,7 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from utils.helpers.logger import logger
+from utils.stages.analyze import analyze_text
 
 
 def display_anonymized_text_editor(
@@ -87,8 +88,8 @@ def edit_anonymized_stage() -> None:
         with col1:
             if st.button("Text bestätigen", type="primary"):
                 st.session_state.text = edited_text
-                st.session_state.stage = "analyze"
-                st.rerun()
+                if analyze_text(st.session_state.text):
+                    st.rerun()
         with col2:
             if st.button("Zurück zur Anonymisierung", type="secondary"):
                 st.session_state.stage = "anonymize"

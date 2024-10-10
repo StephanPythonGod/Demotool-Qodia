@@ -10,7 +10,10 @@ from utils.helpers.api import (
     check_if_default_credentials,
     ocr_pdf_to_text_api,
 )
-from utils.helpers.files import list_files_by_extension
+from utils.helpers.files import (
+    create_uploaded_file_from_binary,
+    list_files_by_extension,
+)
 from utils.helpers.logger import logger
 from utils.helpers.padnext import handle_padnext_upload
 from utils.helpers.transform import annotate_text_update
@@ -77,7 +80,7 @@ def analyze_text(text: str) -> None:
             check_if_default_credentials()
             data = analyze_api_call(text)
 
-            if data:
+            if data is not None:
                 processed_data = analyze_add_data(data)
                 st.session_state.df = pd.DataFrame(processed_data)
                 annotate_text_update()
@@ -139,7 +142,20 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
         # If pasted image exists, it takes priority
         if paste_result.image_data:
             logger.info("Using pasted image data.")
-            return paste_result.image_data
+
+            # Convert the PngImageFile to bytes
+            image = paste_result.image_data  # Assuming this is a PngImageFile object
+            image_bytes_io = BytesIO()
+            image.save(
+                image_bytes_io, format="PNG"
+            )  # Save image to BytesIO in PNG format
+            image_bytes = image_bytes_io.getvalue()  # Get the raw bytes
+
+            return create_uploaded_file_from_binary(
+                binary_data=image_bytes,
+                file_name="pasted_image.png",
+                mime_type="image/png",
+            )
 
         # If file upload exists, return the uploaded file
         if file_upload:

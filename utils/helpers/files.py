@@ -79,3 +79,25 @@ def load_file_from_path(file_path: Path) -> UploadedFile:
 
     # Create and return the UploadedFile object
     return UploadedFile(uploaded_file_rec, file_urls)
+
+
+def create_uploaded_file_from_binary(
+    binary_data: bytes, file_name: str, mime_type: str
+) -> UploadedFile:
+    """
+    Create an UploadedFile object from binary data, file name, and MIME type.
+
+    Args:
+        binary_data (bytes): The binary data of the file.
+        file_name (str): The name of the file.
+        mime_type (str): The MIME type of the file.
+
+    Returns:
+        UploadedFile: An UploadedFile object containing the file data.
+    """
+    file_id = str(uuid.uuid4())
+    uploaded_file_rec = UploadedFileRec(
+        file_id=file_id, name=file_name, type=mime_type, data=binary_data
+    )
+    file_urls = FileURLs(file_id=file_id, upload_url="", delete_url="")
+    return UploadedFile(uploaded_file_rec, file_urls)
