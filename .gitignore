@@ -16,3 +16,6 @@ deploy.sh
 
 # Ignore all pkl files
 *.pkl
+
+# Ignore the /temp folder in the repo and all its contents
+/temp/*
