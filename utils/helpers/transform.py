@@ -40,8 +40,8 @@ def annotate_text_update() -> None:
 
     # Order the dataframe according to the order of the ziffer in the text
     ziffer_order_dict = {ziffer: order for order, ziffer in enumerate(ziffer_order)}
-    st.session_state.df["order"] = st.session_state.df["ziffer"].map(ziffer_order_dict)
-    st.session_state.df["order"].fillna(9999, inplace=True)
+    st.session_state.df["order"] = st.session_state.df["Ziffer"].map(ziffer_order_dict)
+    st.session_state.df["order"] = st.session_state.df["order"].fillna(9999)
     st.session_state.df.sort_values("order", inplace=True)
     st.session_state.df.drop("order", axis=1, inplace=True)
     st.session_state.df.reset_index(drop=True, inplace=True)
