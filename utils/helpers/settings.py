@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
@@ -13,10 +14,8 @@ controller = CookieController()
 def get_cookie(cookie_name: str) -> Optional[str]:
     """
     Retrieve a cookie value by name.
-
     Args:
         cookie_name (str): The name of the cookie to retrieve.
-
     Returns:
         Optional[str]: The value of the cookie if it exists, None otherwise.
     """
@@ -26,7 +25,6 @@ def get_cookie(cookie_name: str) -> Optional[str]:
 def set_cookie(cookie_name: str, value: str, secure: bool = True) -> None:
     """
     Set a cookie with the given name and value.
-
     Args:
         cookie_name (str): The name of the cookie to set.
         value (str): The value to store in the cookie.
@@ -46,7 +44,6 @@ def set_cookie(cookie_name: str, value: str, secure: bool = True) -> None:
 def load_settings_from_cookies() -> Dict[str, str]:
     """
     Load settings from cookies and return them as a dictionary.
-
     Returns:
         Dict[str, str]: A dictionary containing the loaded settings.
     """
@@ -64,6 +61,17 @@ def save_settings_to_cookies() -> None:
     set_cookie("category", st.session_state.category)
 
 
+def hash_input(input_string: str) -> str:
+    """
+    Hash the input string using SHA-256.
+    Args:
+        input_string (str): The string to be hashed.
+    Returns:
+        str: The hashed string.
+    """
+    return hashlib.sha256(input_string.encode()).hexdigest()
+
+
 def settings_sidebar() -> None:
     """Display the settings sidebar in the Streamlit app."""
     with st.sidebar:
@@ -72,13 +80,11 @@ def settings_sidebar() -> None:
             value=st.session_state.api_url,
             help="Hier kann die URL der API geändert werden, die für die Analyse des Textes verwendet wird.",
         ).strip()
-
         st.session_state.api_key = st.text_input(
             "API Key",
             value=st.session_state.api_key,
             help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.",
         ).strip()
-
         category_options = ["Hernien-OP", "Knie-OP", "Zahn-OP"]
         st.session_state.category = st.selectbox(
             "Kategorie",
@@ -86,6 +92,29 @@ def settings_sidebar() -> None:
             index=category_options.index(st.session_state.category),
             help="Hier kann die Kategorie der Leistungsziffern geändert werden, die für die Analyse des Textes verwendet wird.",
         )
+
+        # New fields for Arzt and Kassenname
+        arzt_input = st.text_input(
+            "Arzt",
+            value="",
+            help="Optional: Geben Sie den Namen des Arztes ein.",
+        ).strip()
+        kassenname_input = st.text_input(
+            "Kassenname",
+            value="",
+            help="Optional: Geben Sie den Namen der Krankenkasse ein.",
+        ).strip()
+
+        # Hash and store the new inputs if they are not empty
+        if arzt_input:
+            st.session_state.arzt_hash = hash_input(arzt_input)
+        else:
+            st.session_state.arzt_hash = None
+
+        if kassenname_input:
+            st.session_state.kassenname_hash = hash_input(kassenname_input)
+        else:
+            st.session_state.kassenname_hash = None
 
         if st.button("Save Settings"):
             with st.spinner("🔍 Teste API Einstellungen..."):

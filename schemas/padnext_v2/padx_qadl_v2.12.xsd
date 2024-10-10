@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mit XMLSpy v2015 rel. 4 sp1 (x64) (http://www.altova.com) von Jan Brötzmann (quadcore GmbH) bearbeitet -->
+<xs:schema xmlns:pad="http://padinfo.de/ns/pad" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://padinfo.de/ns/pad" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.12">
+	<xs:include schemaLocation="padx_basis_v2.12.xsd"/>
+	<xs:element name="Quittung">
+		<xs:annotation>
+			<xs:documentation>Quittungsinformationen für eine Datenlieferung</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="nachrichtentyp" type="pad:Nachrichtentyp.Typ" fixed="QADL"/>
+				<xs:element name="eingangsdatum" type="xs:dateTime">
+					<xs:annotation>
+						<xs:documentation>Eingangsdatum mit Uhrzeit der Datenlieferung bei der PVS.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="status" type="xs:positiveInteger">
+					<xs:annotation>
+						<xs:documentation>Verarbeitungsstatus der gesamten Datenlieferung.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="fehler" type="pad:Fehler.Typ" minOccurs="0" maxOccurs="unbounded">
+					<xs:annotation>
+						<xs:documentation>Fehlerangabe für die gesamte Datenlieferung.</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="datenlieferung" use="required">
+				<xs:annotation>
+					<xs:documentation>Enthält die Transfernummer der zu quittierenden Datenlieferung und gibt den Inhalt des Feldes aus der Auftragsdatei an.</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="6"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="dateianzahl" type="xs:positiveInteger" use="required">
+				<xs:annotation>
+					<xs:documentation>Anzahl der eingegangenen Dateien innerhalb der Datenlieferung.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="rechnungsanzahl" type="xs:nonNegativeInteger" use="required">
+				<xs:annotation>
+					<xs:documentation>Anzahl der Rechnungen innerhalb der Datenlieferung.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
