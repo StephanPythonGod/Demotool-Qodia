@@ -1,19 +1,22 @@
+# Dockerfile-nginx
+
 FROM nginx:alpine
 
-# Install OpenSSL
+# Install OpenSSL and bash (if needed)
 RUN apk add --no-cache openssl
 
 # Copy the certificate generation script
-COPY scripts/generate_self_signed_cert.sh /generate_self_signed_cert.sh
+COPY scripts/generate_self_signed_cert.sh /usr/local/bin/generate_self_signed_cert.sh
 
-# Make the script executable
-RUN chmod +x /generate_self_signed_cert.sh
-
-# Generate the self-signed certificate
-RUN /generate_self_signed_cert.sh
+# Run the certificate generation script during the image build process
+RUN chmod +x /usr/local/bin/generate_self_signed_cert.sh && \
+    sh -x /usr/local/bin/generate_self_signed_cert.sh
 
 # Copy the Nginx configuration
 COPY data/nginx.conf /etc/nginx/nginx.conf
+
+# Expose necessary ports
+EXPOSE 80 443
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

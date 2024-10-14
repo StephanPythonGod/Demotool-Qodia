@@ -11,4 +11,5 @@ deploy.sh
 !/data/nginx.conf
 !/data/logo.jpg
 !/data/logo.png
+!/data/arial.ttf
 ssl/
