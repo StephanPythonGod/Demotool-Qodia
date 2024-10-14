@@ -5,32 +5,27 @@ Willkommen beim **Qodia - Kodierungstool**, einer Streamlit-Anwendung, die eine 
 ## Inhaltsverzeichnis
 
 - [Installation](#installation)
-- [Nutzung](#nutzung)
 - [Funktionen](#funktionen)
 - [Lizenz](#lizenz)
 - [Kontakt](#kontakt)
 
 ## Installation
 
-Um die benötigten Abhängigkeiten zu installieren, führen Sie den folgenden Befehl aus:
+Für die Installation des Projekts muss eine [Docker-Compose](/compose.yaml) Orchestrierung aufgesetzt werden. Diese besteht einerseits aus einem [Qodia-Kodierungstool](/Dockerfile) Container, der die Streamlit Anwendung hostet, und andererseits aus einem [Nginx](/Dockerfile-nginx) Container, der notwendig ist, um das Qodia-Kodierungstool im eigenen Netwerk via HTTPS anzusprechen.
+
+Um die Docker-Compose Orchestrierung aufzusetzen, klonen Sie das Repository und führen Sie den folgenden Befehl aus:
 
 ```bash
-pip install -r requirements.txt
+bash ./scripts/setup.sh
 ```
 
-## Nutzung
-
-Um die Anwendung zu starten, verwenden Sie den folgenden Befehl:
-
-```bash
-streamlit run app.py
-```
+Bei erfolgreicher Installation können Sie die Anwendung über den folgenden Link erreichen: [https://localhost](https://localhost)
 
 ## Funktionen
 
 - **Interaktion mit der Qodia API**: Nutzen Sie die API zur OCR-Verarbeitung und Textanalyse.
 - **Ergebnisse anzeigen**: Zeigt die Ergebnisse der API-Verarbeitung übersichtlich in der Anwendung an.
-- **Lokale Anonymisierung**: Ermöglicht die Anonymisierung von Texten direkt auf Ihrem Gerät.
+- **Lokale Anonymisierung**: Ermöglicht die Anonymisierung von Texten lokal auf Ihrem Gerät.
 - **Datei-Upload**: Laden Sie PDFs, PNGs oder JPGs hoch, um sie zu verarbeiten.
 - **Screenshots einfügen**: Fügen Sie Text und Bilder direkt aus der Zwischenablage ein.
 
