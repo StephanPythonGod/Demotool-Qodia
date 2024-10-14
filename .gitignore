@@ -11,7 +11,11 @@ deploy.sh
 /data/*
 !/data/GOA_Ziffern.csv
 !/data/template_rechnung.html
+!/data/arial.ttf
 .env
 
 # Ignore all pkl files
 *.pkl
+
+# Ignore the /temp folder in the repo and all its contents
+/temp/*

@@ -239,7 +239,7 @@ def send_feedback_api(response_object: Dict) -> None:
 
 def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
     """
-    Generate a PDF file from the given DataFrame.
+    Generate a PDF file from the given DataFrame, taking into account any applicable discount.
 
     Args:
         df (Optional[pd.DataFrame]): The DataFrame containing the data for the PDF.
@@ -265,16 +265,30 @@ def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
         ),
     }
 
+    # Prepare items and calculate the total price
     items = df_to_items(df)
     data["items"] = items
     data["total"] = sum(item["total"] for item in data["items"])
-    data["discount"] = data["total"] * 0.25
-    data["final_price"] = data["total"] - data["discount"]
 
+    # Handling discount logic based on user selection
+    discount_option = st.session_state["minderung_data"]["prozentsatz"]
+    begruendung = st.session_state["minderung_data"]["begruendung"]
+
+    if discount_option and discount_option != "keine":
+        discount_percentage = float(discount_option.replace("%", ""))
+        data["discount"] = data["total"] * (discount_percentage / 100)
+        data["final_price"] = data["total"] - data["discount"]
+        data["discount_reason"] = begruendung  # Include reason for discount
+    else:
+        data["discount"] = None  # No discount applied
+        data["final_price"] = data["total"]
+        data["discount_reason"] = None  # No discount reason
+
+    # Format items' values for currency display
     for item in data["items"]:
         for key, value in item.items():
             if isinstance(value, (int, float)):
-                if key in ["preis", "total", "discount", "final_price"]:
+                if key in ["preis", "total"]:
                     item[key] = f"{value:.2f} €".replace(".", ",")
                 else:
                     item[key] = str(value)
@@ -282,17 +296,22 @@ def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
         if int(item["anzahl"]) > 1:
             item["ziffer"] = f"{item['anzahl']}x {item['ziffer']}"
 
+    # Format total, discount, and final price
     data["total"] = f"{data['total']:.2f} €".replace(".", ",")
-    data["discount"] = f"{data['discount']:.2f} €".replace(".", ",")
+    if data["discount"] is not None:
+        data["discount"] = f"{data['discount']:.2f} €".replace(".", ",")
     data["final_price"] = f"{data['final_price']:.2f} €".replace(".", ",")
 
+    # Render the HTML content using the template
     env = Environment(loader=FileSystemLoader("."))
     template = env.get_template("./data/template_rechnung.html")
     html_content = template.render(data)
 
+    # Save HTML to file
     with open("./data/rechnung_generiert.html", "w") as file:
         file.write(html_content)
 
+    # Generate PDF via API
     pdf_file = "./data/rechnung_generiert.pdf"
     conn = http.client.HTTPSConnection("yakpdf.p.rapidapi.com")
 

@@ -34,6 +34,7 @@ from utils.helpers.transform import (
     format_erstellungsdatum,
     format_kundennummer,
     format_transfernummer,
+    transform_df_to_goziffertyp,
 )
 from utils.helpers.xml import (
     process_xml,
@@ -53,6 +54,31 @@ PADX_XSD_PATH = f"{SCHEMA_DIR}/padx_adl_v2.12.xsd"
 
 def generate_file_name(auftrag: Auftrag) -> str:
     return f"{format_kundennummer(auftrag.absender.logisch.kundennr)}_{format_erstellungsdatum(auftrag.erstellungsdatum)}_{auftrag.nachrichtentyp.value._value_}_{format_transfernummer(auftrag.transfernr)}"
+
+
+def generate_pad(df):
+    # Generate PAD positions
+    goziffern = transform_df_to_goziffertyp(df)
+    positionen_obj = create_positionen_object(goziffern)
+    output_path = "./data/pad_positionen.xml"
+    output_path = write_object_to_xml(positionen_obj, output_path=output_path)
+    with open(output_path, "r", encoding="iso-8859-15") as f:
+        xml_object = f.read()
+    return xml_object
+
+
+def generate_padnext(df):
+    with st.spinner("Generiere PADnext Datei..."):
+        # Generate PADnext file based on uploaded PADnext file
+        goziffern = transform_df_to_goziffertyp(df)
+        positionen_obj = create_positionen_object(goziffern)
+        pad_data_ready = update_padnext_positionen(
+            padnext_folder=st.session_state.pad_data_path, positionen=positionen_obj
+        )
+        if isinstance(pad_data_ready, Path):
+            return pad_data_ready
+        else:
+            return False
 
 
 # Validation Functions

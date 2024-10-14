@@ -9,11 +9,20 @@ from dotenv import load_dotenv  # For loading environment variables from a .env 
 def reset() -> None:
     """Reset the app to its initial state and rerun the script."""
     st.session_state.stage = "analyze"
-    st.session_state.text = ""
+    st.session_state.text = None
     st.session_state.annotated_text_object = []
     st.session_state.df = pd.DataFrame()
     st.session_state.analyze_api_response = None
     st.session_state.ocr_api_response = None
+    st.session_state.pad_ready = False
+    st.session_state.pad_data_path = None
+    st.session_state.pad_data_ready = False
+    st.session_state.ziffer_to_edit = None
+    st.session_state.pdf_ready = False
+    st.session_state.pdf_data = None
+    st.session_state.selected_ziffer = None
+    st.session_state.uploaded_file = None
+    st.session_state.original_df = None
 
 
 def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
@@ -60,6 +69,9 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("pad_data_ready", False)
     st.session_state.setdefault("arzt_hash", None)
     st.session_state.setdefault("kassenname_hash", None)
+    st.session_state.setdefault(
+        "minderung_data", {"prozentsatz": None, "begruendung": None}
+    )
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(
