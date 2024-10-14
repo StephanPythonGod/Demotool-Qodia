@@ -82,7 +82,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     )
 
     # Default category if not in settings
-    st.session_state.category = settings.get("category") or "Hernien-OP"
+    st.session_state.category = settings.get("category") or None
 
     st.session_state.setdefault("selected_ziffer", None)
     st.session_state.setdefault("uploaded_file", None)

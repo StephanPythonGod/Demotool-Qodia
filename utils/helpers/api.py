@@ -4,7 +4,7 @@ import os
 import pickle
 import time
 from io import BytesIO
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 import requests
@@ -35,6 +35,52 @@ def check_if_default_credentials() -> None:
         )
 
 
+def get_workflows() -> List[str]:
+    """
+    Retrieve the list of available workflows from the API for the user.
+
+    Returns:
+        List[str]: The list of available workflows.
+    """
+    logger.info("Retrieving available workflows...")
+    url = f"{st.session_state.api_url}/workflows"
+    headers = {"x-api-key": st.session_state.api_key}
+
+    try:
+        response = requests.get(url, headers=headers)
+        logger.info(
+            f"Done retrieving workflows. Response status: {response.status_code}"
+        )
+    except Exception as e:
+        logger.error(f"Error retrieving workflows: {e}")
+        st.error(
+            "Ein Fehler ist beim Abrufen der verfügbaren Workflows aufgetreten. "
+            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
+            f"Fehlerdetails: {e}"
+        )
+        return []
+
+    if response.status_code != 200:
+        logger.error(
+            (
+                f"API error: Status Code: {response.status_code}, "
+                f"Message: {response.text}, "
+                f"Request ID: {response.headers.get('X-Request-ID', '')}"
+            )
+        )
+        st.error(
+            "Ein Fehler ist beim Abrufen der verfügbaren Workflows aufgetreten.\n\n"
+            "API-Fehler:\n"
+            f"Status Code: {response.status_code}\n"
+            f"Nachricht: {response.text}\n"
+            f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): "
+            f"{response.headers.get('X-Request-ID', '')}"
+        )
+        return []
+
+    return response.json()["workflows"]
+
+
 def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
     """
     Analyze the given text using the API and return the prediction.
@@ -48,6 +94,14 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
         Optional[Dict]: The prediction result or None if an error occurred.
     """
     logger.info("Analyzing text...")
+
+    if st.session_state.category is None:
+        st.error(
+            "Bitte wählen Sie eine Kategorie aus, bevor Sie den Text analysieren oder speichern Sie die Einstellungen erneut."
+        )
+        raise ValueError(
+            "No category selected. Please select a category before analyzing text."
+        )
 
     # Define the data folder path relative to the current script
     data_folder = os.path.join(os.path.dirname(__file__), "data")
