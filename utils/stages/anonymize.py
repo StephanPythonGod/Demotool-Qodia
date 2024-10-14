@@ -32,7 +32,7 @@ def load_image(
 
 
 def create_overlay_image(
-    image: Image.Image, text: str, font_size: int = 80
+    image: Image.Image, text: str, font_size: int = 100
 ) -> Image.Image:
     """
     Create an overlay on the image with semi-transparent gray background and rotated text.
@@ -65,8 +65,8 @@ def create_overlay_image(
     # Handle multi-line text by splitting on newline characters
     lines = text.split("\n")
 
-    # Find the maximum width and height for the text
-    max_width = overlay_image.width * 0.9
+    # # Find the maximum width and height for the text
+    max_width = overlay_image.width
     text_sizes = [draw.textbbox((0, 0), line, font=font) for line in lines]
     total_text_height = sum(bottom - top for _, top, _, bottom in text_sizes)
 
@@ -131,7 +131,7 @@ def display_file_selection_interface(
     all_selections = []
     left_column, right_column = st.columns([1, 1])
 
-    with left_column:
+    with right_column:
         if uploaded_file is None:
             st.warning("Please upload a file first.")
             return None
@@ -222,7 +222,7 @@ def display_file_selection_interface(
             logger.error(f"Error processing file for selection: {e}")
             return None
 
-    _display_instructions(right_column)
+    _display_instructions(left_column)
 
     return all_selections
 
@@ -353,12 +353,17 @@ def anonymize_stage() -> None:
     """
     selections = display_file_selection_interface(st.session_state.uploaded_file)
 
+    print("Selections:")
+    print(selections)
+
     if st.button("Datei Anonymisieren", type="primary"):
         with st.spinner("🔍 Extrahiere Text und anonymisiere..."):
             try:
                 extracted_text = perform_ocr_on_file(
                     st.session_state.uploaded_file, selections
                 )
+                print("Extracted text:")
+                print(extracted_text)
                 anonymize_result = anonymize_text(extracted_text)
 
                 st.session_state.anonymized_text = anonymize_result["anonymized_text"]
