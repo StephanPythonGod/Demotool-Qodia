@@ -303,79 +303,6 @@
                 <p>{{ item.total }}</p>
             </div>
         {% endfor %}
-
-<!-- 
-        <div>
-            <p>2024-01-01</p>
-        </div>
-        <div>
-            <p>123</p>
-        </div>
-        <div>
-            <p>Service 1</p>
-        </div>
-        <div>
-            <p>$50</p>
-            <p>$100</p>
-        </div>
-        <div>
-            <p>High</p>
-        </div>
-        <div>
-            <p>$150</p>
-            <p>$100</p>
-        </div>
-        <div>
-            <p>$150</p>
-        </div>
-        <div>
-            <p>2024-01-02</p>
-        </div>
-        <div>
-            <p>456</p>
-        </div>
-        <div>
-            <p>Service 2</p>
-        </div>
-        <div>
-            <p>$75</p>
-            <p>$200</p>
-        </div>
-        <div>
-            <p>Medium</p>
-        </div>
-        <div>
-            <p>$250</p>
-            <p>$200</p>
-        </div>
-        <div>
-            <p>$250</p>
-        </div>
-        <div>
-            <p>2024-01-03</p>
-        </div>
-        <div>
-            <p>789</p>
-        </div>
-        <div>
-            <p>Service 3</p>
-        </div>
-        <div>
-            <p>$100</p>
-            <p>$300</p>
-        </div>
-        <div>
-            <p>Low</p>
-        </div>
-        <div>
-            <p>$400</p>
-            <p>$300</p>
-        </div>
-        <div>
-            <p>$400</p>
-        </div>
-        
- -->
         <!-- Last row after all items -->
         <div></div>
         <div> </div>
@@ -386,23 +313,25 @@
         <div></div>
         <div></div>
         <div style="text-align: end;">
-            <p>{{total}}</p>
+            <p>{{ total }}</p>
         </div>
 
         <hr style="grid-column: 3/ -1">
 
-        <!-- Dicount row -->
-        <div></div>
-        <div></div>
-        <div>
-            <p>Abzgl. 25% Minderung gem. §6a Abs. 1 GOÄ</p>
-        </div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div style="text-align: end;">
-            <p>{{discount}}</p>
-        </div>
+        {% if discount %}
+            <!-- Discount row (only shown if a discount is applied) -->
+            <div></div>
+            <div></div>
+            <div>
+                <p>{{discount_reason}}</p>
+            </div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div style="text-align: end;">
+                <p>{{ discount }}</p>
+            </div>
+        {% endif %}
 
         <!-- Final row with final price -->
         <div></div>
@@ -414,7 +343,7 @@
         <div></div>
         <div></div>
         <div style="text-align: end;">
-            <p style="font-weight: bold;">{{final_price}}</p>
+            <p style="font-weight: bold;">{{ final_price }}</p>
         </div>
     </div>
 
