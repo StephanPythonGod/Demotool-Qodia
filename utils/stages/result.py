@@ -1,25 +1,18 @@
 import re
-from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import streamlit as st
 from annotated_text import annotated_text
 
-from utils.helpers.api import generate_pdf
 from utils.helpers.logger import logger
-from utils.helpers.padnext import (
-    create_positionen_object,
-    update_padnext_positionen,
-    write_object_to_xml,
-)
 from utils.helpers.transform import (
     annotate_text_update,
     format_euro,
     format_ziffer_to_4digits,
     split_recognized_and_potential,
-    transform_df_to_goziffertyp,
 )
-from utils.stages.feedback_modal import feedback_modal
+from utils.stages.feedback_modal import rechnung_erstellen_modal
 from utils.stages.modal import create_new_data, modal_dialog
 from utils.utils import create_tooltip, find_zitat_in_text, tooltip_css
 
@@ -119,34 +112,9 @@ def apply_sorting():
     st.session_state.df.reset_index(drop=True, inplace=True)
 
 
-def generate_pad(df):
-    # Generate PAD positions
-    goziffern = transform_df_to_goziffertyp(df)
-    positionen_obj = create_positionen_object(goziffern)
-    output_path = "./data/pad_positionen.xml"
-    output_path = write_object_to_xml(positionen_obj, output_path=output_path)
-    with open(output_path, "r", encoding="iso-8859-15") as f:
-        xml_object = f.read()
-    return xml_object
-
-
-def generate_padnext(df):
-    with st.spinner("Generiere PADnext Datei..."):
-        # Generate PADnext file based on uploaded PADnext file
-        goziffern = transform_df_to_goziffertyp(df)
-        positionen_obj = create_positionen_object(goziffern)
-        pad_data_ready = update_padnext_positionen(
-            padnext_folder=st.session_state.pad_data_path, positionen=positionen_obj
-        )
-        if isinstance(pad_data_ready, Path):
-            return pad_data_ready
-        else:
-            return False
-
-
-def handle_feedback_submission():
+def handle_feedback_submission(df: pd.DataFrame, generate: Optional[str] = None):
     # Open Feedback Modal
-    feedback_modal(df=st.session_state.df)
+    rechnung_erstellen_modal(df=df, generate=generate)
 
 
 def result_stage():
@@ -328,20 +296,14 @@ def result_stage():
     with left_outer_column:
         st.button(
             "Zurücksetzen",
-            on_click=lambda: (handle_feedback_submission(),),
+            on_click=lambda: (handle_feedback_submission(df=recognized_df),),
             type="primary",
             use_container_width=True,
         )
         with right_outer_column:
             if st.button("PDF generieren", type="primary", use_container_width=True):
                 with st.spinner("📄 Generiere PDF..."):
-                    try:
-                        st.session_state.pdf_data = generate_pdf(recognized_df)
-                        st.session_state.pdf_ready = True
-                    except Exception as e:
-                        st.error(f"Failed to generate PDF : {str(e)}")
-
-                    handle_feedback_submission()
+                    handle_feedback_submission(df=recognized_df, generate="pdf")
 
             if st.session_state.pdf_ready:
                 st.download_button(
@@ -354,9 +316,7 @@ def result_stage():
             if st.button(
                 "PAD Positionen generieren", type="primary", use_container_width=True
             ):
-                st.session_state.pad_data = generate_pad(recognized_df)
-                st.session_state.pad_ready = True
-                handle_feedback_submission()
+                handle_feedback_submission(df=recognized_df, generate="pad_positionen")
 
             if st.session_state.pad_ready:
                 st.download_button(
@@ -373,10 +333,7 @@ def result_stage():
                 disabled=(st.session_state.pad_data_path is None),
                 help="PADnext Datei kann nur generiert werden, wenn eine PADnext Datei hochgeladen wurde.",
             ):
-                pad_data_ready = generate_padnext(recognized_df)
-                st.session_state.pad_data_ready = pad_data_ready
-                logger.info("PADnext Datei generiert")
-                handle_feedback_submission()
+                handle_feedback_submission(df=recognized_df, generate="pad_next")
 
             if st.session_state.pad_data_ready:
                 # Read the .zip file as binary data
