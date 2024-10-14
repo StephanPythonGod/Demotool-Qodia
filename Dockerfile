@@ -24,13 +24,14 @@ COPY pyproject.toml poetry.lock ./
 COPY app.py ./
 COPY utils ./utils
 COPY data ./data
+COPY schemas ./schemas
 
 # Install dependencies using Poetry
 RUN poetry config virtualenvs.create false && \
     poetry install --no-root
 
 # Download and cache the spaCy model
-RUN python -m spacy download de_core_news_lg
+# RUN python -m spacy download de_core_news_lg
 
 # Download and cache the Flair model (Hugging Face model)
 RUN python -c "from flair.models import SequenceTagger; SequenceTagger.load('flair/ner-german-large')"
@@ -38,8 +39,9 @@ RUN python -c "from flair.models import SequenceTagger; SequenceTagger.load('fla
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
 
-# Define environment variable
-ENV PORT 8080
+# Define environment variables
+ENV PORT=8080
+ENV DEPLOYMENT_ENV=local
 
 # Start the Streamlit application
 CMD ["poetry", "run", "streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]

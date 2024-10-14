@@ -12,6 +12,7 @@ deploy.sh
 !/data/GOA_Ziffern.csv
 !/data/template_rechnung.html
 !/data/arial.ttf
+!/data/nginx.conf
 .env
 
 # Ignore all pkl files
@@ -19,3 +20,6 @@ deploy.sh
 
 # Ignore the /temp folder in the repo and all its contents
 /temp/*
+
+# Ignore the /ssl folder in the repo and all its contents
+/ssl/*
