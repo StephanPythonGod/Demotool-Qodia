@@ -179,9 +179,10 @@ def rechnung_erstellen_modal(df: pd.DataFrame, generate: Optional[str] = None) -
             "Rechnung generieren",
             disabled=True,
             help="Bitte wählen Sie einen Minderung Prozentsatz und geben Sie eine Begründung an.",
+            type="primary",
         )
     else:
-        if st.button("Rechnung generieren"):
+        if st.button("Rechnung generieren", type="primary"):
             if generate == "pdf":
                 try:
                     st.session_state.pdf_data = generate_pdf(df)
