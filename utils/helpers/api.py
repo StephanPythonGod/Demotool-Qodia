@@ -9,15 +9,13 @@ from typing import Dict, List, Optional, Union
 import pandas as pd
 import requests
 import streamlit as st
-from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+from utils.helpers.files import resource_path
 from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_items, format_ziffer_to_4digits
-
-load_dotenv()
 
 
 def check_if_default_credentials() -> None:
@@ -104,13 +102,15 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
         )
 
     # Define the data folder path relative to the current script
-    data_folder = os.path.join(os.path.dirname(__file__), "data")
+    # data_folder = os.path.join(os.path.dirname(__file__), "data")
+    data_folder = resource_path("data")
 
     # Ensure the data folder exists
     os.makedirs(data_folder, exist_ok=True)
 
     # Generate a filename based on the text hash
-    safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
+    # safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
+    safe_filename = resource_path(f"data/{hash(text)}response.pkl")
 
     # Check if a cached response exists and use_cache is True
     if use_cache and os.path.exists(safe_filename):
@@ -200,6 +200,14 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         Optional[str]: The extracted text or None if an error occurred.
     """
     logger.info("Performing OCR on the document...")
+    if st.session_state.category is None:
+        st.error(
+            "Bitte wählen Sie eine Kategorie aus, bevor Sie den Text analysieren oder speichern Sie die Einstellungen erneut."
+        )
+        raise ValueError(
+            "No category selected. Please select a category before analyzing text."
+        )
+
     url = f"{st.session_state.api_url}/process_document"
     payload = {
         "ocr_processor": "google_document_ai",
@@ -214,23 +222,23 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         file_bytes = file_bytes.getvalue()
         file_name = "clipboard_image.png"
         mime_type = "image/png"
-    else:  # UploadedFile
+    else:
         file_bytes = file.read()
         file_name = file.name
         mime_type = file.type or "application/octet-stream"
 
     files = {"file": (file_name, file_bytes, mime_type)}
 
-    try:
-        response = requests.post(url, headers=headers, data=payload, files=files)
-    except Exception as e:
-        logger.error(f"Error calling API for OCR: {e}")
-        st.error(
-            "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
-            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
-            f"Fehlerdetails: {e}"
-        )
-        return None
+    # try:
+    response = requests.post(url, headers=headers, data=payload, files=files)
+    # except Exception as e:
+    #     logger.error(f"Error calling API for OCR: {e}")
+    #     st.error(
+    #         "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
+    #         "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
+    #         f"Fehlerdetails: {e}"
+    #     )
+    #     return None
 
     logger.info(
         f"Done performing OCR on the document. Response status: {response.status_code}, {response.headers}"
@@ -245,13 +253,12 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         )
         st.error(
             f"Ein Fehler ist beim Aufrufen der API für OCR aufgetreten. "
-            f"Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.\n"
-            f"API-Fehler:\n"
-            f"Status Code: {response.status_code}\n"
-            f"Nachricht: {response.text}\n"(
-                f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): "
-                f"{response.headers.get('X-Request-ID', '')}"
-            )
+            f"Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.\n\n"
+            f"API-Fehler:\n\n"
+            f"Status Code: {response.status_code}\n\n"
+            f"Nachricht: {response.text}\n\n"
+            f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): "
+            f"{response.headers.get('X-Request-ID', 'nicht-vorhanden')}"
         )
         return None
 

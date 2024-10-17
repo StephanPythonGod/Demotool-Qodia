@@ -1,3 +1,5 @@
+# import os
+# import platform
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional, Union
 
@@ -7,6 +9,33 @@ from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from utils.helpers.logger import logger
+
+# # Define paths for local Tesseract executables for different operating systems
+# TESSERACT_DIR = "tesseract"
+# LOCAL_TESSERACT_WINDOWS = os.path.join(TESSERACT_DIR, "tesseract.exe")
+# LOCAL_TESSERACT_LINUX = os.path.join(TESSERACT_DIR, "tesseract")
+# LOCAL_TESSERACT_MAC = os.path.join(TESSERACT_DIR, "tesseract")
+
+
+# def get_tesseract_cmd():
+#     """Get the path to the Tesseract executable, checking the operating system and preferring the local version if available."""
+#     system = platform.system()
+
+#     if system == "Windows" and os.path.exists(LOCAL_TESSERACT_WINDOWS):
+#         logger.info("Using local Tesseract installation for Windows.")
+#         return LOCAL_TESSERACT_WINDOWS
+#     elif system == "Linux" and os.path.exists(LOCAL_TESSERACT_LINUX):
+#         logger.info("Using local Tesseract installation for Linux.")
+#         return LOCAL_TESSERACT_LINUX
+#     elif system == "Darwin" and os.path.exists(LOCAL_TESSERACT_MAC):
+#         logger.info("Using local Tesseract installation for macOS.")
+#         return LOCAL_TESSERACT_MAC
+#     else:
+#         logger.info(f"Using system-installed Tesseract for {system}.")
+#         return pytesseract.pytesseract.tesseract_cmd
+
+
+# pytesseract.pytesseract.tesseract_cmd = get_tesseract_cmd()
 
 
 def perform_ocr_on_file(
