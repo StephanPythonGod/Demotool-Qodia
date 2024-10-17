@@ -114,7 +114,7 @@ def perform_ocr(file: BytesIO) -> bool:
                 return False
     except Exception as e:
         logger.error(f"Error performing OCR: {e}")
-        st.error("Fehler bei der Textextraktion.")
+        st.error("Fehler bei der Textextraktion. Bitte versuchen Sie es erneut.")
         return False
 
 
@@ -133,9 +133,10 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
     Returns:
         BytesIO: The uploaded or pasted file, if available.
     """
+
     try:
         # If uploaded file exists in session state, it takes priority
-        if st.session_state.uploaded_file:
+        if st.session_state.uploaded_file and not st.session_state.new_file_uploaded:
             logger.info("Using uploaded file.")
             return st.session_state.uploaded_file
 
@@ -160,6 +161,8 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
         # If file upload exists, return the uploaded file
         if file_upload:
             logger.info("File uploaded successfully.")
+            if st.session_state.new_file_uploaded:
+                st.session_state.new_file_uploaded = False
             return file_upload
 
         return None
@@ -174,6 +177,11 @@ def handle_pad_file_selection():
         st.session_state.file_selected = False  # Reset the flag
         return True
     return False
+
+
+def file_upload_callback():
+    if st.session_state.uploaded_file:
+        st.session_state.new_file_uploaded = True
 
 
 def analyze_stage() -> None:
@@ -213,6 +221,7 @@ def analyze_stage() -> None:
         "PDF Dokument auswählen",
         type=["pdf", "png", "jpg", "zip"],
         label_visibility="collapsed",
+        on_change=file_upload_callback,
     )
 
     with right_column:
@@ -248,33 +257,32 @@ def analyze_stage() -> None:
     if is_valid_file(uploaded_file) or is_valid_file(st.session_state.uploaded_file):
         st.session_state.uploaded_file = uploaded_file
 
-        # Cloud environment logic
-        if DEPLOYMENT_ENV == "cloud":
-            right_column.warning(
-                "Dokument erfolgreich hochgeladen. Der Text wird automatisch extrahiert.",
-                icon="✅",
-            )
-            # Perform OCR only if text is not already extracted
-            if not st.session_state.text:
-                if perform_ocr(uploaded_file):
-                    st.rerun()
-
-        # Local environment logic
-        elif DEPLOYMENT_ENV == "local":
-            right_column.warning(
-                "Dokument erfolgreich hochgeladen. Bitte wählen Sie eine der folgenden Optionen aus.",
-                icon="✅",
-            )
-
-            # Show anonymization options
-            button_col1, _, button_col2 = right_column.columns([1, 1, 1])
-
-            if button_col1.button("Anonymisieren", type="primary"):
-                st.session_state.stage = "anonymize"
-                st.rerun()
-
-            if button_col2.button("Keine Anonymisierung Notwendig", type="primary"):
+        if st.session_state.uploaded_file:
+            # Cloud environment logic
+            if DEPLOYMENT_ENV == "cloud":
+                right_column.warning(
+                    "Dokument erfolgreich hochgeladen. Der Text wird automatisch extrahiert.",
+                    icon="✅",
+                )
+                # Perform OCR only if text is not already extracted
                 if not st.session_state.text:
                     if perform_ocr(uploaded_file):
                         st.rerun()
-                    pass
+
+            # Local environment logic
+            elif DEPLOYMENT_ENV == "local":
+                right_column.warning(
+                    "Dokument erfolgreich hochgeladen. Bitte wählen Sie eine der folgenden Optionen aus.",
+                    icon="✅",
+                )
+
+                # Show anonymization options
+                button_col1, _, button_col2 = right_column.columns([1, 1, 1])
+
+                if button_col1.button("Anonymisieren", type="primary"):
+                    st.session_state.stage = "anonymize"
+                    st.rerun()
+
+                if button_col2.button("Keine Anonymisierung Notwendig", type="primary"):
+                    if perform_ocr(uploaded_file):
+                        st.rerun()
