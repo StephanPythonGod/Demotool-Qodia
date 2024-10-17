@@ -6,7 +6,7 @@ authors = ["StephanPythonGod <bozztryh@web.de>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.14"
 streamlit = "^1.36.0"
 streamlit-cookies-controller = "^0.0.4"
 fuzzywuzzy = "^0.18.0"
@@ -36,6 +36,7 @@ flake8 = "^7.1.1"
 pre-commit = "^3.8.0"
 isort = "^5.13.2"
 black = "^24.8.0"
+pyinstaller = "^6.10.0"
 
 [build-system]
 requires = ["poetry-core"]

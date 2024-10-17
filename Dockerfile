@@ -25,6 +25,7 @@ COPY app.py ./
 COPY utils ./utils
 COPY data ./data
 COPY schemas ./schemas
+COPY models ./models
 
 # Install dependencies using Poetry
 RUN poetry config virtualenvs.create false && \

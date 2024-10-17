@@ -23,3 +23,15 @@ deploy.sh
 
 # Ignore the /ssl folder in the repo and all its contents
 /ssl/*
+/ssl
+
+# Ignore all files related to generating an executable
+/dist/*
+/dist
+/build/*
+/build
+*.spec
+
+# Ignore all files in the /models folder
+/models/*
+/models

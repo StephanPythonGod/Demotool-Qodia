@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 import zipfile
 from pathlib import Path
@@ -101,3 +102,19 @@ def create_uploaded_file_from_binary(
     )
     file_urls = FileURLs(file_id=file_id, upload_url="", delete_url="")
     return UploadedFile(uploaded_file_rec, file_urls)
+
+
+def resource_path(relative_path):
+    """Get the absolute path to the resource, works for development and for PyInstaller."""
+    try:
+        # If the app is running as an executable, PyInstaller stores the files in a temp directory _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # If running in development (normal mode), find the project root
+        current_file_path = os.path.dirname(os.path.abspath(__file__))
+        # Traverse up to find the root of the repository (assuming `utils/helpers/` structure)
+        base_path = os.path.abspath(
+            os.path.join(current_file_path, "../../..")
+        )  # Adjust this to your repo's structure
+
+    return os.path.join(base_path, relative_path)

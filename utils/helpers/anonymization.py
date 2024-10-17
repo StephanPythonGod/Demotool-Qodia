@@ -1,3 +1,4 @@
+import os
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -12,6 +13,7 @@ from presidio_analyzer import (
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 
+from utils.helpers.files import resource_path
 from utils.helpers.logger import logger
 
 ENTITIES = [
@@ -42,6 +44,10 @@ MODEL_LANGUAGES = {
     "de": "flair/ner-german-large",
 }
 
+MODELS_DIR = "models"
+MODEL_FILE = os.path.join(MODELS_DIR, "flair-ner-german-large.pt")
+MODEL_FILE = resource_path(MODEL_FILE)
+
 DEFAULT_EXPLANATION = "Identified as {} by Flair's Named Entity Recognition"
 
 DATE_PATTERNS = [
@@ -64,6 +70,30 @@ GENDER_WORDS = [
     "dame",
     "damen",
 ]
+
+
+def download_model_if_needed():
+    """Download the Hugging Face NER model if it does not exist locally."""
+    if not os.path.exists(MODEL_FILE):
+        logger.info("Downloading Hugging Face model...")
+        os.makedirs(resource_path(MODELS_DIR), exist_ok=True)
+        model = SequenceTagger.load(MODEL_LANGUAGES["de"])  # Download the model
+        model.save(MODEL_FILE)  # Save it locally
+    else:
+        logger.info("Model already exists locally.")
+
+
+def load_model():
+    """Load the Hugging Face NER model from the local file."""
+    logger.info("Loading the local Hugging Face model...")
+    if os.path.exists(MODEL_FILE):
+        logger.info("Loading the local Hugging Face model...")
+        model = SequenceTagger.load(MODEL_FILE)  # Load the model from local file
+    else:
+        logger.info("Model not found locally, downloading...")
+        download_model_if_needed()
+        model = load_model()
+    return model
 
 
 class FlairRecognizer(EntityRecognizer):
@@ -89,9 +119,7 @@ class FlairRecognizer(EntityRecognizer):
         """
         self.check_label_groups = check_label_groups or CHECK_LABEL_GROUPS
         supported_entities = supported_entities or ENTITIES
-        self.model = model or SequenceTagger.load(
-            MODEL_LANGUAGES.get(supported_language)
-        )
+        self.model = load_model()
 
         super().__init__(
             supported_entities=supported_entities,
@@ -366,7 +394,8 @@ def _anonymize_flair_only(
         Dict[str, Any]: Dictionary containing anonymized text and detected entities.
     """
     logger.info("Anonymizing text using Flair NER model")
-    tagger = SequenceTagger.load("flair/ner-german-large")
+    # tagger = SequenceTagger.load("flair/ner-german-large")
+    tagger = load_model()
     sentence = Sentence(text)
     tagger.predict(sentence)
 

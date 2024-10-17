@@ -12,6 +12,7 @@ from utils.helpers.transform import (
     format_ziffer_to_4digits,
     split_recognized_and_potential,
 )
+from utils.session import reset
 from utils.stages.feedback_modal import rechnung_erstellen_modal
 from utils.stages.modal import create_new_data, modal_dialog
 from utils.utils import create_tooltip, find_zitat_in_text, tooltip_css
@@ -95,8 +96,8 @@ def reset_ziffer_order():
 
 def set_sort_mode():
     # Cycle through sorting modes: ask -> desc -> text
-    modes = ["ask", "desc"]
-    current_mode = st.session_state.get("sort_mode", "ask")
+    modes = ["ask", "desc", "text"]
+    current_mode = st.session_state.get("sort_mode", "text")
     next_mode = modes[(modes.index(current_mode) + 1) % len(modes)]
     st.session_state.sort_mode = next_mode
     apply_sorting()  # Apply sorting whenever mode changes
@@ -203,7 +204,11 @@ def result_stage():
                 # Set selected_ziffer to None
 
                 # Set the button label based on the current sort_mode
-                sort_label = {"ask": "Ziffer ⬆️", "desc": "Ziffer ⬇️"}
+                sort_label = {
+                    "ask": "Ziffer ⬆️",
+                    "desc": "Ziffer ⬇️",
+                    "text": "Ziffer 🔠",
+                }
 
                 # Initialize sort_mode in session_state if not set yet
                 sort_mode = st.session_state.get("sort_mode", "text")
@@ -296,7 +301,7 @@ def result_stage():
     with left_outer_column:
         st.button(
             "Zurücksetzen",
-            on_click=lambda: (handle_feedback_submission(df=recognized_df),),
+            on_click=lambda: (reset()),
             type="primary",
             use_container_width=True,
         )
