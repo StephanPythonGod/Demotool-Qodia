@@ -32,7 +32,7 @@ docker-compose up --build -d
 
 # Wait for 7 minutes before checking the app status
 echo "Waiting for 7 minutes before checking the app status..."
-sleep 420  # 7 minutes
+sleep 240  # 4 minutes
 
 # Retry logic to check if the app is up
 for i in {1..30}; do  # 30 attempts
