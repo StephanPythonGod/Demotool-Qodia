@@ -29,21 +29,3 @@ echo "Environment variables saved to .env file."
 # Build and run the containers
 echo "Building and starting the containers..."
 docker-compose up --build -d
-
-# Wait for 7 minutes before checking the app status
-echo "Waiting for 7 minutes before checking the app status..."
-sleep 240  # 4 minutes
-
-# Retry logic to check if the app is up
-for i in {1..30}; do  # 30 attempts
-    # Make a request to the Streamlit app URL (modify the endpoint if needed)
-    if curl --insecure --silent --head "$APP_URL" | grep "200 OK" > /dev/null; then
-        echo "The app is now accessible at: $APP_URL"
-        exit 0
-    fi
-    echo "Waiting for the app to be ready... attempt $i"
-    sleep 10  # Wait 10 seconds before checking again
-done
-
-echo "Error: The app did not start successfully after 5 minutes of checking."
-exit 1
