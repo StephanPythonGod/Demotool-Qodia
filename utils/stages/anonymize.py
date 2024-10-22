@@ -353,17 +353,12 @@ def anonymize_stage() -> None:
     """
     selections = display_file_selection_interface(st.session_state.uploaded_file)
 
-    print("Selections:")
-    print(selections)
-
     if st.button("Datei Anonymisieren", type="primary"):
         with st.spinner("🔍 Extrahiere Text und anonymisiere..."):
             try:
                 extracted_text = perform_ocr_on_file(
                     st.session_state.uploaded_file, selections
                 )
-                print("Extracted text:")
-                print(extracted_text)
                 anonymize_result = anonymize_text(extracted_text)
 
                 st.session_state.anonymized_text = anonymize_result["anonymized_text"]

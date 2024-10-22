@@ -360,7 +360,6 @@ def transform_df_to_goziffertyp(df: pd.DataFrame) -> List[GozifferTyp]:
             st.warning(f"Error in row {idx}: {str(e)}")
             continue
 
-    print("Length of goziffer_objects: ", len(goziffer_objects))
     return goziffer_objects
 
 

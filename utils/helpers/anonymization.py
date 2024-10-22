@@ -361,7 +361,7 @@ def _anonymize_gender_words(text: str, detected_entities: List[Dict[str, Any]]) 
 
 
 def anonymize_text_german(
-    text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.8
+    text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.7
 ) -> Dict[str, Any]:
     """
     Anonymize German text using NER models (Flair, SpaCy, or both).
