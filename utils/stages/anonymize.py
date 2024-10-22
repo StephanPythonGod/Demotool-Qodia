@@ -1,5 +1,6 @@
 import hashlib
 import io
+import os
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -10,7 +11,6 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit_drawable_canvas import st_canvas
 
 from utils.helpers.anonymization import anonymize_text
-from utils.helpers.files import resource_path
 from utils.helpers.logger import logger
 from utils.helpers.ocr import perform_ocr_on_file
 
@@ -52,10 +52,8 @@ def create_overlay_image(
 
     # Load a font with a specified size
     try:
-        # REPO_PATH = os.path.dirname(os.path.abspath(__file__))
-        # font_path = os.path.join(REPO_PATH, "../../data/arial.ttf")
-        font_path = "data/arial.ttf"
-        font_path = resource_path(font_path)
+        REPO_PATH = os.path.dirname(os.path.abspath(__file__))
+        font_path = os.path.join(REPO_PATH, "../../data/arial.ttf")
         font = ImageFont.truetype(
             font_path, font_size
         )  # You can change the path to another font if needed

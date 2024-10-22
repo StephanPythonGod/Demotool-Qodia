@@ -13,7 +13,6 @@ from presidio_analyzer import (
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 
-from utils.helpers.files import resource_path
 from utils.helpers.logger import logger
 
 ENTITIES = [
@@ -43,10 +42,8 @@ CHECK_LABEL_GROUPS = [
 MODEL_LANGUAGES = {
     "de": "flair/ner-german-large",
 }
-
-MODELS_DIR = "models"
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "../../../models")
 MODEL_FILE = os.path.join(MODELS_DIR, "flair-ner-german-large.pt")
-MODEL_FILE = resource_path(MODEL_FILE)
 
 DEFAULT_EXPLANATION = "Identified as {} by Flair's Named Entity Recognition"
 
@@ -76,7 +73,7 @@ def download_model_if_needed():
     """Download the Hugging Face NER model if it does not exist locally."""
     if not os.path.exists(MODEL_FILE):
         logger.info("Downloading Hugging Face model...")
-        os.makedirs(resource_path(MODELS_DIR), exist_ok=True)
+        os.makedirs(MODELS_DIR, exist_ok=True)
         model = SequenceTagger.load(MODEL_LANGUAGES["de"])  # Download the model
         model.save(MODEL_FILE)  # Save it locally
     else:

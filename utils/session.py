@@ -5,8 +5,6 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv  # For loading environment variables from a .env file
 
-from utils.helpers.files import resource_path
-
 
 def reset() -> None:
     """Reset the app to its initial state and rerun the script."""
@@ -51,7 +49,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     """
 
     # Load environment variables from a .env file if it exists
-    load_dotenv(dotenv_path=resource_path(".env"))
+    load_dotenv()
 
     if settings is None:
         settings = {}

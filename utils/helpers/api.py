@@ -13,7 +13,6 @@ from jinja2 import Environment, FileSystemLoader
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
-from utils.helpers.files import resource_path
 from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_items, format_ziffer_to_4digits
 
@@ -102,15 +101,13 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
         )
 
     # Define the data folder path relative to the current script
-    # data_folder = os.path.join(os.path.dirname(__file__), "data")
-    data_folder = resource_path("data")
+    data_folder = os.path.join(os.path.dirname(__file__), "data")
 
     # Ensure the data folder exists
     os.makedirs(data_folder, exist_ok=True)
 
     # Generate a filename based on the text hash
-    # safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
-    safe_filename = resource_path(f"data/{hash(text)}response.pkl")
+    safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
 
     # Check if a cached response exists and use_cache is True
     if use_cache and os.path.exists(safe_filename):
@@ -229,16 +226,16 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
 
     files = {"file": (file_name, file_bytes, mime_type)}
 
-    # try:
-    response = requests.post(url, headers=headers, data=payload, files=files)
-    # except Exception as e:
-    #     logger.error(f"Error calling API for OCR: {e}")
-    #     st.error(
-    #         "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
-    #         "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
-    #         f"Fehlerdetails: {e}"
-    #     )
-    #     return None
+    try:
+        response = requests.post(url, headers=headers, data=payload, files=files)
+    except Exception as e:
+        logger.error(f"Error calling API for OCR: {e}")
+        st.error(
+            "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
+            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
+            f"Fehlerdetails: {e}"
+        )
+        return None
 
     logger.info(
         f"Done performing OCR on the document. Response status: {response.status_code}, {response.headers}"
