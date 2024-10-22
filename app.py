@@ -1,7 +1,6 @@
 import streamlit as st
 from dotenv import load_dotenv
 
-from utils.helpers.files import resource_path
 from utils.helpers.logger import logger
 from utils.helpers.settings import load_settings_from_cookies, settings_sidebar
 from utils.session import configure_page, initialize_session_state
@@ -11,7 +10,7 @@ from utils.stages.edit_anonymized import edit_anonymized_stage
 from utils.stages.result import result_stage
 
 # Load env variables from .env file
-load_dotenv(dotenv_path=resource_path(".env"))
+load_dotenv()
 
 # Load settings from cookies before initializing session state
 settings = load_settings_from_cookies()
