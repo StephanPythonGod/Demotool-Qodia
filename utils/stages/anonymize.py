@@ -3,7 +3,6 @@ import io
 import os
 from typing import Dict, List, Optional, Tuple
 
-import pandas as pd
 import streamlit as st
 from pdf2image import convert_from_bytes
 from PIL import Image, ImageDraw, ImageFont
@@ -143,7 +142,7 @@ def display_file_selection_interface(
                 num_pages = 1
 
             for i in range(num_pages):
-                st.subheader(f"Page {i + 1}")
+                st.subheader(f"Seite {i + 1}")
 
                 # Check if the page has already been loaded
                 page_key = f"{file_hash}_page_{i}"
@@ -310,41 +309,6 @@ def _display_instructions(column: st.delta_generator.DeltaGenerator) -> None:
         - Wenn Sie fertig sind, klicken Sie auf **„Datei Anonymisieren"** unten, um die markierten Bereiche für die OCR zu extrahieren und den Text zu anonymisieren.
         """
     )
-
-
-def display_anonymized_text_editor(
-    anonymized_text: str,
-    detected_entities: List[Tuple[str, str]],
-    st: st.delta_generator.DeltaGenerator,
-) -> str:
-    """
-    Display the anonymized text editor and detected entities.
-
-    Args:
-        anonymized_text (str): The anonymized text to display and edit.
-        detected_entities (List[Tuple[str, str]]): A list of detected entities and their types.
-        st (st.delta_generator.DeltaGenerator): The Streamlit object to use for rendering.
-
-    Returns:
-        str: The edited anonymized text.
-    """
-    right_column = st.columns(2)[1]
-
-    right_column.subheader("Anonymisierter Text")
-    edited_text = right_column.text_area(
-        "Bearbeiten Sie den anonymisierten Text:", value=anonymized_text, height=400
-    )
-
-    right_column.subheader("Ersetzte Wörter und zugehörige Entitäten:")
-    if detected_entities:
-        right_column.dataframe(
-            pd.DataFrame(detected_entities, columns=["Ersetztes Wort", "Entitätstyp"]),
-            hide_index=True,
-        )
-    else:
-        right_column.warning("Keine ersetzten Entitäten gefunden.")
-
-    return edited_text
 
 
 def anonymize_stage() -> None:
