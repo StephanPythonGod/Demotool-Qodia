@@ -270,7 +270,7 @@ def analyze_stage() -> None:
                         st.rerun()
 
             # Local environment logic
-            elif DEPLOYMENT_ENV == "local":
+            elif DEPLOYMENT_ENV == "local" or DEPLOYMENT_ENV == "development":
                 right_column.warning(
                     "Dokument erfolgreich hochgeladen. Bitte wählen Sie eine der folgenden Optionen aus.",
                     icon="✅",

@@ -242,34 +242,6 @@ def calculate_einzelbetrag(
     else:
         return goa_item["Einfachsatz"].values[0] * faktor
 
-    # if goa_item.empty:
-    #     logger.error(f"No matching GOÄZiffer for selected Ziffer {ziffer_selected}")
-    #     return 0.0
-
-    # regelhoechstfaktor = goa_item["Regelhöchstfaktor"].values[0]
-    # regelhoechstsatz = goa_item["Regelhöchstsatz"].values[0]
-    # hoechstfaktor = goa_item["Höchstfaktor"].values[0]
-    # hoechstsatz = goa_item["Höchstsatz"].values[0]
-    # einfachsatz = goa_item["Einfachsatz"].values[0]
-
-    # if (
-    #     isinstance(hoechstfaktor, float)
-    #     and isinstance(hoechstsatz, float)
-    #     and faktor >= hoechstfaktor
-    # ):
-    #     return hoechstsatz
-    # elif (
-    #     isinstance(regelhoechstfaktor, float)
-    #     and isinstance(regelhoechstsatz, float)
-    #     and faktor >= regelhoechstfaktor
-    # ):
-    #     return regelhoechstsatz
-    # elif isinstance(einfachsatz, float):
-    #     return einfachsatz
-    # else:
-    #     logger.error(f"Invalid data for selected Ziffer {ziffer_selected}")
-    #     return 0.0
-
 
 def calculate_gesamtbetrag(einzelbetrag: float, anzahl: int) -> float:
     """
@@ -294,12 +266,14 @@ def display_analog_selection(
         current_value = None
 
     analog = st.selectbox(
-        "Analog auswählen",
+        "Analogziffer auswählen",
         options=["Keine Auswahl"] + ziffer_options,
         index=0
         if current_value is None
         else (cleaned_ziffer_options.index(current_value) + 1),
-        label_visibility="collapsed",
+        label_visibility="visible",
+        disabled=current_value is None,
+        help="Hier kann eine Analogziffer ausgewählt werden, jedoch nur dann, wenn die ausgewählte Ziffer eine Analogziffer ist.",
     )
     return analog if analog != "Keine Auswahl" else None
 
@@ -308,10 +282,11 @@ def get_ziffer_data() -> Dict[str, Union[str, int, float, None]]:
     if st.session_state.get("ziffer_to_edit") is not None:
         return st.session_state.df.iloc[st.session_state.ziffer_to_edit].to_dict()
     else:
+        # TODO: I think this is dead code
         return {
             "ziffer": None,
-            "anzahl": 0,
-            "faktor": 1.0,
+            "anzahl": 1,
+            "faktor": 2.3,
             "text": None,
             "zitat": st.session_state.text,
             "begruendung": None,
@@ -364,7 +339,7 @@ def display_haufigkeit_input(current_value: Optional[int]) -> int:
     st.subheader("Häufigkeit")
     return st.number_input(
         "Häufigkeit setzen",
-        value=current_value if current_value is not None else 0,
+        value=current_value if current_value is not None else 1,
         placeholder="Bitte wählen Sie die Häufigkeit der Leistung ...",
         min_value=0,
         max_value=20,
@@ -376,7 +351,7 @@ def display_intensitat_input(current_value: Optional[float]) -> float:
     st.subheader("Faktor")
     intensitat = st.number_input(
         "Faktor setzen",
-        value=current_value if current_value is not None else 1.0,
+        value=current_value if current_value is not None else 2.3,
         placeholder="Bitte wählen Sie die Intensität der Durchführung der Leistung ...",
         min_value=0.0,
         max_value=5.0,

@@ -85,6 +85,8 @@ def read_in_goa(
     # For every row in the DataFrame add a new row with the same values but the GOÄZiffer with an " A" at the end
     # Replace the Beschreibung with the text "Analogziffer zu " + original GO'Ziffer
     goa_analog = goa.copy()
+    # Filter out all rows, where "analog" is empty
+    goa_analog = goa_analog[goa_analog["analog"].isnull()]
     goa_analog["Beschreibung"] = "Analogziffer zu " + goa_analog["GOÄZiffer"]
     goa_analog["analog"] = goa_analog["GOÄZiffer"]
     goa_analog["GOÄZiffer"] = goa_analog["GOÄZiffer"] + " A"
