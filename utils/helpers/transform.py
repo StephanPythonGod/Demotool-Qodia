@@ -431,3 +431,17 @@ def split_recognized_and_potential(df):
     recognized_df = df[df["confidence"] >= 0.9]
     potential_df = df[df["confidence"] < 0.9]
     return recognized_df, potential_df
+
+
+def concatenate_labels(zitat):
+    concatenated_text = []
+
+    # Loop through all high-level keys in zitat
+    for key, value in zitat.items():
+        # Loop through all items in the list associated with the key
+        for obj in value:
+            # Extract the 'label' field
+            concatenated_text.append(obj["label"].strip())
+
+    # Join all the labels with " [...] " between them
+    return " [...] ".join(concatenated_text)

@@ -13,43 +13,10 @@ from utils.helpers.transform import (
     split_recognized_and_potential,
 )
 from utils.session import reset
-from utils.stages.feedback_modal import rechnung_erstellen_modal
-from utils.stages.modal import create_new_data, modal_dialog
+from utils.stages.feedback_modal import feedback_modal
+from utils.stages.generate_result_modal import rechnung_erstellen_modal
+from utils.stages.modal import add_new_ziffer, modal_dialog
 from utils.utils import create_tooltip, find_zitat_in_text, tooltip_css
-
-
-def add_new_ziffer():
-    # Create a temporary placeholder for the new ziffer
-    new_row_id = (
-        st.session_state.df["row_id"].max() + 1 if len(st.session_state.df) > 0 else 0
-    )
-    temp_index = len(st.session_state.df)
-
-    # Add a temporary row to the dataframe
-    temp_row = create_new_data(
-        ziffer=None,
-        analog=None,
-        haufigkeit=1,
-        intensitat=2.3,
-        beschreibung=None,
-        zitat=st.session_state.text,
-        begruendung=None,
-        einzelbetrag=0.0,
-        gesamtbetrag=0.0,
-        row_id=new_row_id,  # Add row_id to the new row
-    )
-    st.session_state.df = pd.concat(
-        [st.session_state.df, pd.DataFrame([temp_row])], ignore_index=True
-    )
-    # Set the temporary row as the selected index
-    st.session_state.selected_ziffer = temp_index
-
-    # Set a flag to indicate that we're adding a new ziffer
-    st.session_state.adding_new_ziffer = True
-
-    # Open the modal dialog for editing the new row
-    st.session_state.ziffer_to_edit = temp_index
-    modal_dialog()
 
 
 def set_selected_ziffer(index):
@@ -303,6 +270,10 @@ def result_stage():
             use_container_width=True,
         )
         with right_outer_column:
+            if st.button("Feedback geben", type="primary", use_container_width=True):
+                with st.spinner("📝 Feedback wird geladen..."):
+                    feedback_modal(st.session_state.df)
+
             if st.button("PDF generieren", type="primary", use_container_width=True):
                 with st.spinner("📄 Generiere PDF..."):
                     handle_feedback_submission(df=recognized_df, generate="pdf")

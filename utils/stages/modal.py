@@ -2,11 +2,45 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import streamlit as st
+from streamlit_annotation_tools import text_labeler
 
 from utils.helpers.db import read_in_goa
 from utils.helpers.logger import logger
-from utils.helpers.transform import annotate_text_update
+from utils.helpers.transform import annotate_text_update, concatenate_labels
 from utils.utils import ziffer_from_options
+
+
+def add_new_ziffer():
+    new_row_id = (
+        st.session_state.df["row_id"].max() + 1 if len(st.session_state.df) > 0 else 0
+    )
+    temp_index = len(st.session_state.df)
+
+    # Add a temporary row to the dataframe
+    temp_row = create_new_data(
+        ziffer=None,
+        analog=None,
+        haufigkeit=1,
+        intensitat=2.3,
+        beschreibung=None,
+        zitat=None,
+        begruendung=None,
+        einzelbetrag=0.0,
+        gesamtbetrag=0.0,
+        row_id=new_row_id,  # Add row_id to the new row
+    )
+    st.session_state.df = pd.concat(
+        [st.session_state.df, pd.DataFrame([temp_row])], ignore_index=True
+    )
+    # Set the temporary row as the selected index
+    st.session_state.selected_ziffer = temp_index
+
+    # Set a flag to indicate that we're adding a new ziffer
+    st.session_state.adding_new_ziffer = True
+
+    # Open the modal dialog for editing the new row
+    st.session_state.ziffer_to_edit = temp_index
+    modal_dialog()
 
 
 def determine_additional_fields(
@@ -158,7 +192,7 @@ def modal_dialog() -> None:
 
         haufigkeit = display_haufigkeit_input(ziffer_data.get("anzahl"))
         intensitat = display_intensitat_input(ziffer_data.get("faktor"))
-        zitat = display_zitat_input(ziffer_data.get("zitat"))
+        zitat = display_zitat_input(ziffer_data.get("zitat"), ziffer)
         begruendung = display_begrundung_input(ziffer_data.get("begruendung"))
 
         ziffer_selected = analog if analog else ziffer
@@ -362,15 +396,25 @@ def display_intensitat_input(current_value: Optional[float]) -> float:
     return round(intensitat, 1)
 
 
-def display_zitat_input(current_value: Optional[str]) -> str:
+def display_zitat_input(current_value: Optional[str], ziffer_str: Optional[str]) -> str:
     st.subheader("Textzitat")
-    return st.text_area(
-        "Textzitat einfügen",
-        value=current_value if current_value is not None else "",
-        placeholder="Bitte hier das Textzitat einfügen ...",
-        help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
-        height=200,
-    )
+    if current_value is None:
+        if ziffer_str is None:
+            st.info(
+                "Wählen Sie zuerst eine Ziffer aus, um ein Zitat auszuwählen.", icon="🔎"
+            )
+        else:
+            zitat = text_labeler(text=st.session_state.text, labels={ziffer_str: []})
+            zitat = concatenate_labels(zitat)
+            return zitat
+    else:
+        return st.text_area(
+            "Textzitat einfügen",
+            value=current_value if current_value is not None else "",
+            placeholder="Bitte hier das Textzitat einfügen ...",
+            help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
+            height=200,
+        )
 
 
 def display_begrundung_input(current_value: Optional[str]) -> Optional[str]:
