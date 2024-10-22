@@ -16,6 +16,8 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile
 from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_items, format_ziffer_to_4digits
 
+DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "local")
+
 
 def check_if_default_credentials() -> None:
     """
@@ -78,14 +80,13 @@ def get_workflows() -> List[str]:
     return response.json()["workflows"]
 
 
-def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
+def analyze_api_call(text: str) -> Optional[Dict]:
     """
     Analyze the given text using the API and return the prediction.
-    If a cached response exists in the data folder and caching is enabled, return that instead.
+    If a cached response exists in the data folder and the environment is 'development', return that instead.
 
     Args:
         text (str): The text to be analyzed.
-        use_cache (bool): Whether to use the cached response or not (default is True).
 
     Returns:
         Optional[Dict]: The prediction result or None if an error occurred.
@@ -100,6 +101,9 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
             "No category selected. Please select a category before analyzing text."
         )
 
+    # Get the deployment environment (default to 'local' if not set)
+    deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
+
     # Define the data folder path relative to the current script
     data_folder = os.path.join(os.path.dirname(__file__), "data")
 
@@ -109,7 +113,10 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
     # Generate a filename based on the text hash
     safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
 
-    # Check if a cached response exists and use_cache is True
+    # Check if caching should be used based on the environment variable
+    use_cache = deployment_env == "development"
+
+    # Check if a cached response exists and the environment allows using cache
     if use_cache and os.path.exists(safe_filename):
         logger.info(f"Using cached response from {safe_filename}")
         try:
@@ -122,7 +129,7 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
         except Exception as e:
             logger.error(f"Error loading cached response: {e}")
 
-    # Perform the API call if no cached response exists or if use_cache is False
+    # Perform the API call if no cached response exists or if caching is not allowed
     url = f"{st.session_state.api_url}/process_document"
 
     payload = {
@@ -173,15 +180,15 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
     except KeyError:
         prediction = response.json()["prediction"]
 
-    # Save the full response and prediction to a file using pickle
-    cached_response = {"response": response, "prediction": prediction}
-
-    try:
-        with open(safe_filename, "wb") as file:
-            pickle.dump(cached_response, file)
-        logger.info(f"Response saved to {safe_filename}")
-    except Exception as e:
-        logger.error(f"Error saving response to file: {e}")
+    # Save the full response and prediction to a file using pickle if caching is enabled
+    if use_cache:
+        cached_response = {"response": response, "prediction": prediction}
+        try:
+            with open(safe_filename, "wb") as file:
+                pickle.dump(cached_response, file)
+            logger.info(f"Response saved to {safe_filename}")
+        except Exception as e:
+            logger.error(f"Error saving response to file: {e}")
 
     return prediction
 
@@ -189,6 +196,7 @@ def analyze_api_call(text: str, use_cache: bool = False) -> Optional[Dict]:
 def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]:
     """
     Perform OCR on the given file using the API and return the extracted text.
+    If a cached response exists in the data folder and the environment is 'development', return that instead.
 
     Args:
         file (Union[Image.Image, UploadedFile]): The file to be processed.
@@ -197,6 +205,7 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         Optional[str]: The extracted text or None if an error occurred.
     """
     logger.info("Performing OCR on the document...")
+
     if st.session_state.category is None:
         st.error(
             "Bitte wählen Sie eine Kategorie aus, bevor Sie den Text analysieren oder speichern Sie die Einstellungen erneut."
@@ -204,6 +213,34 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         raise ValueError(
             "No category selected. Please select a category before analyzing text."
         )
+
+    # Get the deployment environment (default to 'local' if not set)
+    deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
+
+    # Define the data folder path relative to the current script
+    data_folder = os.path.join(os.path.dirname(__file__), "data")
+
+    # Ensure the data folder exists
+    os.makedirs(data_folder, exist_ok=True)
+
+    # Generate a filename based on the file name and category hash for caching
+    safe_filename = os.path.join(
+        data_folder, f"{hash(file.name + st.session_state.category)}_ocr_response.pkl"
+    )
+
+    # Check if caching should be used based on the environment variable
+    use_cache = deployment_env == "development"
+
+    # Check if a cached response exists and the environment allows using cache
+    if use_cache and os.path.exists(safe_filename):
+        logger.info(f"Using cached OCR response from {safe_filename}")
+        try:
+            with open(safe_filename, "rb") as file:
+                cached_response = pickle.load(file)
+            # Return the cached OCR text
+            return cached_response["ocr_text"]
+        except Exception as e:
+            logger.error(f"Error loading cached OCR response: {e}")
 
     url = f"{st.session_state.api_url}/process_document"
     payload = {
@@ -213,6 +250,7 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
     }
     headers = {"x-api-key": st.session_state.api_key}
 
+    # Prepare the file for the API request
     if isinstance(file, Image.Image):
         file_bytes = BytesIO()
         file.save(file_bytes, format="PNG")
@@ -265,6 +303,16 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         ocr_text = response.json()["result"]["ocr"]["ocr_text"]
     except KeyError:
         ocr_text = response.json()["ocr"]["ocr_text"]
+
+    # Save the OCR text and response to a cache file if caching is enabled
+    if use_cache:
+        cached_response = {"ocr_text": ocr_text}
+        try:
+            with open(safe_filename, "wb") as file:
+                pickle.dump(cached_response, file)
+            logger.info(f"OCR response saved to {safe_filename}")
+        except Exception as e:
+            logger.error(f"Error saving OCR response to file: {e}")
 
     return ocr_text
 

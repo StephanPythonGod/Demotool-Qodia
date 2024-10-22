@@ -29,8 +29,8 @@ def add_new_ziffer():
     temp_row = create_new_data(
         ziffer=None,
         analog=None,
-        haufigkeit=0,
-        intensitat=1.0,
+        haufigkeit=1,
+        intensitat=2.3,
         beschreibung=None,
         zitat=st.session_state.text,
         begruendung=None,
@@ -82,16 +82,11 @@ def sort_ziffer(ascending=True):
     st.session_state.df = st.session_state.df.sort_values(
         by="numeric_ziffer", ascending=ascending
     )
-    st.session_state.df.drop(
-        columns=["numeric_ziffer"], inplace=True
-    )  # Remove helper column
+    st.session_state.df.drop(columns=["numeric_ziffer"], inplace=True)
 
 
 def reset_ziffer_order():
-    st.session_state.df = st.session_state.df.loc[st.session_state.original_order]
-    st.session_state.df.reset_index(drop=True, inplace=True)
-    st.session_state.selected_ziffer = None
-    st.rerun()
+    st.session_state.df = st.session_state.df.sort_values(by="row_id")
 
 
 def set_sort_mode():
@@ -109,6 +104,8 @@ def apply_sorting():
         sort_ziffer(ascending=True)
     elif st.session_state.sort_mode == "desc":
         sort_ziffer(ascending=False)
+    elif st.session_state.sort_mode == "text":
+        reset_ziffer_order()
     # Reset index and clear the selected ziffer
     st.session_state.df.reset_index(drop=True, inplace=True)
 
