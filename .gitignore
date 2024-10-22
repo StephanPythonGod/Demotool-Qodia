@@ -23,3 +23,12 @@ deploy.sh
 
 # Ignore the /ssl folder in the repo and all its contents
 /ssl/*
+
+# Ignore all .exe build using py related files
+*.exe
+/build/
+/dist/
+*.spec
+
+# Ignore the content of the models folder
+/models/*
