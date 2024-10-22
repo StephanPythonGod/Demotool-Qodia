@@ -111,7 +111,7 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     os.makedirs(data_folder, exist_ok=True)
 
     # Generate a filename based on the text hash
-    safe_filename = os.path.join(data_folder, f"{hash(text)}_response.pkl")
+    safe_filename = os.path.join(data_folder, f"{text[:30]}_response.pkl")
 
     # Check if caching should be used based on the environment variable
     use_cache = deployment_env == "development"
@@ -225,7 +225,7 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
 
     # Generate a filename based on the file name and category hash for caching
     safe_filename = os.path.join(
-        data_folder, f"{hash(file.name + st.session_state.category)}_ocr_response.pkl"
+        data_folder, f"{file.name[:5] + st.session_state.category}_ocr_response.pkl"
     )
 
     # Check if caching should be used based on the environment variable

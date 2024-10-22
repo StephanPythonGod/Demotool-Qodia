@@ -29,6 +29,7 @@ pyopenssl = "^24.2.1"
 cryptography = "^43.0.1"
 xmlschema = "^3.4.2"
 pypdf2 = "^3.0.1"
+streamlit-annotation-tools = "^1.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
