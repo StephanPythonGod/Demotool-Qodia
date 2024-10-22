@@ -34,8 +34,10 @@ RUN poetry config virtualenvs.create false && \
 # Download and cache the spaCy model
 # RUN python -m spacy download de_core_news_lg
 
-# Download and cache the Flair model (Hugging Face model)
-RUN python -c "from flair.models import SequenceTagger; SequenceTagger.load('flair/ner-german-large')"
+# Check if the flair model already exists in the models directory
+# If it does not, download the model
+RUN test -f ./models/flair-ner-german-large.pt || \
+    python -c "from flair.models import SequenceTagger; SequenceTagger.load('flair/ner-german-large')"
 
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
