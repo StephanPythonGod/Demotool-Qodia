@@ -31,10 +31,6 @@ def display_anonymized_text_editor(
     edited_text = column.text_area(
         "Bearbeiten Sie den anonymisierten Text:", value=anonymized_text, height=400
     )
-
-    # TODO: Implement entity replacement and display
-    # Uncomment and implement the following code when ready:
-
     return edited_text
 
 
