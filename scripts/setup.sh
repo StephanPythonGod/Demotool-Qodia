@@ -26,6 +26,6 @@ EOF
 
 echo "Environment variables saved to .env file."
 
-# Build and run the containers
+# Build and run the containers with .env file passed to Docker Compose
 echo "Building and starting the containers..."
-docker-compose up --build -d
+docker-compose --env-file .env up --build -d

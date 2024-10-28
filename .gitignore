@@ -6,7 +6,6 @@ __pycache__/utils.cpython-312.pyc
 .pre-commit-config.yaml
 app.yaml
 deploy.sh
-.vscode/
 
 /data/*
 !/data/GOA_Ziffern.csv
@@ -35,3 +34,6 @@ deploy.sh
 
 # Ignore all files inside the /models folder
 /models/*
+
+# Remove all .tar files
+*.tar

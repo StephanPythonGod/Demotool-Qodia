@@ -1,16 +1,9 @@
+import os
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List
 
 from flair.data import Sentence
 from flair.models import SequenceTagger
-from presidio_analyzer import (
-    AnalysisExplanation,
-    AnalyzerEngine,
-    EntityRecognizer,
-    RecognizerResult,
-)
-from presidio_analyzer.nlp_engine import NlpEngineProvider
-from presidio_anonymizer import AnonymizerEngine
 
 from utils.helpers.logger import logger
 
@@ -41,6 +34,8 @@ CHECK_LABEL_GROUPS = [
 MODEL_LANGUAGES = {
     "de": "flair/ner-german-large",
 }
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "../../../models")
+MODEL_FILE = os.path.join(MODELS_DIR, "flair-ner-german-large.pt")
 
 DEFAULT_EXPLANATION = "Identified as {} by Flair's Named Entity Recognition"
 
@@ -53,192 +48,71 @@ DATE_PATTERNS = [
 GENDER_WORDS = [
     "frau",
     "frauen",
+    "frauens",
+    "frau",
+    "frauen",
+    "frauen",
     "mann",
     "männer",
+    "mannes",
+    "männern",
+    "männer",
+    "mann",
     "herr",
     "herren",
-    "fräulein",
-    "mädchen",
-    "jung",
-    "junge",
+    "herrn",
+    "herren",
+    "herren",
     "dame",
     "damen",
+    "dames",
+    "dame",
+    "damen",
+    "damen",
+    "fräulein",
+    "fräuleins",
+    "fräulein",
+    "mädchen",
+    "mädchens",
+    "mädchen",
+    "mädchen",
+    "junge",
+    "jungen",
+    "jungens",
+    "junge",
+    "jugendlicher",
+    "jugendliche",
+    "jugendlichen",
+    "jugendlichen",
+    "person",
+    "personen",
+    "person",
+    "persons",
 ]
 
 
-class FlairRecognizer(EntityRecognizer):
-    """
-    Recognizer that uses a Flair NER model for entity recognition in German texts.
-    """
-
-    def __init__(
-        self,
-        supported_language: str = "de",
-        supported_entities: Optional[List[str]] = None,
-        check_label_groups: Optional[List[Tuple[Set[str], Set[str]]]] = None,
-        model: Optional[SequenceTagger] = None,
-    ):
-        """
-        Initialize the FlairRecognizer.
-
-        Args:
-            supported_language (str): The language code for the supported language (default: "de").
-            supported_entities (Optional[List[str]]): List of supported entity types (default: None).
-            check_label_groups (Optional[List[Tuple[Set[str], Set[str]]]]): Label groups for entity checking (default: None).
-            model (Optional[SequenceTagger]): Pre-loaded Flair SequenceTagger model (default: None).
-        """
-        self.check_label_groups = check_label_groups or CHECK_LABEL_GROUPS
-        supported_entities = supported_entities or ENTITIES
-        self.model = model or SequenceTagger.load(
-            MODEL_LANGUAGES.get(supported_language)
-        )
-
-        super().__init__(
-            supported_entities=supported_entities,
-            supported_language=supported_language,
-            name="Flair Recognizer",
-        )
-
-    def load(self) -> None:
-        """Load the model. Not used as the model is loaded during initialization."""
-        pass
-
-    def get_supported_entities(self) -> List[str]:
-        """
-        Get the list of supported entities.
-
-        Returns:
-            List[str]: List of supported entity types.
-        """
-        return self.supported_entities
-
-    def analyze(
-        self,
-        text: str,
-        entities: List[str],
-        nlp_artifacts: Optional[Dict[str, Any]] = None,
-    ) -> List[RecognizerResult]:
-        """
-        Analyze the text using the Flair NER model.
-
-        Args:
-            text (str): Text to analyze.
-            entities (List[str]): List of entity types to recognize.
-            nlp_artifacts (Optional[Dict[str, Any]]): Not used by this recognizer.
-
-        Returns:
-            List[RecognizerResult]: List of Presidio RecognizerResult objects.
-        """
-        results = []
-        sentence = Sentence(text)
-        self.model.predict(sentence)
-
-        entities = entities or self.supported_entities
-
-        for entity in entities:
-            if entity not in self.supported_entities:
-                continue
-
-            for ent in sentence.get_spans("ner"):
-                if not self._check_label(entity, ent.labels[0].value):
-                    continue
-
-                textual_explanation = DEFAULT_EXPLANATION.format(ent.labels[0].value)
-                explanation = self._build_flair_explanation(
-                    round(ent.score, 2), textual_explanation
-                )
-                flair_result = self._convert_to_recognizer_result(ent, explanation)
-
-                results.append(flair_result)
-
-        return results
-
-    def _convert_to_recognizer_result(
-        self, entity: Any, explanation: AnalysisExplanation
-    ) -> RecognizerResult:
-        """
-        Convert a Flair entity into a Presidio RecognizerResult.
-
-        Args:
-            entity (Any): Detected entity from Flair NER.
-            explanation (AnalysisExplanation): Explanation object for the detection.
-
-        Returns:
-            RecognizerResult: Converted RecognizerResult object.
-        """
-        entity_type = PRESIDIO_EQUIVALENCES.get(entity.tag, entity.tag)
-        flair_score = round(entity.score, 2)
-
-        return RecognizerResult(
-            entity_type=entity_type,
-            start=entity.start_position,
-            end=entity.end_position,
-            score=flair_score,
-            analysis_explanation=explanation,
-        )
-
-    def _build_flair_explanation(
-        self, original_score: float, explanation: str
-    ) -> AnalysisExplanation:
-        """
-        Create an explanation for why this result was detected.
-
-        Args:
-            original_score (float): Score given by this recognizer.
-            explanation (str): Explanation string.
-
-        Returns:
-            AnalysisExplanation: AnalysisExplanation object.
-        """
-        return AnalysisExplanation(
-            recognizer=self.__class__.__name__,
-            original_score=original_score,
-            textual_explanation=explanation,
-        )
-
-    def _check_label(self, entity: str, label: str) -> bool:
-        """
-        Check if the entity and label are part of the predefined label groups.
-
-        Args:
-            entity (str): Presidio entity type (e.g., PERSON, LOCATION).
-            label (str): Flair entity label (e.g., PER, LOC).
-
-        Returns:
-            bool: True if the label matches the entity, False otherwise.
-        """
-        return any(
-            entity in egrp and label in lgrp for egrp, lgrp in self.check_label_groups
-        )
+def download_model_if_needed():
+    """Download the Hugging Face NER model if it does not exist locally."""
+    if not os.path.exists(MODEL_FILE):
+        logger.info("Downloading Hugging Face model...")
+        os.makedirs(MODELS_DIR, exist_ok=True)
+        model = SequenceTagger.load(MODEL_LANGUAGES["de"])  # Download the model
+        model.save(MODEL_FILE)  # Save it locally
+    else:
+        logger.info("Model already exists locally.")
 
 
-def setup_analyzer(use_spacy: bool = True, use_flair: bool = True) -> AnalyzerEngine:
-    """
-    Set up the Presidio AnalyzerEngine with optional Flair and SpaCy integration.
-
-    Args:
-        use_spacy (bool): Whether to use SpaCy for NER (default: True).
-        use_flair (bool): Whether to use Flair for NER (default: True).
-
-    Returns:
-        AnalyzerEngine: Configured AnalyzerEngine object.
-    """
-    nlp_engine = None
-    if use_spacy:
-        spacy_configuration = {
-            "nlp_engine_name": "spacy",
-            "models": [{"lang_code": "de", "model_name": "de_core_news_lg"}],
-        }
-        provider = NlpEngineProvider(nlp_configuration=spacy_configuration)
-        nlp_engine = provider.create_engine()
-
-    analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["de"])
-
-    if use_flair:
-        flair_recognizer = FlairRecognizer()
-        analyzer.registry.add_recognizer(flair_recognizer)
-
-    return analyzer
+def load_model():
+    """Load the Hugging Face NER model from the local file."""
+    logger.info("Loading the local Hugging Face model...")
+    if os.path.exists(MODEL_FILE):
+        logger.info("Loading the local Hugging Face model...")
+        model = SequenceTagger.load(MODEL_FILE)  # Load the model from local file
+    else:
+        logger.info("Model not found locally, downloading...")
+        download_model_if_needed()
+        model = load_model()
+    return model
 
 
 def _anonymize_continuous_numbers(
@@ -306,7 +180,7 @@ def _anonymize_gender_words(text: str, detected_entities: List[Dict[str, Any]]) 
 
 
 def anonymize_text_german(
-    text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.8
+    text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.7
 ) -> Dict[str, Any]:
     """
     Anonymize German text using NER models (Flair, SpaCy, or both).
@@ -348,7 +222,7 @@ def anonymize_text_german(
     if use_flair and not use_spacy:
         return _anonymize_flair_only(text, threshold, detected_entities)
     else:
-        return _anonymize_presidio(text, use_spacy, use_flair, detected_entities)
+        raise NotImplementedError("SpaCy NER is not implemented.")
 
 
 def _anonymize_flair_only(
@@ -366,7 +240,8 @@ def _anonymize_flair_only(
         Dict[str, Any]: Dictionary containing anonymized text and detected entities.
     """
     logger.info("Anonymizing text using Flair NER model")
-    tagger = SequenceTagger.load("flair/ner-german-large")
+    # tagger = SequenceTagger.load("flair/ner-german-large")
+    tagger = load_model()
     sentence = Sentence(text)
     tagger.predict(sentence)
 
@@ -414,47 +289,6 @@ def _anonymize_flair_only(
     logger.info(f"Anonymization complete. Detected {len(detected_entities)} entities.")
     return {
         "anonymized_text": anonymized_text,
-        "detected_entities": detected_entities,
-    }
-
-
-def _anonymize_presidio(
-    text: str, use_spacy: bool, use_flair: bool, detected_entities: List[Dict[str, Any]]
-) -> Dict[str, Any]:
-    """
-    Anonymize text using Presidio with SpaCy and/or Flair.
-
-    Args:
-        text (str): Text to anonymize.
-        use_spacy (bool): Use SpaCy for NER.
-        use_flair (bool): Use Flair for NER.
-        detected_entities (List[Dict[str, Any]]): List of already detected entities.
-
-    Returns:
-        Dict[str, Any]: Dictionary containing anonymized text and detected entities.
-    """
-    logger.info(
-        f"Anonymizing text using Presidio with SpaCy: {use_spacy}, Flair: {use_flair}"
-    )
-    analyzer = setup_analyzer(use_spacy, use_flair)
-
-    analyzer_results = analyzer.analyze(text=text, entities=ENTITIES, language="de")
-
-    anonymizer_engine = AnonymizerEngine()
-    anonymized_result = anonymizer_engine.anonymize(
-        text=text, analyzer_results=analyzer_results
-    )
-
-    presidio_entities = [
-        {**entity.to_dict(), "original_word": text[entity.start : entity.end]}
-        for entity in analyzer_results
-    ]
-
-    detected_entities.extend(presidio_entities)
-
-    logger.info(f"Anonymization complete. Detected {len(detected_entities)} entities.")
-    return {
-        "anonymized_text": anonymized_result.text,
         "detected_entities": detected_entities,
     }
 

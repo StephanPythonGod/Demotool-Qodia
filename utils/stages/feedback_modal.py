@@ -1,11 +1,8 @@
-from typing import Optional
-
 import pandas as pd
 import streamlit as st
 
-from utils.helpers.api import generate_pdf, send_feedback_api
+from utils.helpers.api import send_feedback_api
 from utils.helpers.logger import logger
-from utils.helpers.padnext import generate_pad, generate_padnext
 from utils.helpers.transform import df_to_processdocumentresponse
 
 # Define error types
@@ -22,9 +19,6 @@ ERROR_TYPES = [
     "Leistung wird bei diesem Arzt nicht abgerechnet",
     "Anderer Grund",
 ]
-
-# Define options for 'Minderung Prozentsatz'
-MINDERUNG_OPTIONS = ["keine", "15%", "25%"]
 
 
 def detect_changes(original_df: pd.DataFrame, modified_df: pd.DataFrame) -> list:
@@ -88,43 +82,9 @@ def detect_changes(original_df: pd.DataFrame, modified_df: pd.DataFrame) -> list
     return changes
 
 
-@st.dialog("Rechnung erstellen", width="large")
-def rechnung_erstellen_modal(df: pd.DataFrame, generate: Optional[str] = None) -> None:
-    original_df = st.session_state.original_df
+def feedback_form(original_df: pd.DataFrame, df: pd.DataFrame) -> None:
+    """Returns the Feedback Form."""
     changes = detect_changes(original_df, df)
-
-    st.write(
-        "Bitte wählen Sie den Minderung Prozentsatz und geben Sie eine Begründung an:"
-    )
-
-    # Minderung Prozentsatz selection (mandatory)
-    prozentsatz = st.selectbox(
-        "Minderung Prozentsatz",
-        MINDERUNG_OPTIONS,
-        index=None,
-        key="minderung_prozentsatz",
-        placeholder="Bitte wählen ...",
-    )
-
-    # Dynamically set the Begründung based on selection
-    if prozentsatz == "15%":
-        begruendung_default = "Abzgl. 15% Minderung gem. §6a Abs.1 GOÄ"
-    elif prozentsatz == "25%":
-        begruendung_default = "Abzgl. 25% Minderung gem. §6a Abs.1 GOÄ"
-    else:
-        begruendung_default = ""
-
-    begruendung = st.text_input(
-        "Begründung",
-        value=begruendung_default,
-        key="minderung_begruendung",
-        placeholder="Bitte geben Sie eine Begründung an ...",
-    )
-
-    # Store selected values in session state
-    st.session_state["minderung_data"]["prozentsatz"] = prozentsatz
-    st.session_state["minderung_data"]["begruendung"] = begruendung
-
     # Display changes and feedback section
     st.subheader("Hier können Sie Feedback an die KI geben.")
     feedback_data = []
@@ -166,48 +126,34 @@ def rechnung_erstellen_modal(df: pd.DataFrame, generate: Optional[str] = None) -
 
     # Optional feedback text area
     st.text_area(
-        "Optional: Add any comments or feedback here",
+        "Kommentar",
         key="user_comment",
         height=100,
-        placeholder="(Optional) Fügen Sie hier Kommentare oder Feedback hinzu ...",
-        label_visibility="collapsed",
+        placeholder="(Optional) Fügen Sie hier Kommentare, Feedback oder Änderungswünsche hinzu ...",
+        label_visibility="visible",
+        help="Dieser Text geht direkt an Qodia und wir können Ihre Anmerkungen nutzen, um die KI und das Kodierungstool zu verbessern.",
     )
 
-    # Disable button until mandatory fields are filled
-    if not prozentsatz:
-        st.button(
-            "Rechnung generieren",
-            disabled=True,
-            help="Bitte wählen Sie einen Minderung Prozentsatz und geben Sie eine Begründung an.",
-            type="primary",
-        )
-    else:
-        if st.button("Rechnung generieren", type="primary"):
-            if generate == "pdf":
-                try:
-                    st.session_state.pdf_data = generate_pdf(df)
-                    st.session_state.pdf_ready = True
-                except Exception as e:
-                    st.error(f"Failed to generate PDF : {str(e)}")
-            elif generate == "pad_positionen":
-                st.session_state.pad_data = generate_pad(df)
-                st.session_state.pad_ready = True
-            elif generate == "pad_next":
-                pad_data_ready = generate_padnext(df)
-                st.session_state.pad_data_ready = pad_data_ready
 
-            try:
-                # Prepare feedback data for API call
-                api_feedback_data = {}
-                api_feedback_data["feedback_data"] = df_to_processdocumentresponse(
-                    df, st.session_state.text
-                )
-                api_feedback_data["user_comment"] = st.session_state.get(
-                    "user_comment", None
-                )
-                send_feedback_api(api_feedback_data)
-                st.success("Rechnung erfolgreich generiert!")
-            except Exception as e:
-                logger.error(f"Failed to generate bill: {e}")
-                st.error("Fehler beim Erstellen der Rechnung")
-            st.rerun()
+def process_and_send_feedback(df: pd.DataFrame) -> None:
+    try:
+        # Prepare feedback data for API call
+        api_feedback_data = {}
+        api_feedback_data["feedback_data"] = df_to_processdocumentresponse(
+            df, st.session_state.text
+        )
+        api_feedback_data["user_comment"] = st.session_state.get("user_comment", None)
+        send_feedback_api(api_feedback_data)
+        st.success("Feedback erfolgreich gesendet 😊")
+    except Exception as e:
+        logger.error(f"Failed to generate bill: {e}")
+        st.error("Fehler beim Erstellen der Rechnung")
+
+
+@st.dialog("Feedback geben 🔨", width="large")
+def feedback_modal(df: pd.DataFrame) -> None:
+    feedback_form(st.session_state.original_df, df)
+
+    if st.button("Feedback senden", type="primary"):
+        process_and_send_feedback(df)
+        st.rerun()
