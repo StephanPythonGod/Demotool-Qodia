@@ -29,7 +29,7 @@ COPY models ./models
 
 # Install dependencies using Poetry
 RUN poetry config virtualenvs.create false && \
-    poetry install --no-root
+    poetry install --no-dev --no-root
 
 # Download and cache the spaCy model
 # RUN python -m spacy download de_core_news_lg

@@ -34,3 +34,6 @@ deploy.sh
 
 # Ignore all files inside the /models folder
 /models/*
+
+# Remove all .tar files
+*.tar
