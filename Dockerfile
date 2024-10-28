@@ -31,9 +31,6 @@ COPY models ./models
 RUN poetry config virtualenvs.create false && \
     poetry install --no-dev --no-root
 
-# Download and cache the spaCy model
-# RUN python -m spacy download de_core_news_lg
-
 # Check if the flair model already exists in the models directory
 # If it does not, download the model
 RUN test -f ./models/flair-ner-german-large.pt || \

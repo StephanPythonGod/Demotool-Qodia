@@ -2,6 +2,7 @@ version: '3'
 name: qodia
 services:
   kodierungstool:
+    image: kodierungstool:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -17,6 +18,7 @@ services:
       - RAPID_API_KEY=${RAPID_API_KEY}
   nginx:
     container_name: nginx
+    image: nginx:latest
     build:
       context: .
       dockerfile: Dockerfile-nginx
