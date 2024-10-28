@@ -72,6 +72,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault(
         "minderung_data", {"prozentsatz": None, "begruendung": None}
     )
+    st.session_state.setdefault("new_file_uploaded", False)
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(
@@ -82,7 +83,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     )
 
     # Default category if not in settings
-    st.session_state.category = settings.get("category") or "Hernien-OP"
+    st.session_state.category = settings.get("category") or None
 
     st.session_state.setdefault("selected_ziffer", None)
     st.session_state.setdefault("uploaded_file", None)

@@ -2,11 +2,45 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import streamlit as st
+from streamlit_annotation_tools import text_labeler
 
 from utils.helpers.db import read_in_goa
 from utils.helpers.logger import logger
-from utils.helpers.transform import annotate_text_update
+from utils.helpers.transform import annotate_text_update, concatenate_labels
 from utils.utils import ziffer_from_options
+
+
+def add_new_ziffer():
+    new_row_id = (
+        st.session_state.df["row_id"].max() + 1 if len(st.session_state.df) > 0 else 0
+    )
+    temp_index = len(st.session_state.df)
+
+    # Add a temporary row to the dataframe
+    temp_row = create_new_data(
+        ziffer=None,
+        analog=None,
+        haufigkeit=1,
+        intensitat=2.3,
+        beschreibung=None,
+        zitat=None,
+        begruendung=None,
+        einzelbetrag=0.0,
+        gesamtbetrag=0.0,
+        row_id=new_row_id,  # Add row_id to the new row
+    )
+    st.session_state.df = pd.concat(
+        [st.session_state.df, pd.DataFrame([temp_row])], ignore_index=True
+    )
+    # Set the temporary row as the selected index
+    st.session_state.selected_ziffer = temp_index
+
+    # Set a flag to indicate that we're adding a new ziffer
+    st.session_state.adding_new_ziffer = True
+
+    # Open the modal dialog for editing the new row
+    st.session_state.ziffer_to_edit = temp_index
+    modal_dialog()
 
 
 def determine_additional_fields(
@@ -158,7 +192,7 @@ def modal_dialog() -> None:
 
         haufigkeit = display_haufigkeit_input(ziffer_data.get("anzahl"))
         intensitat = display_intensitat_input(ziffer_data.get("faktor"))
-        zitat = display_zitat_input(ziffer_data.get("zitat"))
+        zitat = display_zitat_input(ziffer_data.get("zitat"), ziffer)
         begruendung = display_begrundung_input(ziffer_data.get("begruendung"))
 
         ziffer_selected = analog if analog else ziffer
@@ -242,34 +276,6 @@ def calculate_einzelbetrag(
     else:
         return goa_item["Einfachsatz"].values[0] * faktor
 
-    # if goa_item.empty:
-    #     logger.error(f"No matching GOÄZiffer for selected Ziffer {ziffer_selected}")
-    #     return 0.0
-
-    # regelhoechstfaktor = goa_item["Regelhöchstfaktor"].values[0]
-    # regelhoechstsatz = goa_item["Regelhöchstsatz"].values[0]
-    # hoechstfaktor = goa_item["Höchstfaktor"].values[0]
-    # hoechstsatz = goa_item["Höchstsatz"].values[0]
-    # einfachsatz = goa_item["Einfachsatz"].values[0]
-
-    # if (
-    #     isinstance(hoechstfaktor, float)
-    #     and isinstance(hoechstsatz, float)
-    #     and faktor >= hoechstfaktor
-    # ):
-    #     return hoechstsatz
-    # elif (
-    #     isinstance(regelhoechstfaktor, float)
-    #     and isinstance(regelhoechstsatz, float)
-    #     and faktor >= regelhoechstfaktor
-    # ):
-    #     return regelhoechstsatz
-    # elif isinstance(einfachsatz, float):
-    #     return einfachsatz
-    # else:
-    #     logger.error(f"Invalid data for selected Ziffer {ziffer_selected}")
-    #     return 0.0
-
 
 def calculate_gesamtbetrag(einzelbetrag: float, anzahl: int) -> float:
     """
@@ -294,12 +300,14 @@ def display_analog_selection(
         current_value = None
 
     analog = st.selectbox(
-        "Analog auswählen",
+        "Analogziffer auswählen",
         options=["Keine Auswahl"] + ziffer_options,
         index=0
         if current_value is None
         else (cleaned_ziffer_options.index(current_value) + 1),
-        label_visibility="collapsed",
+        label_visibility="visible",
+        disabled=current_value is None,
+        help="Hier kann eine Analogziffer ausgewählt werden, jedoch nur dann, wenn die ausgewählte Ziffer eine Analogziffer ist.",
     )
     return analog if analog != "Keine Auswahl" else None
 
@@ -308,10 +316,11 @@ def get_ziffer_data() -> Dict[str, Union[str, int, float, None]]:
     if st.session_state.get("ziffer_to_edit") is not None:
         return st.session_state.df.iloc[st.session_state.ziffer_to_edit].to_dict()
     else:
+        # TODO: I think this is dead code
         return {
             "ziffer": None,
-            "anzahl": 0,
-            "faktor": 1.0,
+            "anzahl": 1,
+            "faktor": 2.3,
             "text": None,
             "zitat": st.session_state.text,
             "begruendung": None,
@@ -364,7 +373,7 @@ def display_haufigkeit_input(current_value: Optional[int]) -> int:
     st.subheader("Häufigkeit")
     return st.number_input(
         "Häufigkeit setzen",
-        value=current_value if current_value is not None else 0,
+        value=current_value if current_value is not None else 1,
         placeholder="Bitte wählen Sie die Häufigkeit der Leistung ...",
         min_value=0,
         max_value=20,
@@ -376,7 +385,7 @@ def display_intensitat_input(current_value: Optional[float]) -> float:
     st.subheader("Faktor")
     intensitat = st.number_input(
         "Faktor setzen",
-        value=current_value if current_value is not None else 1.0,
+        value=current_value if current_value is not None else 2.3,
         placeholder="Bitte wählen Sie die Intensität der Durchführung der Leistung ...",
         min_value=0.0,
         max_value=5.0,
@@ -387,15 +396,25 @@ def display_intensitat_input(current_value: Optional[float]) -> float:
     return round(intensitat, 1)
 
 
-def display_zitat_input(current_value: Optional[str]) -> str:
+def display_zitat_input(current_value: Optional[str], ziffer_str: Optional[str]) -> str:
     st.subheader("Textzitat")
-    return st.text_area(
-        "Textzitat einfügen",
-        value=current_value if current_value is not None else "",
-        placeholder="Bitte hier das Textzitat einfügen ...",
-        help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
-        height=200,
-    )
+    if current_value is None:
+        if ziffer_str is None:
+            st.info(
+                "Wählen Sie zuerst eine Ziffer aus, um ein Zitat auszuwählen.", icon="🔎"
+            )
+        else:
+            zitat = text_labeler(text=st.session_state.text, labels={ziffer_str: []})
+            zitat = concatenate_labels(zitat)
+            return zitat
+    else:
+        return st.text_area(
+            "Textzitat einfügen",
+            value=current_value if current_value is not None else "",
+            placeholder="Bitte hier das Textzitat einfügen ...",
+            help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
+            height=200,
+        )
 
 
 def display_begrundung_input(current_value: Optional[str]) -> Optional[str]:

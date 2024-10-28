@@ -12,43 +12,11 @@ from utils.helpers.transform import (
     format_ziffer_to_4digits,
     split_recognized_and_potential,
 )
-from utils.stages.feedback_modal import rechnung_erstellen_modal
-from utils.stages.modal import create_new_data, modal_dialog
+from utils.session import reset
+from utils.stages.feedback_modal import feedback_modal
+from utils.stages.generate_result_modal import rechnung_erstellen_modal
+from utils.stages.modal import add_new_ziffer, modal_dialog
 from utils.utils import create_tooltip, find_zitat_in_text, tooltip_css
-
-
-def add_new_ziffer():
-    # Create a temporary placeholder for the new ziffer
-    new_row_id = (
-        st.session_state.df["row_id"].max() + 1 if len(st.session_state.df) > 0 else 0
-    )
-    temp_index = len(st.session_state.df)
-
-    # Add a temporary row to the dataframe
-    temp_row = create_new_data(
-        ziffer=None,
-        analog=None,
-        haufigkeit=0,
-        intensitat=1.0,
-        beschreibung=None,
-        zitat=st.session_state.text,
-        begruendung=None,
-        einzelbetrag=0.0,
-        gesamtbetrag=0.0,
-        row_id=new_row_id,  # Add row_id to the new row
-    )
-    st.session_state.df = pd.concat(
-        [st.session_state.df, pd.DataFrame([temp_row])], ignore_index=True
-    )
-    # Set the temporary row as the selected index
-    st.session_state.selected_ziffer = temp_index
-
-    # Set a flag to indicate that we're adding a new ziffer
-    st.session_state.adding_new_ziffer = True
-
-    # Open the modal dialog for editing the new row
-    st.session_state.ziffer_to_edit = temp_index
-    modal_dialog()
 
 
 def set_selected_ziffer(index):
@@ -81,22 +49,17 @@ def sort_ziffer(ascending=True):
     st.session_state.df = st.session_state.df.sort_values(
         by="numeric_ziffer", ascending=ascending
     )
-    st.session_state.df.drop(
-        columns=["numeric_ziffer"], inplace=True
-    )  # Remove helper column
+    st.session_state.df.drop(columns=["numeric_ziffer"], inplace=True)
 
 
 def reset_ziffer_order():
-    st.session_state.df = st.session_state.df.loc[st.session_state.original_order]
-    st.session_state.df.reset_index(drop=True, inplace=True)
-    st.session_state.selected_ziffer = None
-    st.rerun()
+    st.session_state.df = st.session_state.df.sort_values(by="row_id")
 
 
 def set_sort_mode():
     # Cycle through sorting modes: ask -> desc -> text
-    modes = ["ask", "desc"]
-    current_mode = st.session_state.get("sort_mode", "ask")
+    modes = ["ask", "desc", "text"]
+    current_mode = st.session_state.get("sort_mode", "text")
     next_mode = modes[(modes.index(current_mode) + 1) % len(modes)]
     st.session_state.sort_mode = next_mode
     apply_sorting()  # Apply sorting whenever mode changes
@@ -108,6 +71,8 @@ def apply_sorting():
         sort_ziffer(ascending=True)
     elif st.session_state.sort_mode == "desc":
         sort_ziffer(ascending=False)
+    elif st.session_state.sort_mode == "text":
+        reset_ziffer_order()
     # Reset index and clear the selected ziffer
     st.session_state.df.reset_index(drop=True, inplace=True)
 
@@ -203,7 +168,11 @@ def result_stage():
                 # Set selected_ziffer to None
 
                 # Set the button label based on the current sort_mode
-                sort_label = {"ask": "Ziffer ⬆️", "desc": "Ziffer ⬇️"}
+                sort_label = {
+                    "ask": "Ziffer ⬆️",
+                    "desc": "Ziffer ⬇️",
+                    "text": "Ziffer 🔠",
+                }
 
                 # Initialize sort_mode in session_state if not set yet
                 sort_mode = st.session_state.get("sort_mode", "text")
@@ -296,11 +265,15 @@ def result_stage():
     with left_outer_column:
         st.button(
             "Zurücksetzen",
-            on_click=lambda: (handle_feedback_submission(df=recognized_df),),
+            on_click=lambda: (reset()),
             type="primary",
             use_container_width=True,
         )
         with right_outer_column:
+            if st.button("Feedback geben", type="primary", use_container_width=True):
+                with st.spinner("📝 Feedback wird geladen..."):
+                    feedback_modal(st.session_state.df)
+
             if st.button("PDF generieren", type="primary", use_container_width=True):
                 with st.spinner("📄 Generiere PDF..."):
                     handle_feedback_submission(df=recognized_df, generate="pdf")
