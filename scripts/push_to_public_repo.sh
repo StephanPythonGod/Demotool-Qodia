@@ -9,3 +9,4 @@ git commit -m "Initial commit with the latest changes"
 git branch -D master
 git branch -m master
 git push --force upstream master
+git branch -D master
