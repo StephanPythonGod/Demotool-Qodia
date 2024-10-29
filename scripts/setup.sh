@@ -11,6 +11,15 @@ if ! [ -x "$(command -v docker-compose)" ]; then
     exit 1
 fi
 
+# Check if "models" directory exists, create it if not
+if [ ! -d "./models" ]; then
+    echo "'models' directory does not exist. Creating it..."
+    mkdir ./models
+    echo "'models' directory created."
+else
+    echo "'models' directory already exists."
+fi
+
 # Prompt the user for environment variables
 read -p "Enter API Key: " api_key
 read -p "Enter API URL: " api_url

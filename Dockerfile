@@ -29,7 +29,7 @@ COPY models ./models
 
 # Install dependencies using Poetry
 RUN poetry config virtualenvs.create false && \
-    poetry install --no-dev --no-root
+    poetry install --no-dev --no-root -vvv
 
 # Check if the flair model already exists in the models directory
 # If it does not, download the model
