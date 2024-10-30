@@ -34,7 +34,7 @@ CHECK_LABEL_GROUPS = [
 MODEL_LANGUAGES = {
     "de": "flair/ner-german-large",
 }
-MODELS_DIR = os.path.join(os.path.dirname(__file__), "../../../models")
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "../../models")
 MODEL_FILE = os.path.join(MODELS_DIR, "flair-ner-german-large.pt")
 
 DEFAULT_EXPLANATION = "Identified as {} by Flair's Named Entity Recognition"
