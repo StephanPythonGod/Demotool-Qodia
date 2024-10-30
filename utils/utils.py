@@ -1,8 +1,20 @@
+import io
+import textwrap
 from html import escape
 from pathlib import Path
 from typing import Any, List, Tuple, Union
 
+import fitz
+import pandas as pd
+import streamlit as st
 from Levenshtein import distance as levenshtein_distance
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import Table as RLTable
+from reportlab.platypus import TableStyle
 
 
 def flatten(lst: Union[List[Any], str]) -> List[Any]:
@@ -202,6 +214,208 @@ def create_tooltip(confidence, confidence_reason):
             </span>
         """
     return emoji
+
+
+def generate_pdf_report(
+    df: pd.DataFrame, selected_columns=["ziffer", "analog", "zitat", "begruendung"]
+):
+    """
+    Generates a comprehensive PDF report with:
+        - A cover page
+        - Embedded bill PDF (if available in session state)
+        - OCR text section
+        - Recognized services table using reportlab for better formatting
+
+    Args:
+        df (pd.DataFrame): DataFrame containing service data for the report.
+        selected_columns (list): Optional list of DataFrame columns to display in the table.
+
+    Returns:
+        bytes: The generated PDF report as bytes.
+    """
+    # Define PDF output and styles
+    buffer = io.BytesIO()
+    pdf = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # 1. Cover Page with Longer Intro Text in German
+    title = Paragraph("Qodia Rechnungsbericht", styles["Title"])
+    intro_text = Paragraph(
+        "Dieser Bericht bietet eine umfassende Übersicht über die Ergebnisse der Analyse, "
+        "die mit dem Qodia Kodierungstool durchgeführt wurde. Der Bericht enthält eine Kopie "
+        "der abgeschlossenen Rechnung, den OCR-Textauszug, sowie eine detaillierte Übersicht "
+        "der erkannten Leistungen. Verwenden Sie diesen Bericht als Referenz für die Abrechnung "
+        "und Qualitätskontrolle der kodierten Dienstleistungen.",
+        styles["Normal"],
+    )
+    toc = Paragraph(
+        "<b>Inhaltsverzeichnis:</b><br/>"
+        "1. Fertige Rechnung<br/>"
+        "2. OP Text<br/>"
+        "3. Übersicht erkannter Leistungen",
+        styles["Normal"],
+    )
+
+    workflow = st.session_state.get("category", "Unbekannter Workflow")
+    honorarvolumen = df["gesamtbetrag"].sum() if "gesamtbetrag" in df.columns else 0
+    erkannte_leistungen = len(df)
+
+    from utils.helpers.transform import format_euro
+
+    summary_data = [
+        ["Workflow", workflow],
+        ["Honorarvolumen", f"{format_euro(honorarvolumen)}"],
+        ["Anzahl erkannter Leistungen", erkannte_leistungen],
+    ]
+
+    summary_table = RLTable(summary_data, colWidths=[6 * cm, 10 * cm])
+    summary_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.lightgrey),
+            ]
+        )
+    )
+
+    elements.extend(
+        [
+            title,
+            Spacer(1, 0.5 * cm),
+            intro_text,
+            Spacer(1, 1 * cm),
+            toc,
+            Spacer(1, 1 * cm),
+            summary_table,
+            PageBreak(),
+        ]
+    )
+
+    # 2. OCR Text Section
+    op_text = st.session_state.get("text", "").replace("\n", "<br />")
+    elements.append(Paragraph("OP Text", styles["Heading2"]))
+    elements.append(Paragraph(op_text, styles["Normal"]))
+    elements.append(PageBreak())
+
+    # Build the first part of the PDF
+    pdf.build(elements)
+    first_part_data = buffer.getvalue()
+    buffer.seek(0)
+    buffer.truncate(0)
+
+    # 3. Create recognized services table using reportlab
+    display_df = df[selected_columns].copy() if selected_columns else df.copy()
+
+    # Adjustable wrap text function for consistent formatting
+    def wrap_text(text, width=70):  # width can be adjusted as needed
+        return "\n".join(textwrap.wrap(str(text), width=width))
+
+    # Apply text wrapping with length restriction
+    for col in display_df.columns:
+        display_df[col] = display_df[col].apply(
+            lambda x: wrap_text(
+                textwrap.shorten(str(x), width=700, placeholder="... (Zitat gekürzt)")
+            )
+        )
+
+    # Title for recognized services table
+    elements = [
+        Paragraph("Erkannte Leistungen", styles["Heading2"]),
+        Spacer(1, 0.5 * cm),
+    ]
+
+    # Prepare dynamic table headers based on selected columns
+    header_row = [
+        Paragraph(f"<b>{col.capitalize()}</b>", styles["Heading4"])
+        for col in display_df.columns
+    ]
+    data = [header_row]  # Start data with header row
+
+    # Fill table data rows dynamically
+    for _, row in display_df.iterrows():
+        data.append(
+            [Paragraph(str(row[col]), styles["Normal"]) for col in display_df.columns]
+        )
+
+    # Calculate dynamic column widths
+    num_columns = len(display_df.columns)
+    col_widths = [
+        2 * cm if (col == "ziffer" or col == "analog") else (25 / num_columns) * cm
+        for col in display_df.columns
+    ]
+
+    # Create and style the table with lighter colors and dynamic layout
+    services_table = RLTable(data, colWidths=col_widths)
+    services_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.lightgrey,
+                ),  # Lighter header background color
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),  # Header text color
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),  # Bold headers
+                ("FONTSIZE", (0, 0), (-1, -1), 9),  # Font size for all cells
+                (
+                    "INNERGRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.25,
+                    colors.lightgrey,
+                ),  # Lighter inner grid lines
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.grey),  # Outer border
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.whitesmoke, colors.lightgrey],
+                ),  # Alternating row colors
+            ]
+        )
+    )
+
+    elements.append(services_table)
+    pdf.build(elements)
+    table_data = buffer.getvalue()
+    buffer.seek(0)
+    buffer.truncate(0)
+
+    # 4. Merge all PDFs together
+    final_pdf = fitz.open()
+
+    # Add first part (cover and OCR text)
+    first_part_pdf = fitz.open(stream=first_part_data, filetype="pdf")
+    final_pdf.insert_pdf(first_part_pdf)
+
+    # Add bill PDF if available
+    if st.session_state.pdf_data is not None:
+        bill_pdf_data = st.session_state.pdf_data
+    else:
+        from utils.helpers.api import generate_pdf
+
+        bill_pdf_data = generate_pdf(df)
+        st.session_state.pdf_data = bill_pdf_data
+
+    bill_pdf = fitz.open(stream=bill_pdf_data, filetype="pdf")
+    final_pdf.insert_pdf(bill_pdf, start_at=1)
+
+    # Add recognized services table
+    table_pdf = fitz.open(stream=table_data, filetype="pdf")
+    final_pdf.insert_pdf(table_pdf)
+
+    # Save the final merged PDF
+    final_pdf_buffer = io.BytesIO()
+    final_pdf.save(final_pdf_buffer)
+    final_pdf_buffer.seek(0)
+    return final_pdf_buffer.getvalue()
 
 
 tooltip_css = """
