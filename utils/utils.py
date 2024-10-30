@@ -1,8 +1,17 @@
+import io
+import tempfile
+import zipfile
 from html import escape
 from pathlib import Path
 from typing import Any, List, Tuple, Union
 
+import pandas as pd
+import streamlit as st
 from Levenshtein import distance as levenshtein_distance
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
 
 
 def flatten(lst: Union[List[Any], str]) -> List[Any]:
@@ -202,6 +211,70 @@ def create_tooltip(confidence, confidence_reason):
             </span>
         """
     return emoji
+
+
+def generate_report_files_as_zip(df: pd.DataFrame):
+    # Create a temporary directory for file storage
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # 1. Generate Rechnung.pdf (Use existing or generate if missing)
+        rechnung_path = f"{temp_dir}/Rechnung.pdf"
+
+        # Retrieve or generate the bill PDF data
+        if st.session_state.pdf_data is not None:
+            # Use existing bill PDF data if available
+            bill_pdf_data = st.session_state.pdf_data
+        else:
+            from utils.helpers.api import (
+                generate_pdf,  # Assuming generate_pdf is available
+            )
+
+            bill_pdf_data = generate_pdf(df)  # Generate PDF from DataFrame
+            st.session_state.pdf_data = (
+                bill_pdf_data  # Store in session state for future use
+            )
+
+        # Save the PDF data to the temporary directory
+        with open(rechnung_path, "wb") as f:
+            f.write(bill_pdf_data)
+
+        # 2. Generate Ziffern.xlsx (Excel sheet of the DataFrame)
+        ziffern_path = f"{temp_dir}/Ziffern.xlsx"
+        df.to_excel(ziffern_path, index=False)
+
+        # 3. Generate Bericht.pdf (PDF with OCR text)
+        bericht_path = f"{temp_dir}/Bericht.pdf"
+        op_text = st.session_state.text.replace(
+            "\n", "<br />"
+        )  # Replace line breaks for proper formatting in PDF
+
+        # Prepare PDF content for OP Bericht
+        pdf_buffer = io.BytesIO()
+        styles = getSampleStyleSheet()
+        elements = [
+            Paragraph("OP Text", styles["Heading2"]),
+            Spacer(1, 0.5 * cm),
+            Paragraph(op_text, styles["Normal"]),
+            PageBreak(),
+        ]
+
+        # Build the OP Bericht PDF
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        doc.build(elements)
+
+        # Save generated PDF to temporary directory
+        with open(bericht_path, "wb") as f:
+            f.write(pdf_buffer.getvalue())
+
+        # 4. Create a zip file containing the three documents
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+            zip_file.write(rechnung_path, "Rechnung.pdf")
+            zip_file.write(ziffern_path, "Ziffern.xlsx")
+            zip_file.write(bericht_path, "Bericht.pdf")
+
+        # Return the ZIP file bytes for download
+        zip_buffer.seek(0)
+        return zip_buffer.getvalue()
 
 
 tooltip_css = """
