@@ -19,7 +19,7 @@ from utils.stages.modal import add_new_ziffer, modal_dialog
 from utils.utils import (
     create_tooltip,
     find_zitat_in_text,
-    generate_pdf_report,
+    generate_report_files_as_zip,
     tooltip_css,
 )
 
@@ -307,12 +307,12 @@ def result_stage():
                 )
 
             if st.button(
-                "PDF Bericht exportieren",
+                "Bericht exportieren",
                 type="primary",
                 use_container_width=True,
             ):
                 with st.spinner("📄 Generiere Bericht..."):
-                    st.session_state.pdf_report_data = generate_pdf_report(
+                    st.session_state.pdf_report_data = generate_report_files_as_zip(
                         df=st.session_state.df
                     )
 
@@ -320,8 +320,8 @@ def result_stage():
                 st.download_button(
                     label="Download Bericht",
                     data=st.session_state.pdf_report_data,
-                    file_name="report.pdf",
-                    mime="application/pdf",
+                    file_name="report.zip",
+                    mime="application/zip",
                     use_container_width=True,
                 )
 
