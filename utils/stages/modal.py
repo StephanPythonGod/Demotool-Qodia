@@ -6,7 +6,11 @@ from streamlit_annotation_tools import text_labeler
 
 from utils.helpers.db import read_in_goa
 from utils.helpers.logger import logger
-from utils.helpers.transform import annotate_text_update, concatenate_labels
+from utils.helpers.transform import (
+    annotate_text_update,
+    concatenate_labels,
+    format_euro,
+)
 from utils.utils import ziffer_from_options
 
 
@@ -59,7 +63,8 @@ def determine_additional_fields(
     ziffer_dataframe: pd.DataFrame = read_in_goa()  # Load ziffer data
 
     analog = ziffer_data.get("analog", None)
-    ziffer_selected = analog if analog else ziffer_data["ziffer"]
+    # ziffer_selected = analog if analog else ziffer_data["ziffer"]
+    ziffer_selected = ziffer_data["ziffer"]
 
     einzelbetrag = calculate_einzelbetrag(
         ziffer_data["faktor"], ziffer_selected, ziffer_dataframe
@@ -195,7 +200,8 @@ def modal_dialog() -> None:
         zitat = display_zitat_input(ziffer_data.get("zitat"), ziffer)
         begruendung = display_begrundung_input(ziffer_data.get("begruendung"))
 
-        ziffer_selected = analog if analog else ziffer
+        # ziffer_selected = analog if analog else ziffer
+        ziffer_selected = ziffer
         einzelbetrag = (
             calculate_einzelbetrag(intensitat, ziffer_selected, ziffer_dataframe)
             if ziffer_selected
@@ -204,16 +210,8 @@ def modal_dialog() -> None:
         gesamtbetrag = calculate_gesamtbetrag(einzelbetrag, haufigkeit)
 
         st.subheader("Zusätzliche Informationen")
-        st.markdown(
-            f"Einzelbetrag: {einzelbetrag:,.2f} €".replace(",", "X")
-            .replace(".", ",")
-            .replace("X", ".")
-        )
-        st.markdown(
-            f"Gesamtbetrag: {gesamtbetrag:,.2f} €".replace(",", "X")
-            .replace(".", ",")
-            .replace("X", ".")
-        )
+        st.markdown(f"Einzelbetrag: {format_euro(einzelbetrag)}")
+        st.markdown(f"Gesamtbetrag: {format_euro(gesamtbetrag)}")
         st.markdown(f"Confidence: {ziffer_data.get('confidence', 1.0)}")
         st.markdown(
             f"GO: {'GOÄ' if ziffer_data.get('go') == 'GOAE' else ziffer_data.get('go', 'Nicht verfügbar')}"
