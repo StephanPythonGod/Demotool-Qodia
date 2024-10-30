@@ -16,7 +16,12 @@ from utils.session import reset
 from utils.stages.feedback_modal import feedback_modal
 from utils.stages.generate_result_modal import rechnung_erstellen_modal
 from utils.stages.modal import add_new_ziffer, modal_dialog
-from utils.utils import create_tooltip, find_zitat_in_text, tooltip_css
+from utils.utils import (
+    create_tooltip,
+    find_zitat_in_text,
+    generate_report_files_as_zip,
+    tooltip_css,
+)
 
 
 def set_selected_ziffer(index):
@@ -284,6 +289,7 @@ def result_stage():
                     data=st.session_state.pdf_data,
                     file_name="generated_pdf.pdf",
                     mime="application/pdf",
+                    use_container_width=True,
                 )
 
             if st.button(
@@ -297,6 +303,26 @@ def result_stage():
                     data=st.session_state.pad_data,
                     file_name="pad_positionen.xml",
                     mime="application/xml",
+                    use_container_width=True,
+                )
+
+            if st.button(
+                "Bericht exportieren",
+                type="primary",
+                use_container_width=True,
+            ):
+                with st.spinner("📄 Generiere Bericht..."):
+                    st.session_state.pdf_report_data = generate_report_files_as_zip(
+                        df=st.session_state.df
+                    )
+
+            if st.session_state.pdf_report_data:
+                st.download_button(
+                    label="Download Bericht",
+                    data=st.session_state.pdf_report_data,
+                    file_name="report.zip",
+                    mime="application/zip",
+                    use_container_width=True,
                 )
 
             if st.button(
@@ -319,4 +345,5 @@ def result_stage():
                     data=padnext_file_data,  # Binary data
                     file_name=st.session_state.pad_data_ready.name,  # Extract the filename from the Path object
                     mime="application/zip",  # Adjust MIME type for a .zip file
+                    use_container_width=True,
                 )

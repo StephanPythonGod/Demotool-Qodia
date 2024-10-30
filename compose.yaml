@@ -15,6 +15,7 @@ services:
       - API_KEY=${API_KEY}
       - API_URL=${API_URL}
       - RAPID_API_KEY=${RAPID_API_KEY}
+      - COMPOSE_HTTP_TIMEOUT=300
   nginx:
     container_name: nginx
     image: nginx:latest

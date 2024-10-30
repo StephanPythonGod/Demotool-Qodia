@@ -10,6 +10,15 @@ if (-not (Get-Command docker-compose -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
+# Check if "models" directory exists, create it if not
+if (-not (Test-Path -Path "./models")) {
+    Write-Host "'models' directory does not exist. Creating it..."
+    New-Item -ItemType Directory -Path "./models" | Out-Null
+    Write-Host "'models' directory created."
+} else {
+    Write-Host "'models' directory already exists."
+}
+
 # Prompt the user for environment variables
 $api_key = Read-Host "Enter API Key"
 $api_url = Read-Host "Enter API URL"
@@ -28,4 +37,4 @@ Write-Host "Environment variables saved to .env file."
 
 # Build and run the containers
 Write-Host "Building and starting the containers..."
-docker-compose up --build -d
+docker-compose --env-file .env up --build -d

@@ -61,6 +61,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("ziffer_to_edit", None)
     st.session_state.setdefault("pdf_ready", False)
     st.session_state.setdefault("pdf_data", None)
+    st.session_state.setdefault("pdf_report_data", None)
     st.session_state.setdefault("analyze_api_response", None)
     st.session_state.setdefault("ocr_api_response", None)
     st.session_state.setdefault("user_comment", None)

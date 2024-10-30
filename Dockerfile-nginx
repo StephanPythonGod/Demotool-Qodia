@@ -1,15 +1,14 @@
-# Dockerfile-nginx
-
 FROM nginx:alpine
 
-# Install OpenSSL and bash (if needed)
-RUN apk add --no-cache openssl
+# Install OpenSSL and dos2unix to handle potential line ending issues
+RUN apk add --no-cache openssl dos2unix
 
 # Copy the certificate generation script
 COPY scripts/generate_self_signed_cert.sh /usr/local/bin/generate_self_signed_cert.sh
 
-# Run the certificate generation script during the image build process
-RUN chmod +x /usr/local/bin/generate_self_signed_cert.sh && \
+# Run dos2unix to ensure the script has LF line endings, and make it executable
+RUN dos2unix /usr/local/bin/generate_self_signed_cert.sh && \
+    chmod +x /usr/local/bin/generate_self_signed_cert.sh && \
     sh -x /usr/local/bin/generate_self_signed_cert.sh
 
 # Copy the Nginx configuration
