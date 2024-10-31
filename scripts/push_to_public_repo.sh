@@ -31,5 +31,7 @@ git branch -m master
 # 9. Force push the new master branch to the public repo.
 git push --force upstream master
 
+
 # (Optional) Delete local master branch if needed.
+git checkout main
 git branch -D master
