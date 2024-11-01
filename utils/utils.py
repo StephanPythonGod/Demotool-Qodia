@@ -153,7 +153,7 @@ def find_zitat_in_text(
     if list_of_indices:
         last_end = list_of_indices[-1][0][1]
         if last_end < len(original_text):
-            updated_annotated_text.append(original_text[last_end:])
+            updated_annotated_text.append(original_text[last_end + 1 :])
 
     return updated_annotated_text or annotated_text
 

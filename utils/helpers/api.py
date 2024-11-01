@@ -111,7 +111,7 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     os.makedirs(data_folder, exist_ok=True)
 
     # Generate a filename based on the text hash
-    safe_filename = os.path.join(data_folder, f"{text[100:115]}_response.pkl")
+    safe_filename = os.path.join(data_folder, f"{hash(text[100:120])}_response.pkl")
 
     # Check if caching should be used based on the environment variable
     # use_cache = deployment_env == "development"
@@ -216,7 +216,7 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         )
 
     # Get the deployment environment (default to 'local' if not set)
-    deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
+    # deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 
     # Define the data folder path relative to the current script
     data_folder = os.path.join(os.path.dirname(__file__), "data")
@@ -226,11 +226,12 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
 
     # Generate a filename based on the file name and category hash for caching
     safe_filename = os.path.join(
-        data_folder, f"{file.name[:10] + st.session_state.category}_ocr_response.pkl"
+        data_folder, f"{hash(file.name + st.session_state.category)}_ocr_response.pkl"
     )
 
     # Check if caching should be used based on the environment variable
-    use_cache = deployment_env == "development"
+    # use_cache = deployment_env == "development"
+    use_cache = True
 
     # Check if a cached response exists and the environment allows using cache
     if use_cache and os.path.exists(safe_filename):
