@@ -40,6 +40,7 @@ def analyze_add_data(data: list[dict]) -> dict:
             "text": [],
             "zitat": [],
             "begruendung": [],
+            "erschwerende_bedingungen": [],
             "confidence": [],
             "analog": [],
             "einzelbetrag": [],
@@ -52,6 +53,9 @@ def analyze_add_data(data: list[dict]) -> dict:
             new_data["ziffer"].append(entry.get("ziffer", ""))
             new_data["zitat"].append(entry.get("zitat", ""))
             new_data["begruendung"].append(entry.get("begruendung", ""))
+            new_data["erschwerende_bedingungen"].append(
+                entry.get("erschwerende_bedingungen", "")
+            )
             new_data["anzahl"].append(entry.get("anzahl", 0))
             new_data["faktor"].append(entry.get("faktor", 0))
             new_data["text"].append(entry.get("text", ""))
