@@ -411,7 +411,7 @@ def display_zitat_input(current_value: Optional[str], ziffer_str: Optional[str])
             value=current_value if current_value is not None else "",
             placeholder="Bitte hier das Textzitat einfügen ...",
             help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
-            height=200,
+            height=00,
         )
 
 
@@ -431,7 +431,7 @@ def display_begrundung_input(current_value: Optional[str]) -> Optional[str]:
         value=current_value,
         placeholder="Bitte hier die Begründung einfügen ...",
         help="Hier soll die Begründung für die Leistungsziffer eingefügt werden.",
-        height=400,
+        height=100,
     )
     return begruendung if begruendung else None
 
