@@ -183,6 +183,11 @@ def modal_dialog() -> None:
         # Get row of ziffer_dataframe for selected ziffer
         try:
             goa_item = ziffer_dataframe[ziffer_dataframe["ziffer"] == ziffer]
+        except Exception:
+            st.error(
+                "Die ausgewählte Ziffer ist nicht gültig. Bitte wählen Sie eine andere Ziffer aus."
+            )
+        try:
             if (
                 ziffer_data.get("analog") is None
                 and goa_item["analog"].values[0] is not None
@@ -197,7 +202,9 @@ def modal_dialog() -> None:
         )
 
         haufigkeit = display_haufigkeit_input(ziffer_data.get("anzahl"))
-        intensitat = display_intensitat_input(ziffer_data.get("faktor"))
+        intensitat = display_intensitat_input(
+            goa_item=goa_item, current_value=ziffer_data.get("faktor")
+        )
         zitat = display_zitat_input(ziffer_data.get("zitat"), ziffer)
         begruendung = display_begrundung_input(ziffer_data.get("begruendung"))
         erschwerende_bedingung = display_erschwerende_bedigungen_input(
@@ -255,6 +262,29 @@ def modal_dialog() -> None:
 
 
 # Helper functions:
+
+
+def check_faktorability(goa_item: pd.DataFrame) -> bool:
+    """
+    Check if the selected ziffer is faktorable.
+
+    Args:
+        ziffer (str): The selected ziffer.
+        ziffer_dataframe (pd.DataFrame): The DataFrame with GOÄ data for ziffer calculations.
+
+    Returns:
+        bool: True if the ziffer is faktorable, False otherwise.
+    """
+    try:
+        einfachsatz = goa_item["Einfachsatz"].values[0]
+        regelhöchstsatz = goa_item["Regelhöchstsatz"].values[0]
+        höchstsatz = goa_item["Höchstsatz"].values[0]
+
+        if einfachsatz == regelhöchstsatz == höchstsatz:
+            return False
+    except KeyError:
+        pass
+    return True
 
 
 def calculate_einzelbetrag(
@@ -368,17 +398,21 @@ def display_haufigkeit_input(current_value: Optional[int]) -> int:
     )
 
 
-def display_intensitat_input(current_value: Optional[float]) -> float:
+def display_intensitat_input(
+    goa_item: pd.DataFrame, current_value: Optional[float]
+) -> float:
     st.subheader("Faktor")
+    faktorability = check_faktorability(goa_item)
     intensitat = st.number_input(
         "Faktor setzen",
-        value=current_value if current_value is not None else 2.3,
+        value=current_value,
         placeholder="Bitte wählen Sie die Intensität der Durchführung der Leistung ...",
+        help="Hier soll der Faktor für die Leistungsziffer eingefügt werden, der den Einzelbetrag beeinflusst. Falls die Ziffer keine Änderung des Faktors zulässt, wird dieser automatisch auf den entsprechenden Wert gesetzt.",
         min_value=0.0,
-        max_value=5.0,
+        max_value=30.0,
         step=0.1,
         format="%.1f",
-        label_visibility="collapsed",
+        disabled=not faktorability,
     )
     return round(intensitat, 1)
 
