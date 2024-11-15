@@ -51,6 +51,11 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     # Load environment variables from a .env file if it exists
     load_dotenv()
 
+    # Export environment variables to the current environment for Monitoring
+    os.environ[
+        "OTEL_RESOURCE_ATTRIBUTES"
+    ] = f"deployment.environment={os.getenv('DEPLOYMENT_ENV', 'staging')}"
+
     if settings is None:
         settings = {}
 
@@ -70,6 +75,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("pad_data_ready", False)
     st.session_state.setdefault("arzt_hash", None)
     st.session_state.setdefault("kassenname_hash", None)
+    st.session_state.setdefault("session_id", None)
     st.session_state.setdefault(
         "minderung_data", {"prozentsatz": None, "begruendung": None}
     )

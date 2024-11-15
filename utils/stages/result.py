@@ -6,6 +6,7 @@ import streamlit as st
 from annotated_text import annotated_text
 
 from utils.helpers.logger import logger
+from utils.helpers.telemetry import track_user_feedback
 from utils.helpers.transform import (
     annotate_text_update,
     format_euro,
@@ -83,6 +84,9 @@ def apply_sorting():
 
 
 def handle_feedback_submission(df: pd.DataFrame, generate: Optional[str] = None):
+    # Track the duration taken by the user to provide feedback
+    if st.session_state.get("session_id"):
+        track_user_feedback(st.session_state.session_id)
     # Open Feedback Modal
     rechnung_erstellen_modal(df=df, generate=generate)
 
