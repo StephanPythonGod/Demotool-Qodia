@@ -29,6 +29,7 @@ def add_new_ziffer():
         beschreibung=None,
         zitat=None,
         begruendung=None,
+        erschwerende_bedingung=None,
         einzelbetrag=0.0,
         gesamtbetrag=0.0,
         row_id=new_row_id,  # Add row_id to the new row
@@ -182,6 +183,11 @@ def modal_dialog() -> None:
         # Get row of ziffer_dataframe for selected ziffer
         try:
             goa_item = ziffer_dataframe[ziffer_dataframe["ziffer"] == ziffer]
+        except Exception:
+            st.error(
+                "Die ausgewählte Ziffer ist nicht gültig. Bitte wählen Sie eine andere Ziffer aus."
+            )
+        try:
             if (
                 ziffer_data.get("analog") is None
                 and goa_item["analog"].values[0] is not None
@@ -196,9 +202,14 @@ def modal_dialog() -> None:
         )
 
         haufigkeit = display_haufigkeit_input(ziffer_data.get("anzahl"))
-        intensitat = display_intensitat_input(ziffer_data.get("faktor"))
+        intensitat = display_intensitat_input(
+            goa_item=goa_item, current_value=ziffer_data.get("faktor")
+        )
         zitat = display_zitat_input(ziffer_data.get("zitat"), ziffer)
         begruendung = display_begrundung_input(ziffer_data.get("begruendung"))
+        erschwerende_bedingung = display_erschwerende_bedigungen_input(
+            ziffer_data.get("erschwerende_bedingungen")
+        )
 
         # ziffer_selected = analog if analog else ziffer
         ziffer_selected = ziffer
@@ -232,6 +243,7 @@ def modal_dialog() -> None:
             beschreibung,
             zitat,
             begruendung,
+            erschwerende_bedingung,
             einzelbetrag,
             gesamtbetrag,
             row_id,
@@ -250,6 +262,29 @@ def modal_dialog() -> None:
 
 
 # Helper functions:
+
+
+def check_faktorability(goa_item: pd.DataFrame) -> bool:
+    """
+    Check if the selected ziffer is faktorable.
+
+    Args:
+        ziffer (str): The selected ziffer.
+        ziffer_dataframe (pd.DataFrame): The DataFrame with GOÄ data for ziffer calculations.
+
+    Returns:
+        bool: True if the ziffer is faktorable, False otherwise.
+    """
+    try:
+        einfachsatz = goa_item["Einfachsatz"].values[0]
+        regelhöchstsatz = goa_item["Regelhöchstsatz"].values[0]
+        höchstsatz = goa_item["Höchstsatz"].values[0]
+
+        if einfachsatz == regelhöchstsatz == höchstsatz:
+            return False
+    except KeyError:
+        pass
+    return True
 
 
 def calculate_einzelbetrag(
@@ -313,22 +348,6 @@ def display_analog_selection(
 def get_ziffer_data() -> Dict[str, Union[str, int, float, None]]:
     if st.session_state.get("ziffer_to_edit") is not None:
         return st.session_state.df.iloc[st.session_state.ziffer_to_edit].to_dict()
-    else:
-        # TODO: I think this is dead code
-        return {
-            "ziffer": None,
-            "anzahl": 1,
-            "faktor": 2.3,
-            "text": None,
-            "zitat": st.session_state.text,
-            "begruendung": None,
-            "confidence": 1.0,
-            "analog": None,
-            "einzelbetrag": 0.0,
-            "gesamtbetrag": 0.0,
-            "go": None,
-            "confidence_reason": None,
-        }
 
 
 def get_ziffer_index(ziffer_options: List[str], ziffer: Optional[str]) -> Optional[int]:
@@ -379,17 +398,21 @@ def display_haufigkeit_input(current_value: Optional[int]) -> int:
     )
 
 
-def display_intensitat_input(current_value: Optional[float]) -> float:
+def display_intensitat_input(
+    goa_item: pd.DataFrame, current_value: Optional[float]
+) -> float:
     st.subheader("Faktor")
+    faktorability = check_faktorability(goa_item)
     intensitat = st.number_input(
         "Faktor setzen",
-        value=current_value if current_value is not None else 2.3,
+        value=current_value,
         placeholder="Bitte wählen Sie die Intensität der Durchführung der Leistung ...",
+        help="Hier soll der Faktor für die Leistungsziffer eingefügt werden, der den Einzelbetrag beeinflusst. Falls die Ziffer keine Änderung des Faktors zulässt, wird dieser automatisch auf den entsprechenden Wert gesetzt.",
         min_value=0.0,
-        max_value=5.0,
+        max_value=30.0,
         step=0.1,
         format="%.1f",
-        label_visibility="collapsed",
+        disabled=not faktorability,
     )
     return round(intensitat, 1)
 
@@ -411,7 +434,7 @@ def display_zitat_input(current_value: Optional[str], ziffer_str: Optional[str])
             value=current_value if current_value is not None else "",
             placeholder="Bitte hier das Textzitat einfügen ...",
             help="Hier soll ein Zitat aus dem ärztlichen Bericht eingefügt werden, welches die Leistungsziffer begründet.",
-            height=200,
+            height=50,
         )
 
 
@@ -431,9 +454,32 @@ def display_begrundung_input(current_value: Optional[str]) -> Optional[str]:
         value=current_value,
         placeholder="Bitte hier die Begründung einfügen ...",
         help="Hier soll die Begründung für die Leistungsziffer eingefügt werden.",
-        height=400,
+        height=50,
     )
     return begruendung if begruendung else None
+
+
+def display_erschwerende_bedigungen_input(
+    current_value: Optional[str],
+) -> Optional[str]:
+    """
+    Display the erschwerende Bedingungen input field.
+
+    Args:
+        current_value (Optional[str]): The current erschwerende Bedingungen value.
+
+    Returns:
+    Optional[str]: The entered erschwerende Bedingungen, or None if empty.
+    """
+    st.subheader("Erschwerende Bedingungen")
+    erschwerende_bedingungen = st.text_area(
+        "Erschwerende Bedingungen eingeben",
+        value=current_value,
+        placeholder="Bitte hier die erschwerenden Bedingungen einfügen ...",
+        help="Hier sollen die erschwerenden Bedingungen für die Leistungsziffer eingefügt werden, die einen höheren Faktor rechtfertigen.",
+        height=50,
+    )
+    return erschwerende_bedingungen if erschwerende_bedingungen else None
 
 
 def create_new_data(
@@ -442,6 +488,7 @@ def create_new_data(
     haufigkeit: int,
     intensitat: float,
     beschreibung: Optional[str],
+    erschwerende_bedingung: Optional[str],
     zitat: str,
     begruendung: Optional[str],
     einzelbetrag: float,
@@ -475,6 +522,7 @@ def create_new_data(
         "text": beschreibung,
         "zitat": zitat,
         "begruendung": begruendung,
+        "erschwerende_bedingungen": erschwerende_bedingung,
         "einzelbetrag": einzelbetrag,
         "gesamtbetrag": gesamtbetrag,
         "row_id": row_id,
