@@ -5,6 +5,8 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv  # For loading environment variables from a .env file
 
+from utils.helpers.logger import logger
+
 
 def reset() -> None:
     """Reset the app to its initial state and rerun the script."""
@@ -52,9 +54,12 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     load_dotenv()
 
     # Export environment variables to the current environment for Monitoring
-    os.environ[
-        "OTEL_RESOURCE_ATTRIBUTES"
-    ] = f"deployment.environment={os.getenv('DEPLOYMENT_ENV', 'staging')}"
+    try:
+        os.environ[
+            "OTEL_RESOURCE_ATTRIBUTES"
+        ] = f"deployment.environment={os.getenv('DEPLOYMENT_ENV', 'staging')}"
+    except Exception as e:
+        logger.error(f"Error exporting environment variables: {e}")
 
     if settings is None:
         settings = {}
