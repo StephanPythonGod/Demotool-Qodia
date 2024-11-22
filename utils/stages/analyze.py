@@ -16,6 +16,7 @@ from utils.helpers.files import (
 )
 from utils.helpers.logger import logger
 from utils.helpers.padnext import handle_padnext_upload
+from utils.helpers.telemetry import track_api_response
 from utils.helpers.transform import annotate_text_update
 from utils.stages.pad_modal import pad_file_modal
 
@@ -88,6 +89,7 @@ def analyze_text(text: str) -> None:
                 processed_data = analyze_add_data(data)
                 st.session_state.df = pd.DataFrame(processed_data)
                 annotate_text_update()
+                st.session_state.update(session_id=track_api_response())
                 st.session_state.update(stage="result")
                 return True
             else:
