@@ -136,6 +136,26 @@ if (-not (Test-Path -Path $envFile)) {
         $rapid_api_key = Read-Host "Enter Rapid API Key"
     } until (Test-ApiKey $rapid_api_key)
 
+    # Get OpenTelemetry configuration
+    do {
+        $otel_service_name = Read-Host "Enter the service name for OpenTelemetry monitoring (default: Kodierungstool)"
+        if ([string]::IsNullOrWhiteSpace($otel_service_name)) {
+            $otel_service_name = "Kodierungstool"
+        }
+    } until (-not [string]::IsNullOrWhiteSpace($otel_service_name))
+
+    do {
+        $otel_endpoint = Read-Host "Enter the OpenTelemetry collector endpoint (default: https://grafana-collector-214718361797.europe-west3.run.app)"
+        if ([string]::IsNullOrWhiteSpace($otel_endpoint)) {
+            $otel_endpoint = "https://grafana-collector-214718361797.europe-west3.run.app"
+        }
+    } until ($otel_endpoint -match '^https?://.+')
+
+    do {
+        $deployment_env = Read-Host "Enter deployment environment (production/development)"
+        $deployment_env = $deployment_env.ToLower()
+    } until ($deployment_env -eq 'production' -or $deployment_env -eq 'development')
+
     # Create .env file with error handling
     try {
         @"
@@ -143,6 +163,12 @@ DEPLOYMENT_ENV=local
 API_KEY=$api_key
 API_URL=$api_url
 RAPID_API_KEY=$rapid_api_key
+
+# Monitoring
+OTEL_SERVICE_NAME="$otel_service_name"
+OTEL_EXPORTER_OTLP_ENDPOINT=$otel_endpoint
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_RESOURCE_ATTRIBUTES="deployment.environment=$deployment_env"
 "@ | Out-File -FilePath $envFile -Encoding utf8 -ErrorAction Stop
         Write-Host ".env file created successfully."
     } catch {
@@ -153,6 +179,7 @@ RAPID_API_KEY=$rapid_api_key
     Write-Host ".env file already exists, skipping creation."
 }
 
+# [Rest of the script remains the same...]
 # Deployment choice
 do {
     $deploymentChoice = Read-Host "Choose deployment method: Enter '1' for Docker or '2' for Python"
