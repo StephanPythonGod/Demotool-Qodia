@@ -1,117 +1,282 @@
 # PowerShell script to set up Qodia-Kodierungstool with persistent environment variable and interactive deployment choice
 
-# Step 0: Set PowerShell Execution Policy (run this if permissions need updating for the session)
-# Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process
+# Function to check if running as administrator
+function Test-Administrator {
+    $user = [Security.Principal.WindowsIdentity]::GetCurrent();
+    $principal = New-Object Security.Principal.WindowsPrincipal $user
+    return $principal.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+}
+
+# Function to validate directory path
+function Test-ValidPath {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return $false }
+    try {
+        $null = [System.IO.Path]::GetFullPath($Path)
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+# Function to validate API key format
+function Test-ApiKey {
+    param([string]$key)
+    return -not [string]::IsNullOrWhiteSpace($key)
+}
+
+# Check for administrator rights
+if (-not (Test-Administrator)) {
+    Write-Error "This script requires administrator rights. Please run PowerShell as administrator."
+    exit 1
+}
+
+# Set PowerShell Execution Policy for the current session if needed
+try {
+    Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force
+} catch {
+    Write-Error "Failed to set execution policy: $_"
+    exit 1
+}
+
+# Verify required tools based on deployment choice
+Write-Host "Checking system requirements..."
+$commonTools = @{
+    'git' = 'Git is not installed. Please install from https://git-scm.com/downloads'
+}
 
 # Step 1: Define and check the repository directory environment variable
 $repoEnvVar = "QODIA_REPO_PATH"
 
-if (-not (Test-Path -Path "Env:\$repoEnvVar")) {
-    $repo_dir = Read-Host "Enter the directory where you want to clone the repository"
-    [System.Environment]::SetEnvironmentVariable($repoEnvVar, $repo_dir, "Machine")
-    Write-Host "Repository path saved to environment variable $repoEnvVar."
+# Check if environment variable exists at machine level
+$machineEnvPath = [System.Environment]::GetEnvironmentVariable($repoEnvVar, "Machine")
+if ([string]::IsNullOrWhiteSpace($machineEnvPath)) {
+    do {
+        $repo_dir = Read-Host "Enter the directory where you want to clone the repository"
+    } until (Test-ValidPath $repo_dir)
+    
+    try {
+        [System.Environment]::SetEnvironmentVariable($repoEnvVar, $repo_dir, "Machine")
+        # Update current session's environment variable
+        $env:QODIA_REPO_PATH = $repo_dir
+        Write-Host "Repository path saved to environment variable $repoEnvVar."
+    } catch {
+        Write-Error "Failed to set environment variable: $_"
+        exit 1
+    }
 } else {
-    $repo_dir = $env:QODIA_REPO_PATH
+    $repo_dir = $machineEnvPath
     Write-Host "Using existing repository path from environment variable: $repo_dir"
 }
 
-# Step 2: Ensure the "models" directory exists
+# Create directory if it doesn't exist
+if (-not (Test-Path -Path $repo_dir)) {
+    try {
+        New-Item -Path $repo_dir -ItemType Directory -Force | Out-Null
+        Write-Host "Created directory: $repo_dir"
+    } catch {
+        Write-Error "Failed to create directory: $_"
+        exit 1
+    }
+}
+
+# Clone repository with proper error handling
+if (-not (Test-Path -Path (Join-Path $repo_dir ".git"))) {
+    # Check if directory is empty
+    $items = Get-ChildItem -Path $repo_dir -Force
+    if ($items.Count -gt 0) {
+        Write-Error "Directory is not empty. Please choose an empty directory for the repository."
+        exit 1
+    }
+    
+    try {
+        Write-Host "Cloning repository to $repo_dir..."
+        git clone "https://github.com/naibill/Qodia-Kodierungstool.git" $repo_dir
+        
+        # Verify the clone was successful by checking for .git directory
+        if (-not (Test-Path -Path (Join-Path $repo_dir ".git"))) {
+            throw "Git clone appeared to succeed but .git directory not found"
+        }
+        Write-Host "Repository cloned successfully."
+    } catch {
+        Write-Error "Failed to clone repository: $_"
+        exit 1
+    }
+} else {
+    Write-Host "Repository already exists in $repo_dir"
+}
+
+# Create models directory
 $modelsDir = Join-Path -Path $repo_dir -ChildPath "models"
 if (-not (Test-Path -Path $modelsDir)) {
-    New-Item -Path $modelsDir -ItemType Directory | Out-Null
-    Write-Host "'models' directory created."
+    try {
+        New-Item -Path $modelsDir -ItemType Directory | Out-Null
+        Write-Host "'models' directory created."
+    } catch {
+        Write-Error "Failed to create models directory: $_"
+        exit 1
+    }
 } else {
     Write-Host "'models' directory already exists."
 }
 
-# Step 3: Create .env file with required environment variables if it doesn't exist
+# Environment file handling - simplified to skip if exists
 $envFile = Join-Path -Path $repo_dir -ChildPath ".env"
 if (-not (Test-Path -Path $envFile)) {
-    Write-Host ".env file not found. Creating .env file..."
-    $api_key = Read-Host "Enter API Key"
-    $api_url = Read-Host "Enter API URL"
-    $rapid_api_key = Read-Host "Enter Rapid API Key"
+    Write-Host "Creating new .env file..."
+    do {
+        $api_key = Read-Host "Enter API Key"
+    } until (Test-ApiKey $api_key)
 
-    @"
+    do {
+        $api_url = Read-Host "Enter API URL"
+    } until ($api_url -match '^https?://.+')
+
+    do {
+        $rapid_api_key = Read-Host "Enter Rapid API Key"
+    } until (Test-ApiKey $rapid_api_key)
+
+    # Create .env file with error handling
+    try {
+        @"
 DEPLOYMENT_ENV=local
 API_KEY=$api_key
 API_URL=$api_url
 RAPID_API_KEY=$rapid_api_key
-"@ | Out-File -FilePath $envFile -Encoding utf8
-    Write-Host ".env file created with environment variables."
+"@ | Out-File -FilePath $envFile -Encoding utf8 -ErrorAction Stop
+        Write-Host ".env file created successfully."
+    } catch {
+        Write-Error "Failed to create .env file: $_"
+        exit 1
+    }
 } else {
-    Write-Host ".env file already exists."
+    Write-Host ".env file already exists, skipping creation."
 }
 
-# Step 4: Prompt the user to choose a deployment method
-$deploymentChoice = Read-Host "Choose deployment method: Enter '1' for Docker or '2' for Python"
+# Deployment choice
+do {
+    $deploymentChoice = Read-Host "Choose deployment method: Enter '1' for Docker or '2' for Python"
+} until ($deploymentChoice -eq '1' -or $deploymentChoice -eq '2')
+
 if ($deploymentChoice -eq '1') {
     # Docker Deployment
-    Write-Host "You chose Docker deployment."
+    Write-Host "Preparing Docker deployment..."
+    
+    # Check Docker requirements
+    $dockerTools = @{
+        'docker' = 'Docker is not installed. Please install from https://docs.docker.com/get-docker/'
+        'docker-compose' = 'Docker Compose is not installed. Please install from https://docs.docker.com/compose/install/'
+    }
+    
+    foreach ($tool in $dockerTools.Keys) {
+        if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+            Write-Error $dockerTools[$tool]
+            exit 1
+        }
+    }
 
-    # Check if Docker and Docker Compose are installed
-    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        Write-Host "Error: Docker is not installed. Please install Docker from https://docs.docker.com/get-docker/"
+    # Start Docker service with proper error handling
+    try {
+        $service = Get-Service docker -ErrorAction Stop
+        if ($service.Status -ne 'Running') {
+            Write-Host "Starting Docker service..."
+            Start-Service docker
+            $timeout = 30
+            $timer = [Diagnostics.Stopwatch]::StartNew()
+            while ($service.Status -ne 'Running' -and $timer.Elapsed.TotalSeconds -lt $timeout) {
+                Start-Sleep -Seconds 1
+                $service.Refresh()
+            }
+            if ($service.Status -ne 'Running') {
+                throw "Docker service failed to start within $timeout seconds"
+            }
+            Write-Host "Docker service started successfully."
+        } else {
+            Write-Host "Docker service is already running."
+        }
+    } catch {
+        Write-Error "Docker service error: $_"
         exit 1
     }
-    if (-not (Get-Command docker-compose -ErrorAction SilentlyContinue)) {
-        Write-Host "Error: Docker Compose is not installed. Please install Docker Compose from https://docs.docker.com/compose/install/"
-        exit 1
-    }
-    # Start Docker if not running
-    Start-Service docker
-    Write-Host "Docker service started."
 
     # Run Docker setup script
-    Set-Location $repo_dir
-    Write-Host "Running Docker setup script..."
-    powershell.exe -ExecutionPolicy Bypass -File "scripts/setup_docker.ps1"
+    try {
+        Set-Location $repo_dir
+        Write-Host "Running Docker setup script..."
+        powershell.exe -ExecutionPolicy Bypass -File "scripts/setup_docker.ps1"
+    } catch {
+        Write-Error "Failed to run Docker setup script: $_"
+        exit 1
+    }
 
 } elseif ($deploymentChoice -eq '2') {
     # Python Deployment
-    Write-Host "You chose Python deployment."
+    Write-Host "Preparing Python deployment..."
 
-    # Check for Python, Poetry, and Tesseract
+    # Check Python 3.12 specifically
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-        Write-Host "Error: Python 3.12 is not installed. Please install it from https://www.python.org/downloads/"
+        Write-Error "Python is not installed. Please install Python 3.12 from https://www.python.org/downloads/"
         exit 1
-    }
-    # Check if Poetry is installed, if not, attempt to install it
-    if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-        Write-Host "Poetry is not installed. Attempting to install Poetry..."
-
-        # Download and install Poetry using the official install script
-        (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-
-        # Add %APPDATA%\Python\Scripts to PATH if not present
-        $python_scripts = [System.IO.Path]::Combine($env:APPDATA, "Python\Scripts")
-        if ($env:Path -notcontains $python_scripts) {
-            [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + $python_scripts, "Machine")
-            Write-Host "%APPDATA%\Python\Scripts has been added to PATH."
-            Write-Host "Please restart your PowerShell session for the changes to take effect."
-        } else {
-            Write-Host "%APPDATA%\Python\Scripts is already in PATH."
+    } else {
+        try {
+            $pythonVersion = (python --version 2>&1).ToString()
+            if ($pythonVersion -match 'Python 3\.12\.\d+') {
+                Write-Host "Python 3.12 is installed: $pythonVersion"
+            } else {
+                Write-Error "Wrong Python version installed: $pythonVersion. Please install Python 3.12 from https://www.python.org/downloads/"
+                exit 1
+            }
+        } catch {
+            Write-Error "Failed to check Python version. Please install Python 3.12 from https://www.python.org/downloads/"
+            exit 1
         }
+    }
 
-        # Verify Poetry installation
-        if (Get-Command poetry -ErrorAction SilentlyContinue) {
+    # Check and install Poetry
+    if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
+        Write-Host "Poetry is not installed. Installing Poetry..."
+        try {
+            (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+            
+            # Add Poetry to PATH
+            $python_scripts = [System.IO.Path]::Combine($env:APPDATA, "Python\Scripts")
+            if ($env:Path -notcontains $python_scripts) {
+                [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + $python_scripts, "Machine")
+                Write-Host "Added Poetry to PATH."
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+            }
+            
+            # Verify Poetry installation
+            if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
+                throw "Poetry installation failed"
+            }
             Write-Host "Poetry installed successfully."
-        } else {
-            Write-Host "Error: Poetry installation failed. Please install it manually from https://python-poetry.org/docs/#installation."
+        } catch {
+            Write-Error "Failed to install Poetry: $_"
+            Write-Host "Please install Poetry manually from https://python-poetry.org/docs/#installation"
             exit 1
         }
     } else {
         Write-Host "Poetry is already installed."
     }
+
+    # Check Tesseract
     if (-not (Get-Command tesseract -ErrorAction SilentlyContinue)) {
-        Write-Host "Error: Tesseract is not installed. Please install it from https://github.com/tesseract-ocr/tesseract"
+        Write-Error "Tesseract is not installed. Please install it from https://github.com/tesseract-ocr/tesseract"
+        exit 1
+    } else {
+        Write-Host "Tesseract is installed."
+    }
+
+    # Run Python setup script
+    try {
+        Set-Location $repo_dir
+        Write-Host "Running Python setup script..."
+        powershell.exe -ExecutionPolicy Bypass -File "scripts/setup_python.ps1"
+    } catch {
+        Write-Error "Failed to run Python setup script: $_"
         exit 1
     }
-    # Run Python setup script
-    Set-Location $repo_dir
-    Write-Host "Running Python setup script..."
-    powershell.exe -ExecutionPolicy Bypass -File "scripts/setup_python.ps1"
-} else {
-    Write-Host "Invalid choice. Exiting."
-    exit 1
 }
+
+Write-Host "Setup completed successfully!"
