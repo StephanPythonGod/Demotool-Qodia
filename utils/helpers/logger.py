@@ -84,6 +84,9 @@ def setup_logger(
     """
     logger = logging.getLogger(name)
 
+    # TODO: Remove this once the issue is fixed
+    logging.getLogger("torch.classes").setLevel(logging.ERROR)
+
     # Prevent adding handlers multiple times
     if not logger.hasHandlers():
         logger.setLevel(level)
