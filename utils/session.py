@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv  # For loading environment variables from a .env file
 
 
 def reset() -> None:
@@ -47,9 +46,6 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
         - uploaded_file: file uploaded by the user, default is None
         - df: pandas DataFrame holding some default structured data, with specific column types
     """
-
-    # Load environment variables from a .env file if it exists
-    load_dotenv()
 
     # Export environment variables to the current environment for Monitoring
     if settings is None:
