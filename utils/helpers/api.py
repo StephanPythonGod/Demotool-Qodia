@@ -17,6 +17,7 @@ from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_items, format_ziffer_to_4digits
 
 DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "local")
+USE_CACHE = os.getenv("USE_CACHE", "true").lower() == "true"
 
 
 def check_if_default_credentials() -> None:
@@ -101,38 +102,22 @@ def analyze_api_call(text: str) -> Optional[Dict]:
             "No category selected. Please select a category before analyzing text."
         )
 
-    # Get the deployment environment (default to 'local' if not set)
-    # deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
-
-    # Define the data folder path relative to the current script
     data_folder = os.path.join(os.path.dirname(__file__), "data")
-
-    # Ensure the data folder exists
     os.makedirs(data_folder, exist_ok=True)
-
-    # Generate a filename based on the text hash
     safe_filename = os.path.join(data_folder, f"{hash(text[100:120])}_response.pkl")
 
-    # Check if caching should be used based on the environment variable
-    # use_cache = deployment_env == "development"
-    use_cache = True
-
-    # Check if a cached response exists and the environment allows using cache
-    if use_cache and os.path.exists(safe_filename):
+    if USE_CACHE and os.path.exists(safe_filename):
         logger.info(f"Using cached response from {safe_filename}")
         try:
             with open(safe_filename, "rb") as file:
                 cached_response = pickle.load(file)
-            # Reconstruct the `requests.Response` object
             response = cached_response["response"]
             st.session_state.analyze_api_response = response
             return cached_response["prediction"]
         except Exception as e:
             logger.error(f"Error loading cached response: {e}")
 
-    # Perform the API call if no cached response exists or if caching is not allowed
     url = f"{st.session_state.api_url}/process_document"
-
     payload = {
         "text": text,
         "category": st.session_state.category,
@@ -176,13 +161,11 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     st.session_state.analyze_api_response = response
 
     try:
-        # Parse prediction from the response
         prediction = response.json()["result"]["prediction"]
     except KeyError:
         prediction = response.json()["prediction"]
 
-    # Save the full response and prediction to a file using pickle if caching is enabled
-    if use_cache:
+    if USE_CACHE:
         cached_response = {"response": response, "prediction": prediction}
         try:
             with open(safe_filename, "wb") as file:
@@ -215,31 +198,17 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
             "No category selected. Please select a category before analyzing text."
         )
 
-    # Get the deployment environment (default to 'local' if not set)
-    # deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
-
-    # Define the data folder path relative to the current script
     data_folder = os.path.join(os.path.dirname(__file__), "data")
-
-    # Ensure the data folder exists
     os.makedirs(data_folder, exist_ok=True)
-
-    # Generate a filename based on the file name and category hash for caching
     safe_filename = os.path.join(
         data_folder, f"{hash(file.name + st.session_state.category)}_ocr_response.pkl"
     )
 
-    # Check if caching should be used based on the environment variable
-    # use_cache = deployment_env == "development"
-    use_cache = True
-
-    # Check if a cached response exists and the environment allows using cache
-    if use_cache and os.path.exists(safe_filename):
+    if USE_CACHE and os.path.exists(safe_filename):
         logger.info(f"Using cached OCR response from {safe_filename}")
         try:
             with open(safe_filename, "rb") as file:
                 cached_response = pickle.load(file)
-            # Return the cached OCR text
             return cached_response["ocr_text"]
         except Exception as e:
             logger.error(f"Error loading cached OCR response: {e}")
@@ -252,7 +221,6 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
     }
     headers = {"x-api-key": st.session_state.api_key}
 
-    # Prepare the file for the API request
     if isinstance(file, Image.Image):
         file_bytes = BytesIO()
         file.save(file_bytes, format="PNG")
@@ -278,24 +246,18 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         return None
 
     logger.info(
-        f"Done performing OCR on the document. Response status: {response.status_code}, {response.headers}"
+        f"Done performing OCR on the document. Response status: {response.status_code}"
     )
     if response.status_code != 200:
         logger.error(
-            (
-                f"API error: Status Code: {response.status_code}, "
-                f"Message: {response.text}, "
-                f"Request ID: {response.headers.get('X-Request-ID', '')}"
-            )
+            f"API error: Status Code: {response.status_code}, Message: {response.text}"
         )
         st.error(
-            f"Ein Fehler ist beim Aufrufen der API für OCR aufgetreten. "
-            f"Überprüfen Sie die API-Einstellungen und speichern Sie die Einstellungen erneut.\n\n"
-            f"API-Fehler:\n\n"
-            f"Status Code: {response.status_code}\n\n"
-            f"Nachricht: {response.text}\n\n"
-            f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): "
-            f"{response.headers.get('X-Request-ID', 'nicht-vorhanden')}"
+            "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR.\n\n"
+            "API-Fehler:\n"
+            f"Status Code: {response.status_code}\n"
+            f"Nachricht: {response.text}\n"
+            f"Anfrage-ID: {response.headers.get('X-Request-ID', 'nicht-vorhanden')}"
         )
         return None
 
@@ -306,8 +268,7 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
     except KeyError:
         ocr_text = response.json()["ocr"]["ocr_text"]
 
-    # Save the OCR text and response to a cache file if caching is enabled
-    if use_cache:
+    if USE_CACHE:
         cached_response = {"ocr_text": ocr_text}
         try:
             with open(safe_filename, "wb") as file:
