@@ -9,29 +9,24 @@ from utils.stages.anonymize import anonymize_stage
 from utils.stages.edit_anonymized import edit_anonymized_stage
 from utils.stages.result import result_stage
 
-# Load env variables from .env file
-load_dotenv()
 
-# Load settings from cookies before initializing session state
-settings = load_settings_from_cookies()
-
-# Now initialize the session state using the loaded settings
-initialize_session_state(settings)
-
-# Configure the Streamlit app
-configure_page()
+def init_app():
+    """Initialize app state and configuration"""
+    if "initialized" not in st.session_state:
+        load_dotenv()
+        settings = load_settings_from_cookies()
+        initialize_session_state(settings)
+        configure_page()
+        st.session_state.initialized = True
 
 
 def main() -> None:
-    """Main function to control the app stages based on session state."""
-    # Display the logo
-    st.image("data/logo.png")
-    # st.title("Qodia")
+    """Main function to control the app stages"""
+    init_app()
 
-    # Display the settings sidebar
+    st.image("data/logo.png")
     settings_sidebar()
 
-    # Define stage-to-function mapping
     stage_functions = {
         "analyze": analyze_stage,
         "anonymize": anonymize_stage,
@@ -39,12 +34,8 @@ def main() -> None:
         "result": result_stage,
     }
 
-    # Retrieve the current stage
     current_stage = st.session_state.stage
-
-    # Call the appropriate stage function based on session state
-    stage_function = stage_functions.get(current_stage)
-    if stage_function:
+    if stage_function := stage_functions.get(current_stage):
         stage_function()
     else:
         logger.warning(f"Unknown stage: {current_stage}")
