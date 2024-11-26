@@ -32,7 +32,9 @@ def add_new_ziffer():
         erschwerende_bedingung=None,
         einzelbetrag=0.0,
         gesamtbetrag=0.0,
-        row_id=new_row_id,  # Add row_id to the new row
+        row_id=new_row_id,
+        confidence=1.0,
+        confidence_reason=None,
     )
     st.session_state.df = pd.concat(
         [st.session_state.df, pd.DataFrame([temp_row])], ignore_index=True
@@ -236,19 +238,19 @@ def modal_dialog() -> None:
 
         # Prepare new data for update
         new_data = create_new_data(
-            ziffer,
-            analog,
-            haufigkeit,
-            intensitat,
-            beschreibung,
-            zitat,
-            begruendung,
-            erschwerende_bedingung,
-            einzelbetrag,
-            gesamtbetrag,
-            row_id,
-            confidence,
-            confidence_reason,
+            ziffer=ziffer,
+            analog=analog,
+            haufigkeit=haufigkeit,
+            intensitat=intensitat,
+            beschreibung=beschreibung,
+            zitat=zitat,
+            begruendung=begruendung,
+            erschwerende_bedingung=erschwerende_bedingung,
+            einzelbetrag=einzelbetrag,
+            gesamtbetrag=gesamtbetrag,
+            row_id=row_id,
+            confidence=confidence,
+            confidence_reason=confidence_reason,
         )
 
         # Display the "Aktualisieren" button
@@ -282,7 +284,7 @@ def check_faktorability(goa_item: pd.DataFrame) -> bool:
 
         if einfachsatz == regelhöchstsatz == höchstsatz:
             return False
-    except KeyError:
+    except Exception:
         pass
     return True
 

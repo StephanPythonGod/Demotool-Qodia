@@ -138,9 +138,10 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     except Exception as e:
         logger.error(f"Error calling API for text analysis: {e}")
         st.error(
+            f"{str(e)}\n\n"
+            "Weitere Informationen:\n"
             "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes. "
-            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
-            f"Fehlerdetails: {e}"
+            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut."
         )
         return None
 
@@ -149,11 +150,25 @@ def analyze_api_call(text: str) -> Optional[Dict]:
         logger.error(
             f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
         )
+
+        # Format error message
+        error_text = response.text
+        try:
+            error_json = response.json()
+            formatted_error = "\n".join(
+                f"{k.capitalize()}: {v}" for k, v in error_json.items()
+            )
+        except Exception:
+            formatted_error = (
+                error_text
+                if error_text
+                else "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes."
+            )
+
         st.error(
-            "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes.\n\n"
-            "API-Fehler:\n"
+            f"{formatted_error}\n\n"
+            "Weitere Informationen:\n"
             f"Status Code: {response.status_code}\n"
-            f"Nachricht: {response.text}\n"
             f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {request_id}"
         )
         return None
@@ -239,9 +254,10 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
     except Exception as e:
         logger.error(f"Error calling API for OCR: {e}")
         st.error(
+            f"{str(e)}\n\n"
+            "Weitere Informationen:\n"
             "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
-            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
-            f"Fehlerdetails: {e}"
+            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut."
         )
         return None
 
@@ -249,15 +265,30 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         f"Done performing OCR on the document. Response status: {response.status_code}"
     )
     if response.status_code != 200:
+        request_id = response.headers.get("X-Request-ID", "nicht-vorhanden")
         logger.error(
-            f"API error: Status Code: {response.status_code}, Message: {response.text}"
+            f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
         )
+
+        # Format error message
+        error_text = response.text
+        try:
+            error_json = response.json()
+            formatted_error = "\n".join(
+                f"{k.capitalize()}: {v}" for k, v in error_json.items()
+            )
+        except Exception:
+            formatted_error = (
+                error_text
+                if error_text
+                else "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR."
+            )
+
         st.error(
-            "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR.\n\n"
-            "API-Fehler:\n"
+            f"{formatted_error}\n\n"
+            "Weitere Informationen:\n"
             f"Status Code: {response.status_code}\n"
-            f"Nachricht: {response.text}\n"
-            f"Anfrage-ID: {response.headers.get('X-Request-ID', 'nicht-vorhanden')}"
+            f"Anfrage-ID: {request_id}"
         )
         return None
 

@@ -64,7 +64,7 @@ def create_overlay_image(
     # Handle multi-line text by splitting on newline characters
     lines = text.split("\n")
 
-    # # Find the maximum width and height for the text
+    # Find the maximum width and height for the text
     max_width = overlay_image.width
     text_sizes = [draw.textbbox((0, 0), line, font=font) for line in lines]
     total_text_height = sum(bottom - top for _, top, _, bottom in text_sizes)
@@ -105,125 +105,31 @@ def create_overlay_image(
     return overlay_image
 
 
-def display_file_selection_interface(
-    uploaded_file: UploadedFile,
-) -> Optional[List[List[Dict[str, float]]]]:
+def sort_selections(selections: List[Dict[str, float]]) -> List[Dict[str, float]]:
     """
-    Display the file selection interface and handle user selections.
+    Sort selections from top-left to bottom-right within each page.
+
+    Args:
+        selections (List[List[Dict[str, float]]]): A list of pages, where each page contains
+            a list of selection dictionaries with 'top' and 'left' coordinates.
+
+    Returns:
+        List[List[Dict[str, float]]]: The sorted selections maintaining the page structure,
+            with selections within each page sorted by vertical position first,
+            then horizontal position.
     """
-    if "file_content" not in st.session_state or "file_hash" not in st.session_state:
-        # Only read the file content if it hasn't been processed yet
-        uploaded_file.seek(0)
-        file_content = uploaded_file.read()
-        file_hash = hashlib.md5(file_content).hexdigest()
-        st.session_state["file_content"] = file_content
-        st.session_state["file_hash"] = file_hash
-        st.session_state["loaded_pages"] = {}
+    if not selections:
+        return selections
 
-    file_content = st.session_state["file_content"]
-    file_hash = st.session_state["file_hash"]
+    sorted_selections = []
 
-    # Track if the overlay has been removed globally across all pages
-    if "overlay_removed" not in st.session_state:
-        st.session_state["overlay_removed"] = False
+    for page in selections:
+        # Use Python's built-in sorted function with a key function that creates a tuple
+        # This is more efficient than manual insertion sort
+        sorted_page = sorted(page, key=lambda x: (x["top"], x["left"]))
+        sorted_selections.append(sorted_page)
 
-    all_selections = []
-    left_column, right_column = st.columns([1, 1])
-
-    with right_column:
-        if uploaded_file is None:
-            st.warning("Please upload a file first.")
-            return None
-
-        try:
-            if uploaded_file.type == "application/pdf":
-                num_pages = len(convert_from_bytes(file_content))
-            else:
-                num_pages = 1
-
-            for i in range(num_pages):
-                st.subheader(f"Seite {i + 1}")
-
-                # Check if the page has already been loaded
-                page_key = f"{file_hash}_page_{i}"
-                if page_key not in st.session_state["loaded_pages"]:
-                    with st.spinner(f"Lade Seite {i + 1}..."):
-                        try:
-                            # Load the page image
-                            page_image = load_image(file_content, uploaded_file.type, i)
-                            (
-                                display_width,
-                                display_height,
-                            ) = _calculate_display_dimensions(page_image)
-
-                            # Create the overlay image
-                            overlay_image = create_overlay_image(
-                                page_image,
-                                "Bitte die zu analysierenden Bereiche auswählen\n(Auswahl mehrerer Bereich möglich)",
-                            )
-
-                            # Store loaded page with overlay
-                            st.session_state["loaded_pages"][page_key] = {
-                                "image": page_image,
-                                "overlay_image": overlay_image,
-                                "width": display_width,
-                                "height": display_height,
-                            }
-                        except Exception as e:
-                            logger.error(f"Error loading page {i + 1}: {e}")
-                            st.error(
-                                f"Fehler beim Laden von Seite {i + 1}. Bitte laden Sie die Webseite neu."
-                            )
-                            continue
-
-                if page_key in st.session_state["loaded_pages"]:
-                    page_data = st.session_state["loaded_pages"][page_key]
-
-                    # Switch the background based on whether the overlay has been globally removed
-                    background_image = (
-                        page_data["image"]
-                        if st.session_state["overlay_removed"]
-                        else page_data["overlay_image"]
-                    )
-
-                    # Display the canvas with either the overlay or raw image
-                    canvas_result = st_canvas(
-                        fill_color="rgba(255, 0, 0, 0.3)",
-                        stroke_width=2,
-                        stroke_color="#FF0000",
-                        background_image=background_image,
-                        height=page_data["height"],
-                        width=page_data["width"],
-                        drawing_mode="rect",
-                        key=f"canvas_{i}",
-                    )
-
-                    # Check if any drawing has been done and remove overlay across all pages
-                    if (
-                        canvas_result.json_data is not None
-                        and len(canvas_result.json_data["objects"]) > 0
-                        and not st.session_state["overlay_removed"]
-                    ):
-                        # Once a drawing is detected, set the global flag to remove overlay
-                        st.session_state["overlay_removed"] = True
-
-                        # Force re-run to refresh the canvas and remove overlay immediately
-                        st.rerun()
-
-                    # Process selections
-                    normalized_selections = _process_canvas_result(
-                        canvas_result, page_data["width"], page_data["height"]
-                    )
-                    all_selections.append(normalized_selections)
-
-        except Exception as e:
-            st.error(f"Fehler beim Anonymisieren: {e}")
-            logger.error(f"Error processing file for selection: {e}")
-            return None
-
-    _display_instructions(left_column)
-
-    return all_selections
+    return sorted_selections
 
 
 def _calculate_display_dimensions(image: Image.Image) -> Tuple[int, int]:
@@ -258,7 +164,7 @@ def _process_canvas_result(
     canvas_result: Dict, display_width: int, display_height: int
 ) -> List[Dict[str, float]]:
     """
-    Process the canvas result and return normalized selections.
+    Process the canvas result and return normalized selections for a single page.
 
     Args:
         canvas_result (Dict): The result from the st_canvas function.
@@ -266,7 +172,9 @@ def _process_canvas_result(
         display_height (int): The display height of the image.
 
     Returns:
-        List[Dict[str, float]]: A list of normalized selections.
+        List[Dict[str, float]]: A list of normalized selections for the page, where each selection
+            is a dictionary containing 'left', 'top', 'width', and 'height' as normalized coordinates
+            (0.0 to 1.0).
     """
     normalized_selections = []
     if canvas_result.json_data is not None:
@@ -281,6 +189,7 @@ def _process_canvas_result(
                         "height": shape["height"] / display_height,
                     }
                 )
+    # Sort the selections for this page
     return normalized_selections
 
 
@@ -311,17 +220,141 @@ def _display_instructions(column: st.delta_generator.DeltaGenerator) -> None:
     )
 
 
+def display_file_selection_interface(
+    uploaded_file: UploadedFile,
+) -> Tuple[Optional[List[List[Dict[str, float]]]], bool]:
+    """
+    Display the file selection interface and handle user selections.
+
+    Args:
+        uploaded_file (UploadedFile): The uploaded file to process.
+
+    Returns:
+        Tuple[Optional[List[List[Dict[str, float]]]], bool]: A tuple containing:
+            - The selections organized by page, where each page contains a list of selection
+              dictionaries with normalized coordinates ('left', 'top', 'width', 'height'),
+              or None if there's an error
+            - A boolean indicating whether any selections were made
+    """
+
+    if "file_content" not in st.session_state or "file_hash" not in st.session_state:
+        uploaded_file.seek(0)
+        file_content = uploaded_file.read()
+        file_hash = hashlib.md5(file_content).hexdigest()
+        st.session_state["file_content"] = file_content
+        st.session_state["file_hash"] = file_hash
+        st.session_state["loaded_pages"] = {}
+
+    file_content = st.session_state["file_content"]
+    file_hash = st.session_state["file_hash"]
+
+    if "overlay_removed" not in st.session_state:
+        st.session_state["overlay_removed"] = False
+
+    all_selections = []
+    has_selections = False
+    left_column, right_column = st.columns([1, 1])
+
+    with right_column:
+        if uploaded_file is None:
+            st.warning("Please upload a file first.")
+            return None, False
+
+        try:
+            if uploaded_file.type == "application/pdf":
+                num_pages = len(convert_from_bytes(file_content))
+            else:
+                num_pages = 1
+
+            for i in range(num_pages):
+                st.subheader(f"Seite {i + 1}")
+
+                page_key = f"{file_hash}_page_{i}"
+                if page_key not in st.session_state["loaded_pages"]:
+                    with st.spinner(f"Lade Seite {i + 1}..."):
+                        try:
+                            page_image = load_image(file_content, uploaded_file.type, i)
+                            (
+                                display_width,
+                                display_height,
+                            ) = _calculate_display_dimensions(page_image)
+
+                            overlay_image = create_overlay_image(
+                                page_image,
+                                "Bitte die zu analysierenden Bereiche auswählen\n(Auswahl mehrerer Bereich möglich)",
+                            )
+
+                            st.session_state["loaded_pages"][page_key] = {
+                                "image": page_image,
+                                "overlay_image": overlay_image,
+                                "width": display_width,
+                                "height": display_height,
+                            }
+                        except Exception as e:
+                            logger.error(f"Error loading page {i + 1}: {e}")
+                            st.error(
+                                f"Fehler beim Laden von Seite {i + 1}. Bitte laden Sie die Webseite neu."
+                            )
+                            continue
+
+                if page_key in st.session_state["loaded_pages"]:
+                    page_data = st.session_state["loaded_pages"][page_key]
+
+                    background_image = (
+                        page_data["image"]
+                        if st.session_state["overlay_removed"]
+                        else page_data["overlay_image"]
+                    )
+
+                    canvas_result = st_canvas(
+                        fill_color="rgba(255, 0, 0, 0.3)",
+                        stroke_width=2,
+                        stroke_color="#FF0000",
+                        background_image=background_image,
+                        height=page_data["height"],
+                        width=page_data["width"],
+                        drawing_mode="rect",
+                        key=f"canvas_{i}",
+                    )
+
+                    if (
+                        canvas_result.json_data is not None
+                        and len(canvas_result.json_data["objects"]) > 0
+                    ):
+                        has_selections = True
+                        if not st.session_state["overlay_removed"]:
+                            st.session_state["overlay_removed"] = True
+                            st.rerun()
+
+                    normalized_selections = _process_canvas_result(
+                        canvas_result, page_data["width"], page_data["height"]
+                    )
+                    all_selections.append(normalized_selections)
+
+        except Exception as e:
+            st.error(f"Fehler beim Anonymisieren: {e}")
+            logger.error(f"Error processing file for selection: {e}")
+            return None, False
+
+    _display_instructions(left_column)
+
+    return sort_selections(all_selections), has_selections
+
+
 def anonymize_stage() -> None:
     """
     Display the anonymize stage and handle the anonymization process.
     """
-    selections = display_file_selection_interface(st.session_state.uploaded_file)
+    selections, has_selections = display_file_selection_interface(
+        st.session_state.uploaded_file
+    )
 
-    if st.button("Datei Anonymisieren", type="primary"):
+    # Only enable the button if there are selections
+    if st.button("Datei Anonymisieren", type="primary", disabled=not has_selections):
         with st.spinner("🔍 Extrahiere Text und anonymisiere..."):
             try:
                 extracted_text = perform_ocr_on_file(
-                    st.session_state.uploaded_file, selections
+                    st.session_state.uploaded_file, selections=selections
                 )
                 anonymize_result = anonymize_text(extracted_text)
 
