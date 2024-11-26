@@ -25,6 +25,24 @@ function Test-ApiKey {
     return -not [string]::IsNullOrWhiteSpace($key)
 }
 
+# Function to add directory to PATH if it's not already included
+function Add-ToPath {
+    param(
+        [string]$PathToAdd
+    )
+    if (Test-Path -Path $PathToAdd) {
+        $currentPath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+        if ($currentPath -notlike "*$PathToAdd*") {
+            $newPath = "$currentPath;$PathToAdd"
+            [System.Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+            Write-Host "Added $PathToAdd to system PATH."
+            return $true
+        }
+    }
+    return $false
+}
+
 # Check for administrator rights
 if (-not (Test-Administrator)) {
     Write-Error "This script requires administrator rights. Please run PowerShell as administrator."
@@ -179,7 +197,6 @@ OTEL_RESOURCE_ATTRIBUTES="deployment.environment=$deployment_env"
     Write-Host ".env file already exists, skipping creation."
 }
 
-# [Rest of the script remains the same...]
 # Deployment choice
 do {
     $deploymentChoice = Read-Host "Choose deployment method: Enter '1' for Docker or '2' for Python"
@@ -240,9 +257,26 @@ if ($deploymentChoice -eq '1') {
     # Python Deployment
     Write-Host "Preparing Python deployment..."
 
-    # Check Python 3.12 specifically
+    # Check Python 3.12 and add default paths
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-        Write-Error "Python is not installed. Please install Python 3.12 from https://www.python.org/downloads/"
+        Write-Host "Python is not installed. Please install Python 3.12 from https://www.python.org/downloads/"
+        
+        # Add default Python installation paths to PATH
+        $pythonPaths = @(
+            "${env:ProgramFiles}\Python312",
+            "${env:ProgramFiles}\Python312\Scripts",
+            "${env:ProgramFiles(x86)}\Python312",
+            "${env:ProgramFiles(x86)}\Python312\Scripts",
+            "${env:LocalAppData}\Programs\Python\Python312",
+            "${env:LocalAppData}\Programs\Python\Python312\Scripts"
+        )
+        
+        foreach ($path in $pythonPaths) {
+            Add-ToPath $path
+        }
+        
+        Write-Host "Default Python paths have been added to system PATH."
+        Write-Host "After installing Python, please restart your PowerShell session and run this script again."
         exit 1
     } else {
         try {
@@ -267,11 +301,7 @@ if ($deploymentChoice -eq '1') {
             
             # Add Poetry to PATH
             $python_scripts = [System.IO.Path]::Combine($env:APPDATA, "Python\Scripts")
-            if ($env:Path -notcontains $python_scripts) {
-                [System.Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + $python_scripts, "Machine")
-                Write-Host "Added Poetry to PATH."
-                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-            }
+            Add-ToPath $python_scripts
             
             # Verify Poetry installation
             if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
@@ -287,9 +317,23 @@ if ($deploymentChoice -eq '1') {
         Write-Host "Poetry is already installed."
     }
 
-    # Check Tesseract
+    # Check Tesseract and add default paths
     if (-not (Get-Command tesseract -ErrorAction SilentlyContinue)) {
-        Write-Error "Tesseract is not installed. Please install it from https://github.com/tesseract-ocr/tesseract"
+        Write-Host "Tesseract is not installed. Please install it from https://digi.bib.uni-mannheim.de/tesseract/"
+        
+        # Add default Tesseract installation paths to PATH
+        $tesseractPaths = @(
+            "${env:ProgramFiles}\Tesseract-OCR",
+            "${env:ProgramFiles(x86)}\Tesseract-OCR",
+            "${env:LocalAppData}\Programs\Tesseract-OCR"
+        )
+        
+        foreach ($path in $tesseractPaths) {
+            Add-ToPath $path
+        }
+        
+        Write-Host "Default Tesseract paths have been added to system PATH."
+        Write-Host "After installing Tesseract, please restart your PowerShell session and run this script again."
         exit 1
     } else {
         Write-Host "Tesseract is installed."
