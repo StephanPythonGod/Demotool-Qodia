@@ -3,6 +3,7 @@ import os
 import sys
 from typing import Optional, Tuple
 
+from dotenv import load_dotenv
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
@@ -11,6 +12,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.trace import get_current_span
 
 from utils.helpers.otlp_connection import check_otlp_connection
+
+load_dotenv()
 
 
 class OTELCompatibleLogHandler(LoggingHandler):
