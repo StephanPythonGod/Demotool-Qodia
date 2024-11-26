@@ -11,17 +11,19 @@ from utils.helpers.logger import logger
 
 def perform_ocr_on_file(
     uploaded_file: Union[Image.Image, UploadedFile],
-    selections: Optional[List[dict]] = None,
+    selections: Optional[List[List[dict]]] = None,
 ) -> str:
     """
     Perform OCR on a PDF or image file, applying OCR to the selected areas if provided.
 
     Args:
         uploaded_file (Union[Image.Image, streamlit.runtime.uploaded_file_manager.UploadedFile]): The file to perform OCR on.
-        selections (Optional[List[dict]]): List of selection areas to apply OCR to.
+        selections (Optional[List[List[dict]]]): List of pages, where each page contains a list of
+            selection dictionaries. Each selection contains normalized coordinates
+            ('left', 'top', 'width', 'height') ranging from 0.0 to 1.0.
 
     Returns:
-        str: The extracted text from the file.
+        str: The extracted text from the file, with text from each selection separated by newlines.
 
     Raises:
         ValueError: If the file type is not supported.
@@ -44,16 +46,18 @@ def perform_ocr_on_file(
         raise ValueError(f"Unsupported file type: {uploaded_file.type}")
 
 
-def _process_pdf(pdf_file: UploadedFile, selections: Optional[List[dict]]) -> str:
+def _process_pdf(pdf_file: UploadedFile, selections: Optional[List[List[dict]]]) -> str:
     """
     Process a PDF file for OCR.
 
     Args:
         pdf_file (streamlit.runtime.uploaded_file_manager.UploadedFile): The PDF file to process.
-        selections (Optional[List[dict]]): List of selection areas to apply OCR to.
+        selections (Optional[List[List[dict]]]): List of pages, where each page contains a list of
+            selection dictionaries with normalized coordinates.
 
     Returns:
-        str: The extracted text from the PDF.
+        str: The extracted text from the PDF, with text from each selection and page
+            separated by newlines.
     """
     logger.info("Processing PDF file")
     pdf_file.seek(0)
@@ -90,16 +94,19 @@ def _process_pdf(pdf_file: UploadedFile, selections: Optional[List[dict]]) -> st
     return "\n".join(filter(None, results))
 
 
-def _process_image(image_file: UploadedFile, selections: Optional[List[dict]]) -> str:
+def _process_image(
+    image_file: UploadedFile, selections: Optional[List[List[dict]]]
+) -> str:
     """
     Process an image file for OCR.
 
     Args:
         image_file (streamlit.runtime.uploaded_file_manager.UploadedFile): The image file to process.
-        selections (Optional[List[dict]]): List of selection areas to apply OCR to.
+        selections (Optional[List[List[dict]]]): List of pages (single page for images), where each page
+            contains a list of selection dictionaries with normalized coordinates.
 
     Returns:
-        str: The extracted text from the image.
+        str: The extracted text from the image selections, separated by newlines.
     """
     logger.info("Processing image file")
     image = Image.open(image_file)
@@ -116,10 +123,12 @@ def perform_ocr_on_image(image: Image.Image, selections: Optional[List[dict]]) -
 
     Args:
         image (Image.Image): The image to perform OCR on.
-        selections (Optional[List[dict]]): List of selection areas to apply OCR to.
+        selections (Optional[List[dict]]): List of selections for a single page, where each selection
+            is a dictionary containing normalized coordinates ('left', 'top', 'width', 'height')
+            ranging from 0.0 to 1.0.
 
     Returns:
-        str: The extracted text from the image.
+        str: The extracted text from the image selections, separated by newlines.
     """
     logger.info(f"Performing OCR on image of size: {image.size}")
 
@@ -145,13 +154,17 @@ def process_selection(image: Image.Image, selection: dict) -> str:
 
     Args:
         image (Image.Image): The image to process.
-        selection (dict): The selection area to process.
+        selection (dict): A single selection dictionary containing normalized coordinates:
+            - left (float): Left position (0.0 to 1.0)
+            - top (float): Top position (0.0 to 1.0)
+            - width (float): Width (0.0 to 1.0)
+            - height (float): Height (0.0 to 1.0)
 
     Returns:
         str: The extracted text from the selection.
 
     Raises:
-        ValueError: If the selection coordinates are invalid.
+        ValueError: If the selection coordinates are invalid or out of bounds.
     """
     original_width, original_height = image.size
     left = int(selection["left"] * original_width)
