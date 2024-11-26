@@ -31,52 +31,40 @@ git config --global --add safe.directory "%QODIA_REPO_PATH%" 2>nul
 REM Check for Git updates
 echo Checking for updates...
 git remote update origin --prune
-REM Check if we're behind the remote
-set "updates=0"
-for /f "tokens=*" %%a in ('git rev-list HEAD...origin/main --count 2^>nul') do set "updates=%%a"
+
+REM Try normal pull first
+echo Attempting normal pull...
+git pull origin main
 if %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Failed to check for updates.
-    goto :skip_git
-)
-if defined updates (
-    if %updates% GTR 0 (
-        echo Updates available. Attempting to update...
-        
-        REM Check for local changes
-        git diff --quiet
-        if %ERRORLEVEL% NEQ 0 (
-            echo [WARNING] Local changes detected. Cannot update automatically.
-            choice /C YN /M "Do you want to continue without updating"
-            IF !ERRORLEVEL! EQU 2 exit /b 1
-            goto :skip_git
-        )
-        
-        REM Try to pull updates
-        git pull origin main
-        if %ERRORLEVEL% NEQ 0 (
-            echo [WARNING] Failed to pull updates.
-            choice /C YN /M "Do you want to continue without updating"
-            IF !ERRORLEVEL! EQU 2 exit /b 1
-        ) else (
-            echo Successfully updated to the latest version.
-            
-            REM Update dependencies after pull
-            echo Updating dependencies...
-            poetry install
-            if %ERRORLEVEL% NEQ 0 (
-                echo [WARNING] Failed to update dependencies.
-                choice /C YN /M "Do you want to continue anyway"
-                IF !ERRORLEVEL! EQU 2 exit /b 1
-            )
-        )
-    ) else (
-        echo No updates available.
+    echo Normal pull failed, performing force update...
+    REM Fetch the latest state
+    git fetch origin
+    if %ERRORLEVEL% NEQ 0 (
+        echo [ERROR] Failed to fetch from remote.
+        pause
+        exit /b 1
     )
+    REM Reset to match remote
+    git reset --hard origin/main
+    if %ERRORLEVEL% NEQ 0 (
+        echo [ERROR] Failed to reset to remote state.
+        pause
+        exit /b 1
+    )
+    echo Successfully force-updated to match remote.
 ) else (
-    echo [WARNING] Failed to determine update status.
-    goto :skip_git
+    echo Successfully updated with normal pull.
 )
-:skip_git
+
+REM Update dependencies after pull
+echo Updating dependencies...
+poetry install
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to update dependencies.
+    pause
+    exit /b 1
+)
+
 REM Check if Poetry is available
 where poetry >nul 2>nul
 IF %ERRORLEVEL% NEQ 0 (
