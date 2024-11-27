@@ -1,8 +1,11 @@
 import os
 from io import BytesIO
+from typing import Union
 
 import pandas as pd
 import streamlit as st
+from PIL import Image
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit_paste_button import paste_image_button as pbutton
 
 from utils.helpers.api import (
@@ -100,11 +103,12 @@ def analyze_text(text: str) -> None:
         st.error("Fehler bei der Textanalyse. Bitte versuchen Sie es erneut.")
 
 
-def perform_ocr(file: BytesIO) -> bool:
-    """Perform OCR on the uploaded file using Qodia API.
+def perform_ocr(file: Union[Image.Image, UploadedFile]) -> bool:
+    """
+    Perform OCR on the uploaded file using Qodia API.
 
     Args:
-        file (BytesIO): Uploaded file object.
+        file (Union[Image.Image, UploadedFile]): Uploaded file object.
 
     Returns:
         bool: True if OCR was successful, False otherwise.
@@ -143,10 +147,7 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
     try:
         # If uploaded file exists in session state, it takes priority
         if st.session_state.uploaded_file and not st.session_state.new_file_uploaded:
-            # Store the file content, not just the file object
-            if not hasattr(st.session_state, "file_content"):
-                st.session_state.file_content = st.session_state.uploaded_file.read()
-                st.session_state.uploaded_file.seek(0)  # Reset pointer
+            logger.info("Using uploaded file.")
             return st.session_state.uploaded_file
 
         # If pasted image exists, it takes priority
@@ -170,8 +171,6 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
         # If file upload exists, return the uploaded file
         if file_upload:
             logger.info("File uploaded successfully.")
-            st.session_state.file_content = file_upload.read()
-            file_upload.seek(0)
             if st.session_state.new_file_uploaded:
                 st.session_state.new_file_uploaded = False
             return file_upload

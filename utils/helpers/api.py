@@ -243,6 +243,7 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         file_name = "clipboard_image.png"
         mime_type = "image/png"
     else:
+        file.seek(0)
         file_bytes = file.read()
         file_name = file.name
         mime_type = file.type or "application/octet-stream"
