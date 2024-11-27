@@ -80,16 +80,30 @@ def edit_anonymized_stage() -> None:
         )
 
         # Confirm or go back buttons
-        col1, _, col2 = right_column.columns([1, 0.5, 1])
-        with col1:
-            if st.button("Text bestätigen", type="primary"):
-                st.session_state.text = edited_text
-                if analyze_text(st.session_state.text):
+        with right_column:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button(
+                    "Zurück zur Anonymisierung",
+                    type="secondary",
+                    use_container_width=True,
+                ):
+                    st.session_state.stage = "anonymize"
                     st.rerun()
-        with col2:
-            if st.button("Zurück zur Anonymisierung", type="secondary"):
-                st.session_state.stage = "anonymize"
-                st.rerun()
+            with col2:
+                if st.button(
+                    "Analyse starten", type="primary", use_container_width=True
+                ):
+                    st.session_state.text = edited_text
+                    if analyze_text(st.session_state.text):
+                        st.rerun()
+            with col3:
+                if st.button(
+                    "Mit Rechnung kombinieren", type="primary", use_container_width=True
+                ):
+                    st.session_state.text = edited_text
+                    st.session_state.stage = "rechnung_anonymize"
+                    st.rerun()
     except Exception as e:
         logger.error(f"Error in edit_anonymized_stage: {str(e)}")
         st.error(f"Ein Fehler ist aufgetreten: {str(e)}")
