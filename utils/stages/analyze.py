@@ -143,7 +143,10 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
     try:
         # If uploaded file exists in session state, it takes priority
         if st.session_state.uploaded_file and not st.session_state.new_file_uploaded:
-            logger.info("Using uploaded file.")
+            # Store the file content, not just the file object
+            if not hasattr(st.session_state, "file_content"):
+                st.session_state.file_content = st.session_state.uploaded_file.read()
+                st.session_state.uploaded_file.seek(0)  # Reset pointer
             return st.session_state.uploaded_file
 
         # If pasted image exists, it takes priority
@@ -167,6 +170,8 @@ def handle_file_upload(file_upload, paste_result) -> BytesIO:
         # If file upload exists, return the uploaded file
         if file_upload:
             logger.info("File uploaded successfully.")
+            st.session_state.file_content = file_upload.read()
+            file_upload.seek(0)
             if st.session_state.new_file_uploaded:
                 st.session_state.new_file_uploaded = False
             return file_upload
