@@ -7,6 +7,7 @@ from utils.session import configure_page, initialize_session_state
 from utils.stages.analyze import analyze_stage
 from utils.stages.anonymize import anonymize_stage
 from utils.stages.edit_anonymized import edit_anonymized_stage
+from utils.stages.rechnung_anonymize import rechnung_anonymize_stage
 from utils.stages.result import result_stage
 
 
@@ -32,6 +33,7 @@ def main() -> None:
         "anonymize": anonymize_stage,
         "edit_anonymized": edit_anonymized_stage,
         "result": result_stage,
+        "rechnung_anonymize": rechnung_anonymize_stage,
     }
 
     current_stage = st.session_state.stage
