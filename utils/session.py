@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional
 import pandas as pd
 import streamlit as st
 
+from utils.helpers.canvas import cleanup_session_state
+
 
 def reset() -> None:
     """Reset the app to its initial state and rerun the script."""
@@ -22,6 +24,8 @@ def reset() -> None:
     st.session_state.selected_ziffer = None
     st.session_state.uploaded_file = None
     st.session_state.original_df = None
+
+    cleanup_session_state()
 
 
 def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
