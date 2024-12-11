@@ -28,34 +28,48 @@ IF %ERRORLEVEL% NEQ 0 (
 REM Configure safe directory
 echo Configuring repository as safe directory...
 git config --global --add safe.directory "%QODIA_REPO_PATH%" 2>nul
+
+REM Check if git repository is initialized
+IF NOT EXIST ".git" (
+    echo [WARNING] Git repository not initialized. Skipping updates.
+    goto :skip_git
+)
+
+REM Check remote configuration
+echo Checking remote configuration...
+git remote -v | findstr "origin" >nul
+IF %ERRORLEVEL% NEQ 0 (
+    echo [WARNING] Remote 'origin' not configured. Skipping updates.
+    goto :skip_git
+)
+
 REM Check for Git updates
 echo Checking for updates...
 git remote update origin --prune
 
 REM Try normal pull first
 echo Attempting normal pull...
-git pull origin main
+git pull origin master
 if %ERRORLEVEL% NEQ 0 (
     echo Normal pull failed, performing force update...
     REM Fetch the latest state
-    git fetch origin
+    git fetch origin master
     if %ERRORLEVEL% NEQ 0 (
-        echo [ERROR] Failed to fetch from remote.
-        pause
-        exit /b 1
+        echo [WARNING] Failed to fetch from remote. Continuing without updates...
+        goto :skip_git
     )
     REM Reset to match remote
-    git reset --hard origin/main
+    git reset --hard origin/master
     if %ERRORLEVEL% NEQ 0 (
-        echo [ERROR] Failed to reset to remote state.
-        pause
-        exit /b 1
+        echo [WARNING] Failed to reset to remote state. Continuing without updates...
+        goto :skip_git
     )
     echo Successfully force-updated to match remote.
 ) else (
     echo Successfully updated with normal pull.
 )
 
+:skip_git
 REM Update dependencies after pull
 echo Updating dependencies...
 poetry install
