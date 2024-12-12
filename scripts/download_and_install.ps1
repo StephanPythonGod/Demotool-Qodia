@@ -25,22 +25,100 @@ function Test-ApiKey {
     return -not [string]::IsNullOrWhiteSpace($key)
 }
 
-# Function to add directory to PATH if it's not already included
+# Enhanced Function to add directory to PATH if it's not already included
 function Add-ToPath {
     param(
         [string]$PathToAdd
     )
-    if (Test-Path -Path $PathToAdd) {
-        $currentPath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-        if ($currentPath -notlike "*$PathToAdd*") {
-            $newPath = "$currentPath;$PathToAdd"
-            [System.Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-            Write-Host "Added $PathToAdd to system PATH."
-            return $true
-        }
+    
+    if (-not (Test-Path -Path $PathToAdd)) {
+        Write-Host "Path does not exist: $PathToAdd"
+        return $false
     }
+
+    # Get both Machine and User PATH
+    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+    # Split paths into arrays for better comparison
+    $machinePathArray = $machinePath -split ";"
+    $userPathArray = $userPath -split ";"
+
+    # Check if path already exists in either Machine or User PATH
+    if (($machinePathArray -contains $PathToAdd) -or ($userPathArray -contains $PathToAdd)) {
+        Write-Host "Path already exists in environment: $PathToAdd"
+        return $true
+    }
+
+    try {
+        # Add to Machine PATH
+        $newMachinePath = ($machinePathArray + $PathToAdd) -join ";"
+        [System.Environment]::SetEnvironmentVariable("Path", $newMachinePath, "Machine")
+        
+        # Update current session
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+        Write-Host "Successfully added to system PATH: $PathToAdd"
+        
+        # Broadcast WM_SETTINGCHANGE message to notify other applications of the environment change
+        if (-not ("Win32.NativeMethods" -as [Type])) {
+            Add-Type -Namespace Win32 -Name NativeMethods -MemberDefinition @"
+                [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+                public static extern IntPtr SendMessageTimeout(
+                    IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam,
+                    uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
+"@
+        }
+        
+        $HWND_BROADCAST = [IntPtr]0xffff
+        $WM_SETTINGCHANGE = 0x1a
+        $result = [UIntPtr]::Zero
+        
+        [Win32.NativeMethods]::SendMessageTimeout(
+            $HWND_BROADCAST,
+            $WM_SETTINGCHANGE,
+            [UIntPtr]::Zero,
+            "Environment",
+            2,
+            5000,
+            [ref]$result
+        ) | Out-Null
+
+        return $true
+    }
+    catch {
+        Write-Error "Failed to add to PATH: $_"
+        return $false
+    }
+}
+
+# Function to verify PATH updates
+function Test-PathEntry {
+    param(
+        [string]$PathToTest
+    )
+    
+    $currentPath = $env:Path -split ";"
+    if ($currentPath -contains $PathToTest) {
+        Write-Host "Verified: $PathToTest is in current session PATH"
+        return $true
+    }
+    Write-Host "Warning: $PathToTest is not in current session PATH"
     return $false
+}
+
+# Function to get Python command
+function Get-PythonCommand {
+    # Check for python command first
+    if (Get-Command python -ErrorAction SilentlyContinue) {
+        Write-Host "Found 'python' command"
+        return "python"
+    }
+    # Check for py command
+    elseif (Get-Command py -ErrorAction SilentlyContinue) {
+        Write-Host "Found 'py' command"
+        return "py"
+    }
+    return $null
 }
 
 # Check for administrator rights
@@ -258,8 +336,9 @@ if ($deploymentChoice -eq '1') {
     Write-Host "Preparing Python deployment..."
 
     # Check Python 3.12 and add default paths
-    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-        Write-Host "Python is not installed. Please install Python 3.12 from https://www.python.org/downloads/"
+    $pythonCmd = Get-PythonCommand
+    if (-not $pythonCmd) {
+        Write-Host "Neither 'python' nor 'py' commands are available. Please install Python 3.12 from https://www.python.org/downloads/"
         
         # Add default Python installation paths to PATH
         $pythonPaths = @(
@@ -271,16 +350,32 @@ if ($deploymentChoice -eq '1') {
             "${env:LocalAppData}\Programs\Python\Python312\Scripts"
         )
         
+        $pathsAdded = $false
         foreach ($path in $pythonPaths) {
-            Add-ToPath $path
+            if (Test-Path $path) {
+                if (Add-ToPath $path) {
+                    $pathsAdded = $true
+                    Test-PathEntry $path
+                }
+            }
         }
         
-        Write-Host "Default Python paths have been added to system PATH."
-        Write-Host "After installing Python, please restart your PowerShell session and run this script again."
+        if ($pathsAdded) {
+            Write-Host "Python paths have been added to system PATH. Please restart your PowerShell session."
+            Write-Host "After installing Python, please restart your PowerShell session and run this script again."
+        } else {
+            Write-Host "No valid Python paths found to add to PATH."
+        }
         exit 1
     } else {
         try {
-            $pythonVersion = (python --version 2>&1).ToString()
+            # Use the detected Python command to check version
+            $pythonVersion = if ($pythonCmd -eq "py") {
+                (& py -3.12 --version 2>&1).ToString()
+            } else {
+                (& $pythonCmd --version 2>&1).ToString()
+            }
+
             if ($pythonVersion -match 'Python 3\.12\.\d+') {
                 Write-Host "Python 3.12 is installed: $pythonVersion"
             } else {
@@ -297,15 +392,20 @@ if ($deploymentChoice -eq '1') {
     if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
         Write-Host "Poetry is not installed. Installing Poetry..."
         try {
-            (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+            $installScript = (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content
+            & $pythonCmd - <<< $installScript
             
-            # Add Poetry to PATH
-            $python_scripts = [System.IO.Path]::Combine($env:APPDATA, "Python\Scripts")
-            Add-ToPath $python_scripts
-            
-            # Verify Poetry installation
-            if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-                throw "Poetry installation failed"
+            # Add Poetry to PATH with verification
+            $poetryPath = [System.IO.Path]::Combine($env:APPDATA, "Python", "Scripts")
+            if (Add-ToPath $poetryPath) {
+                Test-PathEntry $poetryPath
+                
+                # Refresh environment variables in current session
+                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+                
+                if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
+                    throw "Poetry installation succeeded but command is not available. Please restart PowerShell."
+                }
             }
             Write-Host "Poetry installed successfully."
         } catch {
