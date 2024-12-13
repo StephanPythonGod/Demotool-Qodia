@@ -100,10 +100,24 @@ if (-not (Test-Path -Path $poppler_dir)) {
     Write-Host "Existing Poppler installation verified."
 }
 
+# Update the Tesseract check section
+function Test-TesseractInstallation {
+    try {
+        $tesseractVersion = & tesseract --version 2>&1
+        if ($tesseractVersion -match "tesseract") {
+            Write-Host "Tesseract is installed and working."
+            return $true
+        }
+    } catch {
+        return $false
+    }
+    return $false
+}
+
 # Step 3: Configure Tesseract
-# Check if Tesseract is installed
-if (-not (Get-Command tesseract -ErrorAction SilentlyContinue)) {
-    Write-Error "Error: Tesseract is not installed. Please install it first from https://ub-mannheim.github.io/Tesseract_Dokumentation/Tesseract_Doku_Windows.html."
+Write-Host "Checking Tesseract installation..."
+if (-not (Test-TesseractInstallation)) {
+    Write-Error "Error: Tesseract is not installed or not working properly. Please install it from https://ub-mannheim.github.io/Tesseract_Dokumentation/Tesseract_Doku_Windows.html"
     exit 1
 }
 
