@@ -4,7 +4,7 @@ __pycache__/
 __pycache__/utils.cpython-312.pyc
 .flake8
 .pre-commit-config.yaml
-app.yaml
+app.yml
 deploy.sh
 
 /data/*
@@ -12,6 +12,7 @@ deploy.sh
 !/data/template_rechnung.html
 !/data/arial.ttf
 !/data/nginx.conf
+!/data/logo.png
 .env
 
 # Ignore all pkl files
@@ -37,3 +38,7 @@ deploy.sh
 
 # Remove all .tar files
 *.tar
+
+# Remove all .pem files
+*.pem
+
