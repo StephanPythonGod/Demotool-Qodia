@@ -20,6 +20,10 @@ def display_file_selection_interface(
     right_column: st.delta_generator.DeltaGenerator,
 ) -> Tuple[Optional[List[List[Dict[str, float]]]], bool]:
     """Rechnung-specific file selection interface."""
+    # Initialize page_selections if not exists
+    if "page_selections" not in st.session_state:
+        st.session_state.page_selections = {}
+
     _display_instructions(left_column)
 
     return base_display_file_selection_interface(
@@ -99,19 +103,32 @@ def process_selected_areas(
 
 def submit_processed_pdf(processed_pdf: bytes) -> None:
     """Submit the processed PDF for further processing."""
-    if "text" not in st.session_state:
-        st.error("No text content found in session state")
-        return
-
-    bericht_text = st.session_state.text
-    bericht_file = io.BytesIO()
-    bericht_file.write(bericht_text.encode("utf-8"))
-    bericht_file.seek(0)
+    processing_mode = st.session_state.get("processing_mode", "text")
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        zip_file.writestr("bericht.txt", bericht_file.read())
+        if processing_mode == "text":
+            # Text mode: Include bericht.txt and rechnung.pdf
+            if "text" not in st.session_state:
+                st.error("No text content found in session state")
+                return
+
+            bericht_text = st.session_state.text
+            bericht_file = io.BytesIO()
+            bericht_file.write(bericht_text.encode("utf-8"))
+            bericht_file.seek(0)
+            zip_file.writestr("bericht.txt", bericht_file.read())
+
+        else:
+            # PDF mode: Include bericht.pdf and rechnung.pdf
+            if "bericht_pdf" not in st.session_state:
+                st.error("No bericht PDF found in session state")
+                return
+
+            zip_file.writestr("bericht.pdf", st.session_state.bericht_pdf)
+
         zip_file.writestr("rechnung.pdf", processed_pdf)
+
     zip_buffer.seek(0)
 
     st.download_button(
