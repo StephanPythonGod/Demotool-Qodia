@@ -77,6 +77,16 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     )
     st.session_state.setdefault("new_file_uploaded", False)
 
+    # Initialize page selection related state
+    st.session_state.setdefault("page_selection", [])
+    st.session_state.setdefault("page_range", {"start": 1, "end": 1})
+    st.session_state.setdefault("current_set", 0)
+    st.session_state.setdefault("page_cache", {})
+    st.session_state.setdefault("loaded_pages", {})
+    st.session_state.setdefault("overlay_removed", False)
+    st.session_state.setdefault("page_selections", {})
+    st.session_state.setdefault("processing_started", False)
+
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(
         "API_URL", "URL der API"
