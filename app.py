@@ -1,14 +1,21 @@
+import atexit
+import os
+
 import streamlit as st
 from dotenv import load_dotenv
 
+from utils.helpers.api import get_workflows, test_api
 from utils.helpers.logger import logger
-from utils.helpers.settings import load_settings_from_cookies, settings_sidebar
-from utils.session import configure_page, initialize_session_state
+from utils.helpers.settings import load_settings_from_cookies
+from utils.session import cleanup_resources, configure_page, initialize_session_state
 from utils.stages.analyze import analyze_stage
-from utils.stages.anonymize import anonymize_stage
-from utils.stages.edit_anonymized import edit_anonymized_stage
-from utils.stages.rechnung_anonymize import rechnung_anonymize_stage
+from utils.stages.generate_result_modal import rechnung_erstellen_modal
 from utils.stages.result import result_stage
+from utils.stages.select_bill import select_bill_stage
+from utils.stages.select_distribution_pages import select_distribution_pages_stage
+from utils.stages.select_documents import select_documents_stage
+
+configure_page()
 
 
 def init_app():
@@ -17,7 +24,32 @@ def init_app():
         load_dotenv()
         settings = load_settings_from_cookies()
         initialize_session_state(settings)
-        configure_page()
+        if (
+            os.getenv("DEPLOYMENT_ENV") == "local"
+            or os.getenv("DEPLOYMENT_ENV") == "production"
+        ):
+            if test_api():
+                st.sidebar.success("API-Test erfolgreich. API Key ist korrekt.")
+                with st.spinner("🔍 Lade Workflows..."):
+                    workflows = get_workflows()
+                    if workflows:
+                        st.session_state.workflows = workflows
+                    else:
+                        st.error(
+                            "Keine Kategorien verfügbar. Bitte überprüfen Sie den API Key."
+                        )
+                        st.session_state.workflows = None
+            else:
+                st.sidebar.error(
+                    "API-Test fehlgeschlagen. Bitte überprüfen Sie die API-Einstellungen."
+                )
+                st.session_state.workflows = None
+
+        # Register cleanup handler for app shutdown
+        if "cleanup_registered" not in st.session_state:
+            atexit.register(cleanup_resources)
+            st.session_state.cleanup_registered = True
+
         st.session_state.initialized = True
 
 
@@ -26,14 +58,13 @@ def main() -> None:
     init_app()
 
     st.image("data/logo.png")
-    settings_sidebar()
 
     stage_functions = {
         "analyze": analyze_stage,
-        "anonymize": anonymize_stage,
-        "edit_anonymized": edit_anonymized_stage,
+        "select_documents": select_documents_stage,
+        "select_distribution_pages": select_distribution_pages_stage,
+        "select_bill": select_bill_stage,
         "result": result_stage,
-        "rechnung_anonymize": rechnung_anonymize_stage,
     }
 
     current_stage = st.session_state.stage
@@ -41,6 +72,18 @@ def main() -> None:
         stage_function()
     else:
         logger.warning(f"Unknown stage: {current_stage}")
+
+    if (
+        "show_minderung_modal" in st.session_state
+        and st.session_state.show_minderung_modal
+    ):
+        rechnung_erstellen_modal(
+            df=st.session_state.generate_df, generate=st.session_state.generate_type
+        )
+        # Reset the state after showing the modal
+        st.session_state.show_minderung_modal = False
+        st.session_state.generate_type = None
+        st.session_state.generate_df = None
 
 
 if __name__ == "__main__":

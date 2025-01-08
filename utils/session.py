@@ -4,12 +4,13 @@ from typing import Any, Dict, Optional
 import pandas as pd
 import streamlit as st
 
-from utils.helpers.canvas import cleanup_session_state
+from utils.helpers.background import get_thread_pool
+from utils.helpers.document_store import get_document_store
+from utils.helpers.logger import logger
 
 
 def reset() -> None:
     """Reset the app to its initial state and rerun the script."""
-    st.session_state.stage = "analyze"
     st.session_state.text = None
     st.session_state.annotated_text_object = []
     st.session_state.df = pd.DataFrame()
@@ -25,7 +26,39 @@ def reset() -> None:
     st.session_state.uploaded_file = None
     st.session_state.original_df = None
 
-    cleanup_session_state()
+    if "current_highlighted_pdf" in st.session_state:
+        del st.session_state.current_highlighted_pdf
+
+    # Add these new resets
+
+    # cleanup_session_state()
+
+
+def cleanup_resources():
+    """Clean up resources when the application exits."""
+    try:
+        # Clean up document store
+        if "document_store" in st.session_state:
+            st.session_state.document_store.cleanup()
+            del st.session_state.document_store
+
+        # Cancel any pending futures
+        if "futures" in st.session_state:
+            for future in st.session_state.futures:
+                future.cancel()
+            st.session_state.futures.clear()
+
+        # Shutdown thread pool
+        if "thread_pool" in st.session_state:
+            st.session_state.thread_pool.shutdown(wait=True, cancel_futures=True)
+            del st.session_state.thread_pool
+
+        # Clear upload state
+        if "document_uploader" in st.session_state:
+            del st.session_state.document_uploader
+
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
 
 
 def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
@@ -129,25 +162,29 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
             errors="ignore",
         )
 
+    # Add new session state variables for document management
+    st.session_state.setdefault("selected_document_id", None)
+    st.session_state.setdefault(
+        "show_document_list", True
+    )  # Controls sidebar visibility
+
+    # Initialize document store if API key is available
+    if st.session_state.api_key != "Ihr API Schlüssel":
+        get_document_store()
+        get_thread_pool()
+
+    # Initialize page_selections as a set
+    if "page_selections" not in st.session_state or not isinstance(
+        st.session_state.page_selections, set
+    ):
+        st.session_state.page_selections = set()
+    st.session_state.setdefault("selected_workflow", None)
+
 
 def configure_page():
-    if "page_setting_count" not in st.session_state:
-        st.session_state.page_setting_count = 0
-    # Determine the initial sidebar state based on the presence of uploaded_file
-    if st.session_state.uploaded_file is not None or st.session_state.text is not None:
-        st.session_state.initial_sidebar_state = "collapsed"
-    else:
-        st.session_state.initial_sidebar_state = "expanded"
-
-    if (
-        st.session_state.sidebar_state != st.session_state.initial_sidebar_state
-        and st.session_state.page_setting_count <= 1
-    ):
-        st.set_page_config(
-            page_title="Qodia",
-            page_icon="🔍🤖📚",
-            layout="wide",
-            initial_sidebar_state=st.session_state.initial_sidebar_state,
-        )
-        st.session_state.sidebar_state = st.session_state.initial_sidebar_state
-        st.session_state.page_setting_count += 1
+    st.set_page_config(
+        page_title="Qodia",
+        page_icon="🔍🤖📚",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )

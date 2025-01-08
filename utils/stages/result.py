@@ -1,32 +1,57 @@
+import base64
+import os
 import re
-from typing import Optional
+from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-from annotated_text import annotated_text
 
+from utils.helpers.document_store import DocumentStatus, get_document_store
+from utils.helpers.feedback import handle_feedback_submission
 from utils.helpers.logger import logger
-from utils.helpers.telemetry import track_user_feedback
 from utils.helpers.transform import (
-    annotate_text_update,
-    format_euro,
+    analyze_add_data,
     format_ziffer_to_4digits,
     split_recognized_and_potential,
 )
-from utils.session import reset
-from utils.stages.feedback_modal import feedback_modal
-from utils.stages.generate_result_modal import rechnung_erstellen_modal
-from utils.stages.modal import add_new_ziffer, modal_dialog
-from utils.utils import (
-    create_tooltip,
-    find_zitat_in_text,
-    generate_report_files_as_zip,
-    tooltip_css,
-)
+from utils.stages.export_modal import export_modal
+from utils.stages.modal import modal_dialog
+from utils.utils import get_temp_dir, highlight_text_in_pdf
 
 
 def set_selected_ziffer(index):
-    st.session_state.selected_ziffer = index
+    """Update selected ziffer and highlight text in PDF."""
+    if index is None:
+        st.session_state.selected_ziffer = None
+        st.session_state.current_highlighted_pdf = None
+    else:
+        st.session_state.selected_ziffer = index
+
+        # Get document and OCR data
+        document_store = get_document_store()
+        document = document_store.get_document(st.session_state.selected_document_id)
+        ocr_data = document_store.get_ocr_data(st.session_state.selected_document_id)
+
+        if document and ocr_data:
+            # Get the zitat for the selected ziffer
+            selected_row = st.session_state.df.iloc[index]
+            zitat = selected_row["zitat"]
+
+            # Get PDF path
+            pdf_path = document_store.get_document_path(
+                st.session_state.selected_document_id
+            )
+
+            if pdf_path:
+                # Create highlighted PDF
+                temp_dir = get_temp_dir()
+                highlighted_pdf = highlight_text_in_pdf(
+                    pdf_path=pdf_path,
+                    word_map=ocr_data["word_map"],
+                    text_to_highlight=zitat,
+                    temp_dir=temp_dir,
+                )
+                st.session_state.current_highlighted_pdf = highlighted_pdf
 
 
 def add_to_recognized(index):
@@ -35,9 +60,19 @@ def add_to_recognized(index):
 
 
 def delete_ziffer(index):
+    """Delete a ziffer and update the UI state."""
+    # Clear selected ziffer if we're deleting the currently selected one
+    if st.session_state.selected_ziffer == index:
+        st.session_state.selected_ziffer = None
+        st.session_state.current_highlighted_pdf = None
+
+    # Remove the ziffer only from the working DataFrame
     st.session_state.df = st.session_state.df[st.session_state.df.index != index]
-    st.session_state.selected_ziffer = None
-    annotate_text_update()
+
+    # Reset index for current DataFrame while preserving row_id
+    st.session_state.df = st.session_state.df.reset_index(drop=True)
+
+    # Force rerun to update the UI
     st.rerun()
 
 
@@ -83,21 +118,86 @@ def apply_sorting():
     st.session_state.df.reset_index(drop=True, inplace=True)
 
 
-def handle_feedback_submission(df: pd.DataFrame, generate: Optional[str] = None):
-    # Track the duration taken by the user to provide feedback
-    if st.session_state.get("session_id"):
-        track_user_feedback(st.session_state.session_id)
-    else:
-        logger.warning("Session ID not found; feedback duration not tracked.")
-    # Open Feedback Modal
-    if generate is None:
-        feedback_modal(st.session_state.df)
-    else:
-        rechnung_erstellen_modal(df=df, generate=generate)
+def cleanup_temp_files():
+    """Clean up temporary highlighted PDFs."""
+    temp_dir = get_temp_dir()
+    for file in os.listdir(temp_dir):
+        if file.startswith("highlighted_"):
+            try:
+                os.remove(os.path.join(temp_dir, file))
+            except Exception as e:
+                logger.error(f"Error cleaning up temporary file {file}: {e}")
 
 
-def result_stage():
-    "Display the result of the analysis."
+def result_stage() -> None:
+    """Display the result stage in the Streamlit app."""
+    # Collapse sidebar when entering result stage
+    if st.session_state.stage == "result":
+        st.markdown(
+            """
+            <script>
+                var elements = window.parent.document.getElementsByClassName("css-1544g2n e1fqkh3o4");
+                if (elements.length > 0) {
+                    elements[0].click();
+                }
+            </script>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # Render document list sidebar (reuse from analyze stage)
+    from utils.stages.analyze import render_document_list_sidebar
+
+    render_document_list_sidebar()
+
+    # Get selected document
+    if not st.session_state.selected_document_id:
+        st.error("Kein Dokument ausgewählt")
+        return
+
+    document = get_document_store().get_document(st.session_state.selected_document_id)
+    if not document:
+        st.error("Ausgewähltes Dokument nicht gefunden")
+        return
+    if document["status"] == DocumentStatus.PROCESSING.value:
+        update_time = datetime.fromisoformat(document["updated_at"])
+        st.error(f"Dokument wird seit {datetime.now() - update_time} verarbeitet")
+        return
+
+    if document["status"] == DocumentStatus.FAILED.value:
+        st.error("Dokument konnte nicht verarbeitet werden")
+        error_message = document["error_message"]
+
+        # Extract relevant parts from error message
+        if "API error:" in error_message:
+            # Split into main parts
+            parts = error_message.split(", Message: ")
+            if len(parts) > 1:
+                # Extract the detail message from JSON-like string
+                detail_start = parts[1].find('"detail":"') + 9
+                detail_end = parts[1].find('"}')
+                if detail_start > 8 and detail_end > 0:
+                    error_detail = parts[1][detail_start:detail_end]
+                    st.error(
+                        f"""
+                    Fehlerdetails:
+                    {error_detail}
+                    """
+                    )
+                else:
+                    st.error(error_message)
+            else:
+                st.error(error_message)
+        else:
+            st.error(error_message)
+        return
+
+    # Update session state with document results
+    result = document["result"]
+    processed_data = analyze_add_data(result)
+
+    if st.session_state.df is None or len(st.session_state.df) == 0:
+        st.session_state.df = pd.DataFrame(processed_data)
 
     # Check if we need to clean up after adding a new ziffer
     if st.session_state.get("adding_new_ziffer", False):
@@ -112,7 +212,11 @@ def result_stage():
         st.session_state.adding_new_ziffer = False
 
     # Save the original DataFrame
-    if "original_df" not in st.session_state or st.session_state.original_df is None:
+    if (
+        "original_df" not in st.session_state
+        or st.session_state.original_df is None
+        or ("row_id" not in st.session_state.df)
+    ):
         logger.info("Saving original DataFrame")
         st.session_state.original_df = st.session_state.df.copy()
         if "row_id" not in st.session_state.original_df.columns:
@@ -131,82 +235,25 @@ def result_stage():
 
     recognized_df, potential_df = split_recognized_and_potential(st.session_state.df)
 
-    left_column, right_column = st.columns(2)
-    left_outer_column, _, _, _, right_outer_column = st.columns([1, 2, 2, 2, 1])
+    # Create two main columns
+    left_col, right_col = st.columns([1, 1])
 
-    # Left Column: Display the text with highlighting
-    with left_column:
-        st.subheader("Ärztlicher Bericht:")
-        if (
-            "selected_ziffer" in st.session_state
-            and st.session_state.selected_ziffer is not None
-        ):
-            selected_zitat = st.session_state.df.loc[
-                st.session_state.selected_ziffer, "zitat"
-            ]
-            selected_ziffer = st.session_state.df.loc[
-                st.session_state.selected_ziffer, "ziffer"
-            ]
-            annotated_text(
-                find_zitat_in_text(
-                    [(selected_zitat, selected_ziffer)], [st.session_state.text]
-                )
-            )
-        else:
-            st.write(st.session_state.text)
+    with left_col:
+        st.subheader("Erkannte Leistungsziffern")
 
-    with right_column:
-        top_left, _, _, top_right = st.columns([2, 1, 1, 1])
-        top_left.subheader("Erkannte Leistungsziffern:")
+        # Header row for recognized services
+        header_cols = st.columns([1, 1, 1])
+        headers = ["Ziffer", "Anzahl", "Faktor"]
 
-        # Displaying the Honorarsumme (Sum of "Gesamtbetrag" column) with thousand separators
-        top_right.metric(
-            label="Honorarsumme",
-            value=format_euro(recognized_df["gesamtbetrag"].sum()),
-        )
+        for col, header in zip(header_cols, headers):
+            col.markdown(f"**{header}**")
 
-        # Header row
-        header_cols = right_column.columns([0.5, 1, 1, 1, 1, 2, 1])
-        headers = [
-            "",
-            "Ziffer",
-            "Häufigkeit",
-            "Faktor",
-            "Gesamtbetrag",
-            "Beschreibung",
-            "Aktionen",
-        ]
-
-        for i, (col, header) in enumerate(zip(header_cols, headers)):
-            if header == "Ziffer":
-                # Set selected_ziffer to None
-
-                # Set the button label based on the current sort_mode
-                sort_label = {
-                    "ask": "Ziffer ⬆️",
-                    "desc": "Ziffer ⬇️",
-                    "text": "Ziffer 🔠",
-                }
-
-                # Initialize sort_mode in session_state if not set yet
-                sort_mode = st.session_state.get("sort_mode", "text")
-
-                # Display the button and set the sort mode accordingly
-                col.button(
-                    sort_label.get(sort_mode, "Ziffer 🔠"),
-                    on_click=lambda: (set_selected_ziffer(None), set_sort_mode()),
-                )
-            elif header == "":
-                pass
-            else:
-                col.markdown(f"**{header}**")
-
-        # Display table rows, now including "Gesamtbetrag" in the table
+        # Display recognized services
         for index, row in recognized_df.iterrows():
-            cols = right_column.columns([0.5, 1, 1, 1, 1, 2, 0.5, 0.5])
+            # Update columns to add space for delete button
+            cols = st.columns([1, 1, 1, 0.4, 0.4])
 
-            # Ziffer button
-            if cols[1].button(
+            if cols[0].button(
                 format_ziffer_to_4digits(row["ziffer"]),
                 key=f"ziffer_{row['row_id']}",
                 type="secondary"
@@ -218,141 +265,110 @@ def result_stage():
                 )
                 st.rerun()
 
-            # Displaying each row's values
-            cols[2].write(row["anzahl"])  # Häufigkeit
-            cols[3].write(row["faktor"])  # Faktor
+            cols[1].write(row["anzahl"])
+            cols[2].write(row["faktor"])
 
-            # Format "Gesamtbetrag" with thousand separators
-            formatted_gesamtbetrag = format_euro(row["gesamtbetrag"])
-            cols[4].write(
-                f"{formatted_gesamtbetrag}"
-            )  # New "Gesamtbetrag" column displaying value
-
-            description_html = f"<div style='overflow-x: auto; white-space: nowrap; padding: 5px;'>{row['text']}</div>"
-            cols[5].markdown(description_html, unsafe_allow_html=True)  # Beschreibung
-
-            # Actions: Edit and Delete
-            if cols[6].button(
-                "✏️", key=f"edit_{row['row_id']}"
-            ):  # Use row_id in the key
+            if cols[3].button("✏️", key=f"edit_{row['row_id']}"):
                 st.session_state.ziffer_to_edit = index
                 modal_dialog()
-            if cols[7].button(
-                "🗑️", key=f"delete_{row['row_id']}"
-            ):  # Use row_id in the key
+
+            if cols[4].button("🗑️", key=f"delete_{row['row_id']}"):
                 delete_ziffer(index)
 
-        # Center the "Add New Ziffer" button
-        button_col = right_column.columns([1, 1, 1, 1, 2, 1, 1, 1, 1])[4]
-        if button_col.button("➕", key="add_new_ziffer", type="secondary"):
-            add_new_ziffer()
-
-        st.subheader("Potentielle Leistungsziffern:")
-
-        # Display potential services
-        for index, row in potential_df.iterrows():
-            cols = right_column.columns([0.5, 1, 1, 1, 1, 2, 0.5, 0.5])
-
-            cols[0].markdown(tooltip_css, unsafe_allow_html=True)
-            cols[0].markdown(
-                create_tooltip(row["confidence"], row["confidence_reason"]),
-                unsafe_allow_html=True,
-            )
-            cols[1].button(
-                format_ziffer_to_4digits(row["ziffer"]),
-                key=f"pot_ziffer_{row['row_id']}",
-            )
-            cols[2].write(row["anzahl"])
-            cols[3].write(row["faktor"])
-            cols[4].write(format_euro(row["gesamtbetrag"]))
-            cols[5].markdown(
-                f"<div style='overflow-x: auto; white-space: nowrap; padding: 5px;'>{row['text']}</div>",
-                unsafe_allow_html=True,
-            )
-            if cols[6].button("✏️", key=f"pot_edit_{row['row_id']}"):
-                st.session_state.ziffer_to_edit = index
-                modal_dialog()
-            if cols[7].button("➕", key=f"pot_add_{row['row_id']}"):
-                add_to_recognized(index)
-
-    # Rest of the layout
-    with left_outer_column:
+        # Add new Ziffer button
         st.button(
-            "Zurücksetzen",
-            on_click=lambda: (reset()),
-            type="primary",
+            "➕ Ziffer hinzufügen",
+            key="add_new_ziffer",
+            type="secondary",
             use_container_width=True,
         )
-        with right_outer_column:
+
+        # Potential services section
+        st.subheader("Potentielle Leistungsziffern")
+
+        for index, row in potential_df.iterrows():
+            # Update columns to add space for delete button
+            cols = st.columns([1, 1, 1, 0.4, 0.4, 0.4])
+
+            if cols[0].button(
+                format_ziffer_to_4digits(row["ziffer"]),
+                key=f"pot_ziffer_{row['row_id']}",
+                type="secondary"
+                if st.session_state.selected_ziffer != index
+                else "primary",
+            ):
+                set_selected_ziffer(
+                    None if st.session_state.selected_ziffer == index else index
+                )
+                st.rerun()
+
+            cols[1].write(row["anzahl"])
+            cols[2].write(row["faktor"])
+
+            if cols[3].button("✏️", key=f"pot_edit_{row['row_id']}"):
+                st.session_state.ziffer_to_edit = index
+                modal_dialog()
+            if cols[4].button("➕", key=f"pot_add_{row['row_id']}"):
+                add_to_recognized(index)
+            if cols[5].button("🗑️", key=f"pot_delete_{row['row_id']}"):
+                delete_ziffer(index)
+
+        # Remove the bottom_cols split and create a container for buttons at the bottom
+        st.write("")  # Add some spacing
+        st.write("")  # Add some spacing
+        button_container = st.container()
+
+    with right_col:
+        # Get document store instance
+        document_store = get_document_store()
+
+        # Get PDF path - either highlighted or original
+        pdf_path = st.session_state.get(
+            "current_highlighted_pdf"
+        ) or document_store.get_document_path(st.session_state.selected_document_id)
+
+        if pdf_path:
+            # Calculate height based on number of elements (40px per element, minimum 800px)
+            pdf_height = min(800, 100 * len(st.session_state.original_df))
+
+            # Read file as bytes
+            with open(pdf_path, "rb") as file:
+                bytes_data = file.read()
+
+            # Convert to base64
+            base64_pdf = base64.b64encode(bytes_data).decode("utf-8")
+
+            # Embed PDF in HTML with dynamic height
+            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{pdf_height}" type="application/pdf"></iframe>'
+
+            # Display file
+            st.markdown(pdf_display, unsafe_allow_html=True)
+        else:
+            st.error("PDF konnte nicht geladen werden")
+        st.write("")  # Add some spacing
+        st.write("")  # Add some spacing
+
+    # Create a full-width container for buttons
+    button_container = st.container()
+    with button_container:
+        # Create three columns with the middle one taking most space
+        left_btn, spacer, right_btn = st.columns([1, 5, 1])
+
+        # Place Feedback button on the far left
+        with left_btn:
             if st.button("Feedback geben", type="primary", use_container_width=True):
                 with st.spinner("📝 Feedback wird geladen..."):
                     handle_feedback_submission(df=recognized_df)
 
-            if st.button("PDF generieren", type="primary", use_container_width=True):
-                with st.spinner("📄 Generiere PDF..."):
-                    handle_feedback_submission(df=recognized_df, generate="pdf")
+        # Place Extrahieren button on the far right
+        with right_btn:
+            if st.button("Extrahieren", type="primary", use_container_width=True):
+                export_modal(recognized_df)
 
-            if st.session_state.pdf_ready:
-                st.download_button(
-                    label="Download PDF",
-                    data=st.session_state.pdf_data,
-                    file_name="generated_pdf.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
+    # Add to session state initialization
+    if "current_highlighted_pdf" not in st.session_state:
+        st.session_state.current_highlighted_pdf = None
 
-            if st.button(
-                "PAD Positionen generieren", type="primary", use_container_width=True
-            ):
-                handle_feedback_submission(df=recognized_df, generate="pad_positionen")
-
-            if st.session_state.pad_ready:
-                st.download_button(
-                    label="Download PAD Positionen",
-                    data=st.session_state.pad_data,
-                    file_name="pad_positionen.xml",
-                    mime="application/xml",
-                    use_container_width=True,
-                )
-
-            if st.button(
-                "Bericht exportieren",
-                type="primary",
-                use_container_width=True,
-            ):
-                with st.spinner("📄 Generiere Bericht..."):
-                    st.session_state.pdf_report_data = generate_report_files_as_zip(
-                        df=st.session_state.df
-                    )
-
-            if st.session_state.pdf_report_data:
-                st.download_button(
-                    label="Download Bericht",
-                    data=st.session_state.pdf_report_data,
-                    file_name="report.zip",
-                    mime="application/zip",
-                    use_container_width=True,
-                )
-
-            if st.button(
-                "PADnext Datei generieren",
-                type="primary",
-                use_container_width=True,
-                disabled=(st.session_state.pad_data_path is None),
-                help="PADnext Datei kann nur generiert werden, wenn eine PADnext Datei hochgeladen wurde.",
-            ):
-                handle_feedback_submission(df=recognized_df, generate="pad_next")
-
-            if st.session_state.pad_data_ready:
-                # Read the .zip file as binary data
-                with open(st.session_state.pad_data_ready, "rb") as f:
-                    padnext_file_data = f.read()
-
-                # Now, pass the binary data to the download button
-                st.download_button(
-                    label="Download PADnext Datei",
-                    data=padnext_file_data,  # Binary data
-                    file_name=st.session_state.pad_data_ready.name,  # Extract the filename from the Path object
-                    mime="application/zip",  # Adjust MIME type for a .zip file
-                    use_container_width=True,
-                )
+    # Add cleanup when changing documents or stages
+    if st.session_state.stage != "result":
+        cleanup_temp_files()

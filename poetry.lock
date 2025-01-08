@@ -32,6 +32,21 @@ test-trackers = ["comet-ml", "dvclive", "tensorboard", "wandb"]
 testing = ["bitsandbytes", "datasets", "diffusers", "evaluate", "parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist", "scikit-learn", "scipy", "timm", "torchdata (>=0.8.0)", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
 
 [[package]]
+name = "aiosqlite"
+version = "0.19.0"
+description = "asyncio bridge to the standard sqlite3 module"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "aiosqlite-0.19.0-py3-none-any.whl", hash = "sha256:edba222e03453e094a3ce605db1b970c4b3376264e56f32e2a4959f948d66a96"},
+    {file = "aiosqlite-0.19.0.tar.gz", hash = "sha256:95ee77b91c8d2808bd08a59fbebf66270e9090c3d92ffbf260dc0db0b979577d"},
+]
+
+[package.extras]
+dev = ["aiounittest (==1.4.1)", "attribution (==1.6.2)", "black (==23.3.0)", "coverage[toml] (==7.2.3)", "flake8 (==5.0.4)", "flake8-bugbear (==23.3.12)", "flit (==3.7.1)", "mypy (==1.2.0)", "ufmt (==2.1.0)", "usort (==1.0.6)"]
+docs = ["sphinx (==6.1.3)", "sphinx-mdinclude (==0.5.3)"]
+
+[[package]]
 name = "altair"
 version = "5.4.1"
 description = "Vega-Altair: A declarative statistical visualization library for Python."
@@ -3837,6 +3852,20 @@ files = [
 htbuilder = "*"
 
 [[package]]
+name = "st-clickable-images"
+version = "0.0.3"
+description = "A Streamlit component to display clickable images"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "st-clickable-images-0.0.3.tar.gz", hash = "sha256:84a1337f9364bdb8f5a3c4d85faa6695fd959f449915a616a3a3a47e37b1f7f1"},
+    {file = "st_clickable_images-0.0.3-py3-none-any.whl", hash = "sha256:c35555a660233be01f502202a210f01129f9d111033a8b1f2a4dac0ae177fcd8"},
+]
+
+[package.dependencies]
+streamlit = ">=0.63"
+
+[[package]]
 name = "streamlit"
 version = "1.39.0"
 description = "A faster way to build and share data apps"
@@ -3933,6 +3962,23 @@ files = [
 jinja2 = "*"
 pillow = "*"
 streamlit = ">=1.2"
+
+[[package]]
+name = "streamlit-pdf-viewer"
+version = "0.0.20"
+description = "Streamlit component for PDF visualisation and manipulation"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "streamlit_pdf_viewer-0.0.20-py3-none-any.whl", hash = "sha256:3712249a930b6b274289fdf1d7b30b380a760e63a5e1319c75f3f7d76613e27c"},
+    {file = "streamlit_pdf_viewer-0.0.20.tar.gz", hash = "sha256:71b59a0034603195d6461c60d46f1d7803e658b7f2b3daec5fcc687c72de3e00"},
+]
+
+[package.dependencies]
+streamlit = ">=0.63"
+
+[package.extras]
+devel = ["wheel"]
 
 [[package]]
 name = "sympy"
@@ -4588,4 +4634,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.14"
-content-hash = "d7dd1f247854ff1d53c2694382deecb808f3b738f03f04c0aa671ebbccca707c"
+content-hash = "42eb3e25ae3cf14979cb86df049b07ab62f6bec923ee6ce2c7077ee060f3f2b9"

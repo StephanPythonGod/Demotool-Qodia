@@ -39,6 +39,11 @@ class OTELCompatibleLogHandler(LoggingHandler):
 
 def initialize_otlp_logging() -> Tuple[Optional[LoggerProvider], bool]:
     """Initialize OTLP logging and return (provider, success)"""
+    # Check if telemetry is enabled
+    if os.getenv("TELEMETRY_ENABLED", "false").lower() != "true":
+        logging.info("Telemetry is disabled, skipping OTLP logging initialization")
+        return None, False
+
     otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
 
     success, formatted_endpoint = check_otlp_connection(otlp_endpoint)

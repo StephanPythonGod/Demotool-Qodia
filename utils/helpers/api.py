@@ -3,6 +3,7 @@ import json
 import os
 import pickle
 import time
+from datetime import datetime
 from io import BytesIO
 from typing import Dict, List, Optional, Union
 
@@ -13,6 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+from utils.helpers.document_store import get_document_store
 from utils.helpers.logger import logger
 from utils.helpers.transform import df_to_items, format_ziffer_to_4digits
 
@@ -81,23 +83,32 @@ def get_workflows() -> List[str]:
     return response.json()["workflows"]
 
 
-def analyze_api_call(text: str) -> Optional[Dict]:
+def analyze_api_call(
+    text: str,
+    category: str,
+    api_key: str,
+    api_url: str,
+    arzt_hash: Optional[str] = None,
+    kassenname_hash: Optional[str] = None,
+) -> Optional[Dict]:
     """
     Analyze the given text using the API and return the prediction.
-    If a cached response exists in the data folder and the environment is 'development', return that instead.
 
     Args:
-        text (str): The text to be analyzed.
+        text (str): The text to be analyzed
+        category (str): The category to analyze against
+        api_key (str): The API key for authentication
+        api_url (str): The base URL for the API
+        arzt_hash (Optional[str]): Hash value for the doctor
+        kassenname_hash (Optional[str]): Hash value for the insurance provider
 
     Returns:
-        Optional[Dict]: The prediction result or None if an error occurred.
+        Optional[Dict]: The prediction result or None if an error occurred
     """
     logger.info("Analyzing text...")
 
-    if st.session_state.category is None:
-        st.error(
-            "Bitte wählen Sie eine Kategorie aus, bevor Sie den Text analysieren oder speichern Sie die Einstellungen erneut."
-        )
+    if not category:
+        logger.error("No category selected")
         raise ValueError(
             "No category selected. Please select a category before analyzing text."
         )
@@ -117,68 +128,46 @@ def analyze_api_call(text: str) -> Optional[Dict]:
         except Exception as e:
             logger.error(f"Error loading cached response: {e}")
 
-    url = f"{st.session_state.api_url}/process_document"
+    url = f"{api_url}/process_document"
     payload = {
         "text": text,
-        "category": st.session_state.category,
+        "category": category,
         "process_type": "predict",
     }
 
-    if st.session_state.arzt_hash is not None:
-        payload["arzt"] = st.session_state.arzt_hash
+    if arzt_hash is not None:
+        payload["arzt"] = arzt_hash
 
-    if st.session_state.kassenname_hash is not None:
-        payload["kassenname"] = st.session_state.kassenname_hash
+    if kassenname_hash is not None:
+        payload["kassenname"] = kassenname_hash
 
-    headers = {"x-api-key": st.session_state.api_key}
+    headers = {"x-api-key": api_key}
 
     try:
         response = requests.post(url, headers=headers, data=payload)
+        # Store headers for later use
+        analyze_api_call.last_response_headers = dict(response.headers)
         logger.info(f"Done analyzing text. Response status: {response.status_code}")
     except Exception as e:
         logger.error(f"Error calling API for text analysis: {e}")
-        st.error(
-            f"{str(e)}\n\n"
-            "Weitere Informationen:\n"
-            "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes. "
-            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut."
-        )
-        return None
+        raise
 
     if response.status_code != 200:
         request_id = response.headers.get("X-Request-ID", "nicht-vorhanden")
-        logger.error(
-            f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
-        )
-
-        # Format error message
-        error_text = response.text
-        try:
-            error_json = response.json()
-            formatted_error = "\n".join(
-                f"{k.capitalize()}: {v}" for k, v in error_json.items()
-            )
-        except Exception:
-            formatted_error = (
-                error_text
-                if error_text
-                else "Ein Fehler ist aufgetreten beim Aufrufen der API für die Analyse des Textes."
-            )
-
-        st.error(
-            f"{formatted_error}\n\n"
-            "Weitere Informationen:\n"
-            f"Status Code: {response.status_code}\n"
-            f"Anfrage-ID (Kann von Qodia verwendet werden, um den Fehler zu finden): {request_id}"
-        )
-        return None
+        error_msg = f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
 
     st.session_state.analyze_api_response = response
 
     try:
         prediction = response.json()["result"]["prediction"]
     except KeyError:
-        prediction = response.json()["prediction"]
+        try:
+            prediction = response.json()["prediction"]
+        except KeyError as e:
+            logger.error(f"Unexpected API response format: {e}")
+            raise
 
     if USE_CACHE:
         cached_response = {"response": response, "prediction": prediction}
@@ -192,31 +181,48 @@ def analyze_api_call(text: str) -> Optional[Dict]:
     return prediction
 
 
-def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]:
+def ocr_pdf_to_text_api(
+    file: Union[Image.Image, UploadedFile, bytes],
+    category: str,
+    api_key: str,
+    api_url: str,
+    filename: Optional[str] = None,
+) -> Optional[str]:
     """
-    Perform OCR on the given file using the API and return the extracted text.
-    If a cached response exists in the data folder and the environment is 'development', return that instead.
+    Perform OCR on the given file using the API.
 
     Args:
-        file (Union[Image.Image, UploadedFile]): The file to be processed.
+        file: The file to be processed (Image, UploadedFile, or bytes)
+        category: The category to process against
+        api_key: The API key for authentication
+        api_url: The base URL for the API
+        filename: Optional filename when passing raw bytes
 
     Returns:
-        Optional[str]: The extracted text or None if an error occurred.
+        Optional[str]: The extracted text or None if an error occurred
     """
     logger.info("Performing OCR on the document...")
 
-    if st.session_state.category is None:
-        st.error(
-            "Bitte wählen Sie eine Kategorie aus, bevor Sie den Text analysieren oder speichern Sie die Einstellungen erneut."
-        )
+    if not category:
+        logger.error("No category selected")
         raise ValueError(
             "No category selected. Please select a category before analyzing text."
         )
 
+    # Get the filename for caching
+    cache_filename = filename
+    if isinstance(file, UploadedFile):
+        cache_filename = file.name
+    elif isinstance(file, Image.Image):
+        cache_filename = "clipboard_image.png"
+
+    if not cache_filename:
+        cache_filename = f"document_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     data_folder = os.path.join(os.path.dirname(__file__), "data")
     os.makedirs(data_folder, exist_ok=True)
     safe_filename = os.path.join(
-        data_folder, f"{hash(file.name + st.session_state.category)}_ocr_response.pkl"
+        data_folder, f"{hash(cache_filename + category)}_ocr_response.pkl"
     )
 
     if USE_CACHE and os.path.exists(safe_filename):
@@ -228,25 +234,30 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         except Exception as e:
             logger.error(f"Error loading cached OCR response: {e}")
 
-    url = f"{st.session_state.api_url}/process_document"
+    url = f"{api_url}/process_document"
     payload = {
         "ocr_processor": "google_document_ai",
         "process_type": "ocr",
-        "category": st.session_state.category,
+        "category": category,
     }
-    headers = {"x-api-key": st.session_state.api_key}
+    headers = {"x-api-key": api_key}
 
+    # Handle different input types
     if isinstance(file, Image.Image):
         file_bytes = BytesIO()
         file.save(file_bytes, format="PNG")
         file_bytes = file_bytes.getvalue()
         file_name = "clipboard_image.png"
         mime_type = "image/png"
-    else:
+    elif isinstance(file, UploadedFile):
         file.seek(0)
         file_bytes = file.read()
         file_name = file.name
         mime_type = file.type or "application/octet-stream"
+    else:  # bytes
+        file_bytes = file
+        file_name = filename or f"document_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        mime_type = "application/octet-stream"
 
     files = {"file": (file_name, file_bytes, mime_type)}
 
@@ -254,51 +265,27 @@ def ocr_pdf_to_text_api(file: Union[Image.Image, UploadedFile]) -> Optional[str]
         response = requests.post(url, headers=headers, data=payload, files=files)
     except Exception as e:
         logger.error(f"Error calling API for OCR: {e}")
-        st.error(
-            f"{str(e)}\n\n"
-            "Weitere Informationen:\n"
-            "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR. "
-            "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut."
-        )
-        return None
+        raise
 
     logger.info(
         f"Done performing OCR on the document. Response status: {response.status_code}"
     )
     if response.status_code != 200:
         request_id = response.headers.get("X-Request-ID", "nicht-vorhanden")
-        logger.error(
-            f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
-        )
-
-        # Format error message
-        error_text = response.text
-        try:
-            error_json = response.json()
-            formatted_error = "\n".join(
-                f"{k.capitalize()}: {v}" for k, v in error_json.items()
-            )
-        except Exception:
-            formatted_error = (
-                error_text
-                if error_text
-                else "Ein Fehler ist aufgetreten beim Aufrufen der API für OCR."
-            )
-
-        st.error(
-            f"{formatted_error}\n\n"
-            "Weitere Informationen:\n"
-            f"Status Code: {response.status_code}\n"
-            f"Anfrage-ID: {request_id}"
-        )
-        return None
+        error_msg = f"API error: Status Code: {response.status_code}, Message: {response.text}, Request ID: {request_id}"
+        logger.error(error_msg)
+        raise Exception(error_msg)
 
     st.session_state.ocr_api_response = response
 
     try:
         ocr_text = response.json()["result"]["ocr"]["ocr_text"]
     except KeyError:
-        ocr_text = response.json()["ocr"]["ocr_text"]
+        try:
+            ocr_text = response.json()["ocr"]["ocr_text"]
+        except KeyError as e:
+            logger.error(f"Unexpected API response format: {e}")
+            raise
 
     if USE_CACHE:
         cached_response = {"ocr_text": ocr_text}
@@ -318,24 +305,46 @@ def send_feedback_api(response_object: Dict) -> None:
     Args:
         response_object (Dict): The response object from the API.
     """
-    analyze_api_call_response = st.session_state.analyze_api_response
-    api_request_id = analyze_api_call_response.headers.get("X-Request-ID", None)
-    if api_request_id:
-        url = f"{st.session_state.api_url}/feedback/{api_request_id}"
-        payload = json.dumps(response_object, indent=4)  # Convert dict to JSON string
-        headers = {
-            "x-api-key": st.session_state.api_key,
-            "Content-Type": "application/json",  # Specify content type as JSON
-        }
-        try:
-            response = requests.post(url, headers=headers, data=payload)
-            logger.info(f"Feedback sent. Response status: {response.status_code}")
-            if response.status_code != 200:
-                logger.error(f"API Feedback error: {response.text}")
-        except Exception as e:
-            logger.error(f"Error sending feedback: {e}")
-    else:
-        logger.error("API request ID not found. Feedback not sent.")
+    document_store = get_document_store()
+    document_id = st.session_state.selected_document_id
+
+    # Get document from store
+    document = document_store.get_document(document_id)
+    if not document:
+        raise Exception(f"Document {document_id} not found")
+
+    # Get API headers
+    api_headers = document.get("api_headers")
+    if not api_headers:
+        raise Exception(f"API headers not found for document {document_id}")
+
+    try:
+        api_headers = json.loads(api_headers)
+    except json.JSONDecodeError:
+        raise Exception(f"Invalid API headers format for document {document_id}")
+
+    api_request_id = api_headers.get("x-request-id")
+    if not api_request_id:
+        raise Exception(
+            f"Request ID not found in API headers for document {document_id}"
+        )
+
+    url = f"{st.session_state.api_url}/feedback/{api_request_id}"
+    payload = json.dumps(response_object, indent=4)
+    headers = {
+        "x-api-key": st.session_state.api_key,
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        logger.info(f"Feedback sent. Response status: {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"API Feedback error: {response.text}")
+            raise Exception(f"API Feedback error: {response.text}")
+    except Exception as e:
+        logger.error(f"Error sending feedback: {e}")
+        raise
 
 
 def generate_pdf_from_df(df: Optional[pd.DataFrame] = None) -> str:
@@ -512,7 +521,4 @@ def test_api() -> bool:
         return False
 
     logger.info("API settings are correct. URL and API key are working.")
-    st.success(
-        "Die API-Einstellungen sind korrekt. Die URL und der API-Key funktionieren."
-    )
     return True

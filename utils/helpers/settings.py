@@ -66,7 +66,7 @@ def settings_sidebar() -> None:
             help="Hier kann der API Key geändert werden, der für die Authentifizierung bei der API verwendet wird.",
         ).strip()
 
-        if st.button("Test API"):
+        if st.button("API Testen"):
             with st.spinner("🔍 Teste API Einstellungen..."):
                 if test_api():
                     st.success("API-Test erfolgreich! Kategorien werden geladen...")
@@ -118,7 +118,7 @@ def settings_sidebar() -> None:
             else:
                 st.session_state.kassenname_hash = None
 
-            if st.button("Save Settings"):
+            if st.button("Einstellungen speichern"):
                 with st.spinner("Speichern der Einstellungen..."):
                     save_settings_to_cookies()
                     st.success("Einstellungen erfolgreich gespeichert!")

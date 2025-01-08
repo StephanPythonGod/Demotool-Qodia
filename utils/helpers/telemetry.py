@@ -17,7 +17,13 @@ class StreamlitTelemetryManager:
         """Initialize telemetry manager."""
         self._telemetry_enabled = False
         self._meter_provider = None
-        self._initialize_telemetry()
+
+        # Check telemetry flag before initialization
+        if os.getenv("TELEMETRY_ENABLED", "false").lower() == "true":
+            self._initialize_telemetry()
+        else:
+            logger.info("Telemetry is disabled via environment variable")
+
         self._define_metrics()
 
     def _initialize_telemetry(self):
@@ -59,11 +65,12 @@ class StreamlitTelemetryManager:
 
     def _define_metrics(self):
         """Define the metrics for telemetry."""
-        try:
-            if not self._telemetry_enabled:
-                logger.warning("Telemetry is disabled; no metrics defined.")
-                return
+        # Skip if telemetry is disabled
+        if not self._telemetry_enabled:
+            logger.debug("Telemetry is disabled; skipping metric definitions")
+            return
 
+        try:
             meter = metrics.get_meter("Streamlit Metrics")
             self.feedback_duration_histogram = meter.create_histogram(
                 "feedback_duration_seconds",
