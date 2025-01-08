@@ -445,3 +445,53 @@ def concatenate_labels(zitat):
 
     # Join all the labels with " [...] " between them
     return " [...] ".join(concatenated_text)
+
+
+def analyze_add_data(data: list[dict]) -> dict:
+    """Add all necessary data for the frontend.
+
+    Args:
+        data (list[dict]): A list of dictionaries with 'zitat', 'begruendung', 'goa_ziffer'.
+
+    Returns:
+        dict: Dictionary with keys 'ziffer', 'anzahl', 'faktor', 'text', 'zitat', and 'begruendung'.
+    """
+    try:
+        new_data = {
+            "ziffer": [],
+            "anzahl": [],
+            "faktor": [],
+            "text": [],
+            "zitat": [],
+            "begruendung": [],
+            "erschwerende_bedingungen": [],
+            "confidence": [],
+            "analog": [],
+            "einzelbetrag": [],
+            "gesamtbetrag": [],
+            "go": [],
+            "confidence_reason": [],
+        }
+
+        for entry in data:
+            new_data["ziffer"].append(entry.get("ziffer", ""))
+            new_data["zitat"].append(entry.get("zitat", ""))
+            new_data["begruendung"].append(entry.get("begruendung", ""))
+            new_data["erschwerende_bedingungen"].append(
+                entry.get("erschwerende_bedingungen", "")
+            )
+            new_data["anzahl"].append(entry.get("anzahl", 0))
+            new_data["faktor"].append(entry.get("faktor", 0))
+            new_data["text"].append(entry.get("text", ""))
+            new_data["confidence"].append(entry.get("confidence", 1.0))
+            new_data["analog"].append(entry.get("analog", ""))
+            new_data["einzelbetrag"].append(entry.get("einzelbetrag", 0))
+            new_data["gesamtbetrag"].append(entry.get("gesamtbetrag", 0))
+            new_data["go"].append(entry.get("go", ""))
+            new_data["confidence_reason"].append(entry.get("confidence_reason", ""))
+
+        return new_data
+
+    except Exception as e:
+        logger.error(f"Error processing data: {e}")
+        return {}

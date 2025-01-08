@@ -14,6 +14,7 @@ ENTITIES = [
     "DATE_TIME",
     "GENDER_WORD",
     "ID_NUMBER",
+    "FINANCIAL_ID",
 ]
 
 PRESIDIO_EQUIVALENCES = {
@@ -23,6 +24,7 @@ PRESIDIO_EQUIVALENCES = {
     "DATE_TIME": "DATE_TIME",
     "GENDER_WORD": "GENDER_WORD",
     "ID_NUMBER": "ID_NUMBER",
+    "FINANCIAL_ID": "FINANCIAL_ID",
 }
 
 CHECK_LABEL_GROUPS = [
@@ -88,6 +90,31 @@ GENDER_WORDS = [
     "personen",
     "person",
     "persons",
+]
+
+FINANCIAL_PATTERNS = [
+    # German Tax ID (Steuernummer) - various formats
+    r"St-Nr\.?\s*:?\s*[\d/]+",
+    r"\b\d{2}/\d{3}/\d{5}\b",
+    # VAT ID (USt-IdNr.)
+    r"USt-IdNr\.?\s*:?\s*DE\d{9}",
+    r"\bDE\d{9}\b",
+    # IBAN (German)
+    r"\bDE\d{2}[\s\d]{20,}\b",
+    r"IBAN\s*:?\s*DE\d{2}[\s\d]{20,}",
+    # BIC/SWIFT - Make case sensitive and more specific
+    r"\b(?:BIC|SWIFT)\s*:?\s*[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b",
+    r"\b[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b(?=.*?(?:BIC|SWIFT))",  # Only match if BIC/SWIFT appears nearby
+    # Business Registration (HRB)
+    r"HRB\s*:?\s*\d{1,6}",
+    r"\bHRB\s*\d{1,6}\b",
+    # Insurance Number (IK-Nr.)
+    r"IK-Nr\.?\s*:?\s*\d{9}",
+    # General account numbers - make more specific
+    r"Konto-?Nr\.?\s*:?\s*\d{4,12}",
+    r"Kontonummer\s*:?\s*\d{4,12}",
+    # General reference numbers - make more specific
+    r"Ref(?:erenz)?[-\.]?Nr\.?\s*:?\s*\d{4,15}",
 ]
 
 
@@ -179,24 +206,41 @@ def _anonymize_gender_words(text: str, detected_entities: List[Dict[str, Any]]) 
     return detected_entities
 
 
+def _anonymize_financial_ids(
+    text: str, detected_entities: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Detect and anonymize financial and institutional identifiers in text.
+    """
+    for pattern in FINANCIAL_PATTERNS:
+        # Use re.IGNORECASE only for patterns that don't include uppercase letters
+        flags = re.IGNORECASE if not any(c.isupper() for c in pattern) else 0
+
+        for match in re.finditer(pattern, text, flags=flags):
+            # Verify the match isn't just a regular word (additional validation)
+            if any(char.isdigit() or char in "/:.-" for char in match.group(0)):
+                detected_entities.append(
+                    {
+                        "original_word": match.group(0),
+                        "entity_type": "FINANCIAL_ID",
+                        "start": match.start(),
+                        "end": match.end(),
+                        "score": 1.0,
+                    }
+                )
+
+    return detected_entities
+
+
 def anonymize_text_german(
     text: str, use_spacy: bool = True, use_flair: bool = True, threshold: float = 0.7
 ) -> Dict[str, Any]:
     """
-    Anonymize German text using NER models (Flair, SpaCy, or both).
-
-    Args:
-        text (str): Text to anonymize.
-        use_spacy (bool): Use SpaCy for NER (default: True).
-        use_flair (bool): Use Flair for NER (default: True).
-        threshold (float): Confidence threshold for entity detection (default: 0.8).
-
-    Returns:
-        Dict[str, Any]: Dictionary containing anonymized text and detected entities.
+    Anonymize German text using NER models and pattern matching.
     """
     detected_entities = []
 
-    # Identify dates using regular expressions
+    # Apply existing pattern matching
     for pattern in DATE_PATTERNS:
         for match in re.finditer(pattern, text):
             detected_entities.append(
@@ -205,7 +249,7 @@ def anonymize_text_german(
                     "entity_type": "DATE_TIME",
                     "start": match.start(),
                     "end": match.end(),
-                    "score": 1.0,  # Assign a high confidence for regex matches
+                    "score": 1.0,
                 }
             )
 
@@ -216,6 +260,11 @@ def anonymize_text_german(
 
     # Apply continuous number anonymization
     detected_entities = _anonymize_continuous_numbers(
+        text, detected_entities=detected_entities
+    )
+
+    # Apply financial ID anonymization
+    detected_entities = _anonymize_financial_ids(
         text, detected_entities=detected_entities
     )
 

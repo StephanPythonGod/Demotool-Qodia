@@ -42,3 +42,5 @@ deploy.sh
 # Remove all .pem files
 *.pem
 
+data/users/
+

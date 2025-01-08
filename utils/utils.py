@@ -1,17 +1,18 @@
 import io
+import os
 import tempfile
 import zipfile
 from html import escape
 from pathlib import Path
 from typing import Any, List, Tuple, Union
 
+import fitz
 import pandas as pd
 import streamlit as st
 from Levenshtein import distance as levenshtein_distance
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
+
+from utils.helpers.document_store import get_document_store
+from utils.helpers.logger import logger
 
 
 def flatten(lst: Union[List[Any], str]) -> List[Any]:
@@ -214,6 +215,9 @@ def create_tooltip(confidence, confidence_reason):
 
 
 def generate_report_files_as_zip(df: pd.DataFrame):
+    """
+    Generate a ZIP file containing Rechnung.pdf, Ziffern.xlsx, and the selected document PDF.
+    """
     # Create a temporary directory for file storage
     with tempfile.TemporaryDirectory() as temp_dir:
         # 1. Generate Rechnung.pdf (Use existing or generate if missing)
@@ -221,17 +225,12 @@ def generate_report_files_as_zip(df: pd.DataFrame):
 
         # Retrieve or generate the bill PDF data
         if st.session_state.pdf_data is not None:
-            # Use existing bill PDF data if available
             bill_pdf_data = st.session_state.pdf_data
         else:
-            from utils.helpers.api import (
-                generate_pdf,  # Assuming generate_pdf is available
-            )
+            from utils.helpers.api import generate_pdf
 
-            bill_pdf_data = generate_pdf(df)  # Generate PDF from DataFrame
-            st.session_state.pdf_data = (
-                bill_pdf_data  # Store in session state for future use
-            )
+            bill_pdf_data = generate_pdf(df)
+            st.session_state.pdf_data = bill_pdf_data
 
         # Save the PDF data to the temporary directory
         with open(rechnung_path, "wb") as f:
@@ -241,40 +240,177 @@ def generate_report_files_as_zip(df: pd.DataFrame):
         ziffern_path = f"{temp_dir}/Ziffern.xlsx"
         df.to_excel(ziffern_path, index=False)
 
-        # 3. Generate Bericht.pdf (PDF with OCR text)
-        bericht_path = f"{temp_dir}/Bericht.pdf"
-        op_text = st.session_state.text.replace(
-            "\n", "<br />"
-        )  # Replace line breaks for proper formatting in PDF
+        # 3. Get the selected document's PDF
+        document_store = get_document_store()
+        selected_doc_path = document_store.get_document_path(
+            st.session_state.selected_document_id
+        )
 
-        # Prepare PDF content for OP Bericht
-        pdf_buffer = io.BytesIO()
-        styles = getSampleStyleSheet()
-        elements = [
-            Paragraph("OP Text", styles["Heading2"]),
-            Spacer(1, 0.5 * cm),
-            Paragraph(op_text, styles["Normal"]),
-            PageBreak(),
-        ]
+        if not selected_doc_path or not os.path.exists(selected_doc_path):
+            st.error("Selected document not found")
+            return None
 
-        # Build the OP Bericht PDF
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
-        doc.build(elements)
-
-        # Save generated PDF to temporary directory
-        with open(bericht_path, "wb") as f:
-            f.write(pdf_buffer.getvalue())
-
-        # 4. Create a zip file containing the three documents
+        # 4. Create a zip file containing all three documents
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:
             zip_file.write(rechnung_path, "Rechnung.pdf")
             zip_file.write(ziffern_path, "Ziffern.xlsx")
-            zip_file.write(bericht_path, "Bericht.pdf")
+            zip_file.write(selected_doc_path, "Bericht.pdf")
 
         # Return the ZIP file bytes for download
         zip_buffer.seek(0)
         return zip_buffer.getvalue()
+
+
+def clean_word(word: str) -> str:
+    """Clean a word by removing punctuation and converting to lowercase."""
+    return "".join(c.lower() for c in word if c.isalnum())
+
+
+def highlight_phrase(page, words_to_highlight, page_words, scale_factor):
+    """Helper function to highlight a sequence of words."""
+    # Clean the words to highlight
+    clean_words_to_highlight = [clean_word(w) for w in words_to_highlight]
+
+    if len(words_to_highlight) <= 2:
+        # For short phrases, just find and highlight each word
+        for ocr_word in page_words:
+            # Clean the OCR word
+            clean_ocr_word = clean_word(ocr_word["text"])
+            if clean_ocr_word in clean_words_to_highlight:
+                # Scale and highlight
+                x0 = ocr_word["bbox"][0] * scale_factor
+                x1 = ocr_word["bbox"][2] * scale_factor
+                y0 = ocr_word["bbox"][1] * scale_factor
+                y1 = ocr_word["bbox"][3] * scale_factor
+
+                rect = fitz.Rect(x0, y0, x1, y1)
+                highlight = page.add_highlight_annot(rect)
+                if highlight:
+                    highlight.set_colors(stroke=(1, 1, 0))
+                    highlight.set_opacity(0.5)
+                    highlight.update()
+                    page.apply_redactions()
+    else:
+        # For longer phrases, use sequential matching
+        potential_matches = []
+        for i, ocr_word in enumerate(page_words):
+            if clean_word(ocr_word["text"]) == clean_words_to_highlight[0]:
+                potential_matches.append(i)
+
+        # For each potential starting point
+        for start_idx in potential_matches:
+            matches = []
+            max_distance = 5  # Maximum words to look ahead
+            min_match_ratio = 0.7  # Minimum ratio of words that must match
+
+            # Try to find words in sequence within max_distance
+            current_idx = start_idx
+            for search_word in clean_words_to_highlight:
+                found = False
+                for j in range(
+                    current_idx, min(current_idx + max_distance, len(page_words))
+                ):
+                    if clean_word(page_words[j]["text"]) == search_word:
+                        matches.append(page_words[j])
+                        current_idx = j + 1
+                        found = True
+                        break
+                if not found:
+                    # Don't break immediately, continue looking for other words
+                    current_idx += 1
+
+            # Check if we found enough matching words
+            match_ratio = len(matches) / len(words_to_highlight)
+            if match_ratio >= min_match_ratio:
+                logger.info(f"Found partial match with ratio {match_ratio:.2f}")
+                for ocr_word in matches:
+                    x0 = ocr_word["bbox"][0] * scale_factor
+                    x1 = ocr_word["bbox"][2] * scale_factor
+                    y0 = ocr_word["bbox"][1] * scale_factor
+                    y1 = ocr_word["bbox"][3] * scale_factor
+
+                    rect = fitz.Rect(x0, y0, x1, y1)
+                    highlight = page.add_highlight_annot(rect)
+                    if highlight:
+                        highlight.set_colors(stroke=(1, 1, 0))
+                        highlight.set_opacity(0.5)
+                        highlight.update()
+                        page.apply_redactions()
+
+
+def highlight_text_in_pdf(
+    pdf_path: str, word_map: list, text_to_highlight: str, temp_dir: str
+) -> str:
+    """
+    Create a temporary PDF with highlighted text.
+    """
+    import os
+    from datetime import datetime
+
+    import fitz
+
+    from utils.helpers.logger import logger
+
+    # First check total word count
+    total_words = len([w for w in text_to_highlight.split() if w.strip()])
+    if total_words > 250:
+        st.warning(
+            f"Zitat ist zu lang ({total_words} Wörter). Aus Performance-Gründen werden Zitate mit mehr als 250 Wörtern nicht hervorgehoben. Bitte gucken Sie einfach in die Zifferndetails."
+        )
+        return pdf_path  # Return original PDF path without highlighting
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    temp_pdf_path = os.path.join(temp_dir, f"highlighted_{timestamp}.pdf")
+
+    logger.info(f"Original PDF path: {pdf_path}")
+    logger.info(f"Temp PDF path: {temp_pdf_path}")
+
+    doc = fitz.open(pdf_path)
+
+    try:
+        # Split text into separate quotes
+        quotes = [
+            quote.strip() for quote in text_to_highlight.split("[...]") if quote.strip()
+        ]
+        logger.info(f"Processing {len(quotes)} separate quotes")
+
+        # Process each quote independently
+        for quote in quotes:
+            logger.info(f"Processing quote: {quote}")
+            search_words = [w.strip().lower() for w in quote.split() if w.strip()]
+            if not search_words:
+                continue
+
+            # Search through each page
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+                scale_factor = 72.0 / 200.0
+
+                # Get words for current page
+                page_words = [w for w in word_map if w["page"] == page_num]
+                logger.info(f"Page {page_num} has {len(page_words)} words")
+
+                # Try to highlight this quote on this page
+                highlight_phrase(page, search_words, page_words, scale_factor)
+
+        doc.save(temp_pdf_path, garbage=4, deflate=True, clean=True)
+        logger.info(f"Saved final PDF to: {temp_pdf_path}")
+
+    except Exception as e:
+        logger.error(f"Error highlighting PDF: {e}")
+        raise
+    finally:
+        doc.close()
+
+    return temp_pdf_path
+
+
+def get_temp_dir() -> str:
+    """Get or create temporary directory for highlighted PDFs."""
+    temp_dir = os.path.join(os.path.dirname(__file__), "../temp")
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
 
 
 tooltip_css = """
