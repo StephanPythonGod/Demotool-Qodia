@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from utils.helpers.api import get_workflows, test_api
 from utils.helpers.logger import logger
 from utils.helpers.settings import load_settings_from_cookies
-from utils.session import cleanup_resources, configure_page, initialize_session_state
+from utils.session import cleanup_resources, initialize_session_state
 from utils.stages.analyze import analyze_stage
 from utils.stages.generate_result_modal import rechnung_erstellen_modal
 from utils.stages.result import result_stage
@@ -15,7 +15,12 @@ from utils.stages.select_bill import select_bill_stage
 from utils.stages.select_distribution_pages import select_distribution_pages_stage
 from utils.stages.select_documents import select_documents_stage
 
-configure_page()
+st.set_page_config(
+    page_title="Qodia",
+    page_icon="🔍🤖📚",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 
 def init_app():

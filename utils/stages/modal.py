@@ -119,7 +119,7 @@ def update_ziffer(new_ziffer: Dict[str, Union[str, int, float, None]]) -> None:
         st.session_state.adding_new_ziffer = False
         st.session_state.stage = "result"
     except Exception as e:
-        logger.error(f"Error updating ziffer: {str(e)}")
+        logger.error(f"Error updating ziffer: {str(e)}", exc_info=True)
         st.error(
             "Ein Fehler ist beim Aktualisieren der Ziffer aufgetreten. Bitte versuchen Sie es erneut."
         )
@@ -257,7 +257,7 @@ def modal_dialog() -> None:
         display_update_button(new_data)
 
     except Exception as e:
-        logger.error(f"Error in modal_stage: {str(e)}")
+        logger.error(f"Error in modal_stage: {str(e)}", exc_info=True)
         st.error(
             "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support."
         )

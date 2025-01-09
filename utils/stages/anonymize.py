@@ -67,7 +67,7 @@ def process_pdf_selections(
         processed_pdf = process_selected_areas(file_content, selections)
         return processed_pdf
     except Exception as e:
-        logger.error(f"Error processing PDF selections: {e}")
+        logger.error(f"Error processing PDF selections: {e}", exc_info=True)
         raise e
 
 
@@ -115,7 +115,7 @@ def anonymize_stage() -> None:
                     cleanup_session_state()
                     st.rerun()
                 except Exception as e:
-                    logger.error(f"Error during text anonymization: {e}")
+                    logger.error(f"Error during text anonymization: {e}", exc_info=True)
                     st.error(f"Fehler während der Textanonymisierung: {e}")
 
     with col2:
@@ -139,5 +139,5 @@ def anonymize_stage() -> None:
                     cleanup_session_state()
                     st.rerun()
                 except Exception as e:
-                    logger.error(f"Error during PDF processing: {e}")
+                    logger.error(f"Error during PDF processing: {e}", exc_info=True)
                     st.error(f"Fehler während der PDF-Verarbeitung: {e}")

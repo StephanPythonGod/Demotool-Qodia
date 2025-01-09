@@ -84,7 +84,9 @@ class DocumentStore:
                 f.write(file_data)
             return file_path
         except Exception as e:
-            logger.error(f"Error storing document file {document_id}: {e}")
+            logger.error(
+                f"Error storing document file {document_id}: {e}", exc_info=True
+            )
             raise
 
     def get_document_path(self, document_id: str) -> Optional[str]:
@@ -103,7 +105,9 @@ class DocumentStore:
             files = [f for f in os.listdir(doc_dir) if f.startswith(base_id)]
             return os.path.join(doc_dir, files[0]) if files else None
         except Exception as e:
-            logger.error(f"Error getting document path for {document_id}: {e}")
+            logger.error(
+                f"Error getting document path for {document_id}: {e}", exc_info=True
+            )
             return None
 
     def _initialize_db(self) -> None:
@@ -125,7 +129,7 @@ class DocumentStore:
                 )
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error initializing document store: {e}")
+            logger.error(f"Error initializing document store: {e}", exc_info=True)
             raise
 
     def add_document(self, document_id: str) -> None:
@@ -157,7 +161,7 @@ class DocumentStore:
                 )
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error adding document {document_id}: {e}")
+            logger.error(f"Error adding document {document_id}: {e}", exc_info=True)
             raise
 
     def update_status(
@@ -189,7 +193,9 @@ class DocumentStore:
                 )
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error updating status for document {document_id}: {e}")
+            logger.error(
+                f"Error updating status for document {document_id}: {e}", exc_info=True
+            )
             raise
 
     def get_document(self, document_id: str) -> Optional[Dict[str, Any]]:
@@ -209,7 +215,7 @@ class DocumentStore:
                     return result
                 return None
         except Exception as e:
-            logger.error(f"Error getting document {document_id}: {e}")
+            logger.error(f"Error getting document {document_id}: {e}", exc_info=True)
             raise
 
     def get_all_documents(self) -> List[Dict[str, Any]]:
@@ -228,7 +234,7 @@ class DocumentStore:
                     documents.append(doc)
                 return documents
         except Exception as e:
-            logger.error(f"Error getting all documents: {e}")
+            logger.error(f"Error getting all documents: {e}", exc_info=True)
             raise
 
     def cleanup(self) -> None:
@@ -239,7 +245,7 @@ class DocumentStore:
 
                 shutil.rmtree(self.base_dir)
         except Exception as e:
-            logger.error(f"Error cleaning up document store: {e}")
+            logger.error(f"Error cleaning up document store: {e}", exc_info=True)
             raise
 
     def store_ocr_data(self, document_id: str, ocr_data: dict) -> None:
@@ -265,7 +271,9 @@ class DocumentStore:
                 )
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error storing OCR data for document {document_id}: {e}")
+            logger.error(
+                f"Error storing OCR data for document {document_id}: {e}", exc_info=True
+            )
             raise
 
     def get_ocr_data(self, document_id: str) -> Optional[dict]:
@@ -281,7 +289,9 @@ class DocumentStore:
                     return json.loads(row["ocr_data"])
                 return None
         except Exception as e:
-            logger.error(f"Error getting OCR data for document {document_id}: {e}")
+            logger.error(
+                f"Error getting OCR data for document {document_id}: {e}", exc_info=True
+            )
             raise
 
 

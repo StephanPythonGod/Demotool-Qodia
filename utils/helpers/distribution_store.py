@@ -51,7 +51,7 @@ class DistributionStore:
                 )
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error initializing distribution store: {e}")
+            logger.error(f"Error initializing distribution store: {e}", exc_info=True)
             raise
 
     def store_document_file(self, document_id: str, file_data: bytes) -> str:
@@ -62,7 +62,10 @@ class DistributionStore:
                 f.write(file_data)
             return file_path
         except Exception as e:
-            logger.error(f"Error storing distribution document file {document_id}: {e}")
+            logger.error(
+                f"Error storing distribution document file {document_id}: {e}",
+                exc_info=True,
+            )
             raise
 
     def get_document_path(self, document_id: str) -> Optional[str]:
@@ -87,7 +90,10 @@ class DistributionStore:
                 )
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error adding distribution document {document_id}: {e}")
+            logger.error(
+                f"Error adding distribution document {document_id}: {e}",
+                exc_info=True,
+            )
             raise
 
     def update_status(
@@ -118,7 +124,8 @@ class DistributionStore:
                 conn.commit()
         except Exception as e:
             logger.error(
-                f"Error updating status for distribution document {document_id}: {e}"
+                f"Error updating status for distribution document {document_id}: {e}",
+                exc_info=True,
             )
             raise
 
@@ -133,7 +140,10 @@ class DistributionStore:
                 row = cursor.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            logger.error(f"Error getting distribution document {document_id}: {e}")
+            logger.error(
+                f"Error getting distribution document {document_id}: {e}",
+                exc_info=True,
+            )
             raise
 
     def cleanup(self) -> None:
@@ -144,7 +154,7 @@ class DistributionStore:
 
                 shutil.rmtree(self.base_dir)
         except Exception as e:
-            logger.error(f"Error cleaning up distribution store: {e}")
+            logger.error(f"Error cleaning up distribution store: {e}", exc_info=True)
             raise
 
 

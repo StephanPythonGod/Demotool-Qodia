@@ -40,7 +40,7 @@ def handle_clipboard_paste(paste_result) -> None:
         st.success(f"Bild '{filename}' wurde erfolgreich zur Verarbeitung hinzugefügt")
 
     except Exception as e:
-        logger.error(f"Error processing clipboard image: {e}")
+        logger.error(f"Error processing clipboard image: {e}", exc_info=True)
         st.error("Fehler beim Verarbeiten des Bildes aus der Zwischenablage")
 
 
@@ -80,7 +80,9 @@ def handle_file_upload(
             should_rerun = True
 
         except Exception as e:
-            logger.error(f"Error storing document {uploaded_file.name}: {e}")
+            logger.error(
+                f"Error storing document {uploaded_file.name}: {e}", exc_info=True
+            )
             st.error(f"Fehler beim Hochladen von {uploaded_file.name}: {str(e)}")
 
     # Only trigger rerun for sidebar uploads and when files were actually processed
@@ -116,7 +118,10 @@ def handle_distribution_upload(uploaded_file: UploadedFile) -> None:
         st.rerun()
 
     except Exception as e:
-        logger.error(f"Error storing distribution document {uploaded_file.name}: {e}")
+        logger.error(
+            f"Error storing distribution document {uploaded_file.name}: {e}",
+            exc_info=True,
+        )
         st.error(f"Fehler beim Hochladen von {uploaded_file.name}")
 
 
@@ -223,6 +228,6 @@ def analyze_text(text: str) -> bool:
         st.session_state.stage = "anonymize"
         return True
     except Exception as e:
-        logger.error(f"Error analyzing text: {str(e)}")
+        logger.error(f"Error analyzing text: {str(e)}", exc_info=True)
         st.error(f"Fehler bei der Textanalyse: {str(e)}")
         return False

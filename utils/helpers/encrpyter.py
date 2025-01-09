@@ -85,7 +85,7 @@ def load_public_key(serial_number: str = None):
                 key_file.read(), backend=default_backend()
             )
     except Exception as e:
-        logger.error(f"Error loading public key: {e}")
+        logger.error(f"Error loading public key: {e}", exc_info=True)
         raise
 
 

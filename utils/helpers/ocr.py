@@ -36,7 +36,7 @@ def perform_ocr_on_file(
     if isinstance(file_data, bytes):
         # Try to detect if it's a PDF by checking magic numbers
         if file_data.startswith(b"%PDF"):
-            return _process_complete_pdf_bytes(file_data)
+            return _process_complete_pdf_bytes(file_data, return_coordinates)
         else:
             # Assume it's an image if not PDF
             image = Image.open(BytesIO(file_data))
@@ -48,7 +48,7 @@ def perform_ocr_on_file(
 
     if isinstance(file_data, UploadedFile):
         if file_data.type == "application/pdf":
-            return _process_complete_pdf_bytes(file_data.read())
+            return _process_complete_pdf_bytes(file_data.read(), return_coordinates)
         elif file_data.type.startswith("image"):
             image = Image.open(file_data)
             return (
@@ -62,11 +62,26 @@ def perform_ocr_on_file(
     raise ValueError(f"Unsupported input type: {type(file_data)}")
 
 
-def _process_complete_pdf_bytes(pdf_bytes: bytes) -> str:
-    """Process a complete PDF from bytes."""
+def _process_complete_pdf_bytes(
+    pdf_bytes: bytes, return_coordinates: bool = False
+) -> Union[str, dict]:
+    """
+    Process a complete PDF from bytes.
+
+    Args:
+        pdf_bytes: Raw PDF file bytes
+        return_coordinates: If True, returns dict with text and word coordinates
+
+    Returns:
+        Union[str, dict]: Either the extracted text or a dict with text and word_map
+    """
     logger.info("Processing complete PDF from bytes")
     pages = convert_from_bytes(pdf_bytes)
 
+    if return_coordinates:
+        return _process_pdf_with_coordinates(pages)
+
+    # Original text-only processing
     results = []
     with ThreadPoolExecutor() as executor:
         futures = {
@@ -80,9 +95,47 @@ def _process_complete_pdf_bytes(pdf_bytes: bytes) -> str:
                 if text.strip():
                     results.append(text)
             except Exception as e:
-                logger.error(f"Error processing page: {str(e)}")
+                logger.error(f"Error processing page: {str(e)}", exc_info=True)
 
     return "\n".join(results)
+
+
+def _process_pdf_with_coordinates(pages: List[Image.Image]) -> dict:
+    """
+    Process PDF pages with word coordinates using threading.
+
+    Args:
+        pages: List of PDF pages converted to PIL Images
+
+    Returns:
+        dict: Contains 'text' and 'word_map' with coordinates
+    """
+    all_text = []
+    all_words = []
+
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(perform_ocr_with_coordinates, page): i
+            for i, page in enumerate(pages)
+        }
+
+        for future in as_completed(futures):
+            page_num = futures[future]
+            try:
+                result = future.result()
+                all_text.append(result["text"])
+
+                # Update page numbers in word_map
+                for word in result["word_map"]:
+                    word["page"] = page_num
+                    all_words.extend([word])
+
+            except Exception as e:
+                logger.error(
+                    f"Error processing page {page_num}: {str(e)}", exc_info=True
+                )
+
+    return {"text": " ".join(all_text), "word_map": all_words}
 
 
 def _process_complete_image_bytes(image_bytes: bytes) -> str:
@@ -170,7 +223,9 @@ def _process_pdf(pdf_file: UploadedFile, selections: Optional[List[List[dict]]])
                     page_index
                 ] = future.result()  # Assign result to the correct page index
             except Exception as e:
-                logger.error(f"Error processing page {page_index}: {str(e)}")
+                logger.error(
+                    f"Error processing page {page_index}: {str(e)}", exc_info=True
+                )
                 results[page_index] = ""  # Leave the page blank in case of an error
 
     # Concatenate only non-empty results
@@ -226,7 +281,7 @@ def perform_ocr_on_image(image: Image.Image, selections: Optional[List[dict]]) -
             if result.strip():  # Only add non-empty results
                 results.append(result)
         except Exception as e:
-            logger.error(f"Error processing selection: {str(e)}")
+            logger.error(f"Error processing selection: {str(e)}", exc_info=True)
 
     return "\n".join(results)
 

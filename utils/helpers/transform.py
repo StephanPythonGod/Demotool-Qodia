@@ -356,7 +356,7 @@ def transform_df_to_goziffertyp(df: pd.DataFrame) -> List[GozifferTyp]:
         except Exception as e:
             # Log the error using the provided logger and display a warning in Streamlit
             error_message = f"Error processing row {idx}: {str(e)}"
-            logger.error(error_message)
+            logger.error(error_message, exc_info=True)
             st.warning(f"Error in row {idx}: {str(e)}")
             continue
 
@@ -392,7 +392,7 @@ def format_erstellungsdatum(erstellungsdatum):
 
     except (ValueError, TypeError) as e:
         # Handle parsing or type errors
-        logger.error(f"Error processing erstellungsdatum: {e}")
+        logger.error(f"Error processing erstellungsdatum: {e}", exc_info=True)
         # Optionally, you can return a default or error string in the file name if the date is invalid
         return "00000000"  # A fallback value, can be customized
 
@@ -493,5 +493,5 @@ def analyze_add_data(data: list[dict]) -> dict:
         return new_data
 
     except Exception as e:
-        logger.error(f"Error processing data: {e}")
+        logger.error(f"Error processing data: {e}", exc_info=True)
         return {}

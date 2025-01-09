@@ -398,7 +398,7 @@ def highlight_text_in_pdf(
         logger.info(f"Saved final PDF to: {temp_pdf_path}")
 
     except Exception as e:
-        logger.error(f"Error highlighting PDF: {e}")
+        logger.error(f"Error highlighting PDF: {e}", exc_info=True)
         raise
     finally:
         doc.close()

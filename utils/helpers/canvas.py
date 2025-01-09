@@ -55,7 +55,9 @@ def _create_canvas_with_retry(
                 return canvas_result
 
         except Exception as e:
-            logger.error(f"Canvas creation attempt {attempt + 1} failed: {e}")
+            logger.error(
+                f"Canvas creation attempt {attempt + 1} failed: {e}", exc_info=True
+            )
             if attempt < max_retries - 1:
                 time.sleep(delay)
             continue
@@ -170,7 +172,9 @@ def base_display_file_selection_interface(
                                 del st.session_state[selection_key][str(page_num)]
 
                 except Exception as e:
-                    logger.error(f"Error processing page {page_num + 1}: {e}")
+                    logger.error(
+                        f"Error processing page {page_num + 1}: {e}", exc_info=True
+                    )
                     st.error(f"Fehler bei der Verarbeitung von Seite {page_num + 1}")
                     if st.button("Seite neu laden", key=f"retry_error_{page_num}"):
                         st.rerun()
@@ -200,7 +204,7 @@ def base_display_file_selection_interface(
         return selection_list, has_selections
 
     except Exception as e:
-        logger.error(f"Error in file selection interface: {e}")
+        logger.error(f"Error in file selection interface: {e}", exc_info=True)
         raise
 
 

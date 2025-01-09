@@ -115,7 +115,7 @@ def process_and_send_feedback(df: pd.DataFrame) -> None:
         send_feedback_api(api_feedback_data)
         st.success("Feedback erfolgreich gesendet 😊")
     except Exception as e:
-        logger.error(f"Failed to send feedback: {e}")
+        logger.error(f"Failed to send feedback: {e}", exc_info=True)
         st.error("Fehler beim Senden des Feedbacks")
 
 

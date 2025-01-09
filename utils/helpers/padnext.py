@@ -362,7 +362,7 @@ def padnext_encrypt(
                     public_key = load_public_key()
                     # certificate = load_certificate()
                 except Exception as e:
-                    logger.error(f"Error loading public key: {e}")
+                    logger.error(f"Error loading public key: {e}", exc_info=True)
                     return None
 
             auftrag.verschluesselung.verfahren = "1"  # Indicating encryption is enabled
@@ -370,7 +370,9 @@ def padnext_encrypt(
             auftrag.verschluesselung.verfahren = "0"  # No encryption
             auftrag.verschluesselung.idcert = "0"  # No certificate
     except Exception as e:
-        logger.error(f"Error in loading and modifying _auf.xml file: {e}")
+        logger.error(
+            f"Error in loading and modifying _auf.xml file: {e}", exc_info=True
+        )
         return None
 
     # Check for missing 'datei' fields
@@ -454,7 +456,7 @@ def padnext_encrypt(
         try:
             encrypt_file(compressed_file, encrypted_file, public_key)
         except Exception as e:
-            logger.error(f"Error during file encryption: {e}")
+            logger.error(f"Error during file encryption: {e}", exc_info=True)
             return None
     else:
         encrypted_file = (
@@ -466,7 +468,7 @@ def padnext_encrypt(
     try:
         write_object_to_xml(auftrag, os.path.join(output_folder, auf_file))
     except Exception as e:
-        logger.error(f"Error writing updated _auf.xml file: {e}")
+        logger.error(f"Error writing updated _auf.xml file: {e}", exc_info=True)
         return
 
     # Create the final padx.zip with the updated _auf.xml and (optionally) encrypted file
@@ -482,7 +484,7 @@ def padnext_encrypt(
                 encrypted_file, os.path.basename(encrypted_file)
             )  # Add encrypted or unencrypted file to zip
     except Exception as e:
-        logger.error(f"Error creating final padx.zip: {e}")
+        logger.error(f"Error creating final padx.zip: {e}", exc_info=True)
         return None
 
     # Clean up temporary files if encryption was performed
@@ -491,7 +493,7 @@ def padnext_encrypt(
         os.remove(encrypted_file)
         os.remove(os.path.join(output_folder, auf_file))
     except Exception as e:
-        logger.warning(f"Error during cleanup of temporary files: {e}")
+        logger.warning(f"Error during cleanup of temporary files: {e}", exc_info=True)
 
     logger.info(f"Process complete. Output file: {final_zip}")
 

@@ -63,7 +63,7 @@ def display_uploaded_file(
         else:
             column.warning("Nicht unterstütztes Dateiformat.")
     except Exception as e:
-        logger.error(f"Error displaying uploaded file: {str(e)}")
+        logger.error(f"Error displaying uploaded file: {str(e)}", exc_info=True)
         column.error("Fehler beim Anzeigen der hochgeladenen Datei.")
 
 
@@ -105,5 +105,5 @@ def edit_anonymized_stage() -> None:
                     st.session_state.stage = "rechnung_anonymize"
                     st.rerun()
     except Exception as e:
-        logger.error(f"Error in edit_anonymized_stage: {str(e)}")
+        logger.error(f"Error in edit_anonymized_stage: {str(e)}", exc_info=True)
         st.error(f"Ein Fehler ist aufgetreten: {str(e)}")

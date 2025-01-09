@@ -89,7 +89,7 @@ def process_bill_selections(
         return output_buffer.getvalue()
 
     except Exception as e:
-        logger.error(f"Error processing bill selections: {e}")
+        logger.error(f"Error processing bill selections: {e}", exc_info=True)
         raise
     finally:
         if "input_pdf" in locals():
@@ -132,7 +132,7 @@ def create_export_zip(processed_bill: bytes) -> Optional[bytes]:
         return zip_buffer.getvalue()
 
     except Exception as e:
-        logger.error(f"Error creating export zip: {e}")
+        logger.error(f"Error creating export zip: {e}", exc_info=True)
         st.error("Fehler beim Erstellen der Export-Datei")
         return None
 
@@ -215,7 +215,7 @@ def select_bill_stage() -> None:
                         )
 
             except Exception as e:
-                logger.error(f"Error processing bill: {e}")
+                logger.error(f"Error processing bill: {e}", exc_info=True)
                 st.error("Ein Fehler ist bei der Verarbeitung aufgetreten")
         else:
             st.warning("Bitte wählen Sie zuerst Bereiche aus in den PDFs")

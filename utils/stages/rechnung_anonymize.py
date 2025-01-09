@@ -67,7 +67,7 @@ def process_selected_areas(
     try:
         input_pdf = fitz.open(stream=pdf_data, filetype="pdf")
     except Exception as e:
-        logger.error(f"Failed to open PDF: {e}")
+        logger.error(f"Failed to open PDF: {e}", exc_info=True)
         raise ValueError("Failed to process PDF file")
 
     input_pdf = fitz.open(stream=pdf_data, filetype="pdf")
@@ -185,7 +185,7 @@ def rechnung_anonymize_stage() -> None:
                     cleanup_session_state()
 
                 except Exception as e:
-                    logger.error(f"Error processing selections: {e}")
+                    logger.error(f"Error processing selections: {e}", exc_info=True)
                     st.error(
                         "Ein Fehler ist bei der Verarbeitung aufgetreten. Bitte versuchen Sie es erneut."
                     )

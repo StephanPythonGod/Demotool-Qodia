@@ -58,7 +58,7 @@ def cleanup_resources():
             del st.session_state.document_uploader
 
     except Exception as e:
-        logger.error(f"Error during cleanup: {e}")
+        logger.error(f"Error during cleanup: {e}", exc_info=True)
 
 
 def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
@@ -179,12 +179,3 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     ):
         st.session_state.page_selections = set()
     st.session_state.setdefault("selected_workflow", None)
-
-
-def configure_page():
-    st.set_page_config(
-        page_title="Qodia",
-        page_icon="🔍🤖📚",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )

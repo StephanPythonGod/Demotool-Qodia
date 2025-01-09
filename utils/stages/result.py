@@ -126,7 +126,9 @@ def cleanup_temp_files():
             try:
                 os.remove(os.path.join(temp_dir, file))
             except Exception as e:
-                logger.error(f"Error cleaning up temporary file {file}: {e}")
+                logger.error(
+                    f"Error cleaning up temporary file {file}: {e}", exc_info=True
+                )
 
 
 def result_stage() -> None:

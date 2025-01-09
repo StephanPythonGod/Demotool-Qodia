@@ -54,7 +54,7 @@ def get_workflows() -> List[str]:
             f"Done retrieving workflows. Response status: {response.status_code}"
         )
     except Exception as e:
-        logger.error(f"Error retrieving workflows: {e}")
+        logger.error(f"Error retrieving workflows: {e}", exc_info=True)
         st.error(
             "Ein Fehler ist beim Abrufen der verfügbaren Workflows aufgetreten. "
             "Bitte überprüfen Sie die URL und den API Key und speichern Sie die Einstellungen erneut.\n\n"
@@ -68,7 +68,8 @@ def get_workflows() -> List[str]:
                 f"API error: Status Code: {response.status_code}, "
                 f"Message: {response.text}, "
                 f"Request ID: {response.headers.get('X-Request-ID', '')}"
-            )
+            ),
+            exc_info=True,
         )
         st.error(
             "Ein Fehler ist beim Abrufen der verfügbaren Workflows aufgetreten.\n\n"
@@ -126,7 +127,7 @@ def analyze_api_call(
             st.session_state.analyze_api_response = response
             return cached_response["prediction"]
         except Exception as e:
-            logger.error(f"Error loading cached response: {e}")
+            logger.error(f"Error loading cached response: {e}", exc_info=True)
 
     url = f"{api_url}/process_document"
     payload = {
@@ -149,7 +150,7 @@ def analyze_api_call(
         analyze_api_call.last_response_headers = dict(response.headers)
         logger.info(f"Done analyzing text. Response status: {response.status_code}")
     except Exception as e:
-        logger.error(f"Error calling API for text analysis: {e}")
+        logger.error(f"Error calling API for text analysis: {e}", exc_info=True)
         raise
 
     if response.status_code != 200:
@@ -166,7 +167,7 @@ def analyze_api_call(
         try:
             prediction = response.json()["prediction"]
         except KeyError as e:
-            logger.error(f"Unexpected API response format: {e}")
+            logger.error(f"Unexpected API response format: {e}", exc_info=True)
             raise
 
     if USE_CACHE:
@@ -176,7 +177,7 @@ def analyze_api_call(
                 pickle.dump(cached_response, file)
             logger.info(f"Response saved to {safe_filename}")
         except Exception as e:
-            logger.error(f"Error saving response to file: {e}")
+            logger.error(f"Error saving response to file: {e}", exc_info=True)
 
     return prediction
 
@@ -232,7 +233,7 @@ def ocr_pdf_to_text_api(
                 cached_response = pickle.load(file)
             return cached_response["ocr_text"]
         except Exception as e:
-            logger.error(f"Error loading cached OCR response: {e}")
+            logger.error(f"Error loading cached OCR response: {e}", exc_info=True)
 
     url = f"{api_url}/process_document"
     payload = {
@@ -264,7 +265,7 @@ def ocr_pdf_to_text_api(
     try:
         response = requests.post(url, headers=headers, data=payload, files=files)
     except Exception as e:
-        logger.error(f"Error calling API for OCR: {e}")
+        logger.error(f"Error calling API for OCR: {e}", exc_info=True)
         raise
 
     logger.info(
@@ -284,7 +285,7 @@ def ocr_pdf_to_text_api(
         try:
             ocr_text = response.json()["ocr"]["ocr_text"]
         except KeyError as e:
-            logger.error(f"Unexpected API response format: {e}")
+            logger.error(f"Unexpected API response format: {e}", exc_info=True)
             raise
 
     if USE_CACHE:
@@ -294,7 +295,7 @@ def ocr_pdf_to_text_api(
                 pickle.dump(cached_response, file)
             logger.info(f"OCR response saved to {safe_filename}")
         except Exception as e:
-            logger.error(f"Error saving OCR response to file: {e}")
+            logger.error(f"Error saving OCR response to file: {e}", exc_info=True)
 
     return ocr_text
 
@@ -343,7 +344,7 @@ def send_feedback_api(response_object: Dict) -> None:
             logger.error(f"API Feedback error: {response.text}")
             raise Exception(f"API Feedback error: {response.text}")
     except Exception as e:
-        logger.error(f"Error sending feedback: {e}")
+        logger.error(f"Error sending feedback: {e}", exc_info=True)
         raise
 
 
@@ -512,7 +513,7 @@ def test_api() -> bool:
             )
             return False
     except Exception as e:
-        logger.error(f"Error connecting to API: {e}")
+        logger.error(f"Error connecting to API: {e}", exc_info=True)
         st.error(
             "Ein Fehler ist beim Aufrufen der API aufgetreten. "
             "Bitte überprüfen Sie die URL und den API-Key und speichern Sie die Einstellungen erneut.\n\n"

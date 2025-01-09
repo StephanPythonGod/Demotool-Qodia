@@ -110,7 +110,7 @@ def process_document(
         )
 
     except Exception as e:
-        logger.error(f"Error processing document {document_id}: {e}")
+        logger.error(f"Error processing document {document_id}: {e}", exc_info=True)
         document_store.update_status(
             document_id, DocumentStatus.FAILED, error_message=str(e)
         )
@@ -181,7 +181,7 @@ def queue_document(
         st.session_state.futures.add(future)
 
     except Exception as e:
-        logger.error(f"Error queueing document {document_id}: {e}")
+        logger.error(f"Error queueing document {document_id}: {e}", exc_info=True)
         document_store.update_status(
             document_id, DocumentStatus.FAILED, error_message=str(e)
         )
@@ -228,7 +228,9 @@ def process_distribution_document(document_id: str, selected_pages: list[int]) -
         st.session_state.futures.add(future)
 
     except Exception as e:
-        logger.error(f"Error queueing distribution document {document_id}: {e}")
+        logger.error(
+            f"Error queueing distribution document {document_id}: {e}", exc_info=True
+        )
         distribution_store.update_status(
             document_id, DistributionStatus.FAILED, error_message=str(e)
         )
@@ -261,7 +263,9 @@ def _process_distribution_document_background(
         )
 
     except Exception as e:
-        logger.error(f"Error processing distribution document {document_id}: {e}")
+        logger.error(
+            f"Error processing distribution document {document_id}: {e}", exc_info=True
+        )
         distribution_store.update_status(
             document_id, DistributionStatus.FAILED, error_message=str(e)
         )

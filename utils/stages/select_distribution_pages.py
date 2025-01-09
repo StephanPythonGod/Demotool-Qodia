@@ -44,7 +44,7 @@ def display_page_grid(document_path: str, total_pages: int):
                     st.rerun()
 
             except Exception as e:
-                logger.error(f"Error displaying page {page_num}: {e}")
+                logger.error(f"Error displaying page {page_num}: {e}", exc_info=True)
                 st.error(f"Fehler beim Anzeigen von Seite {page_num + 1}")
             finally:
                 if "doc" in locals():
@@ -107,7 +107,7 @@ def select_distribution_pages_stage():
             st.warning("Bitte wählen Sie mindestens eine Seite aus")
 
     except Exception as e:
-        logger.error(f"Error in select_distribution_pages_stage: {e}")
+        logger.error(f"Error in select_distribution_pages_stage: {e}", exc_info=True)
         st.error("Ein Fehler ist aufgetreten")
         if st.button("Zurück zum Hauptmenü"):
             st.session_state.stage = "analyze"

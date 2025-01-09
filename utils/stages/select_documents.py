@@ -24,7 +24,9 @@ def get_page_thumbnail(document_path: str, page_number: int) -> Optional[str]:
         img_base64 = base64.b64encode(img_data).decode()
         return f"data:image/png;base64,{img_base64}"
     except Exception as e:
-        logger.error(f"Error generating thumbnail for page {page_number}: {e}")
+        logger.error(
+            f"Error generating thumbnail for page {page_number}: {e}", exc_info=True
+        )
         return None
     finally:
         if "doc" in locals():
@@ -172,11 +174,15 @@ def select_documents_stage():
                             )
 
                         except Exception as e:
-                            logger.error(f"Error processing selected pages: {e}")
+                            logger.error(
+                                f"Error processing selected pages: {e}", exc_info=True
+                            )
                             st.error(
                                 "Fehler bei der Verarbeitung der ausgewählten Seiten"
                             )
 
             except Exception as e:
-                logger.error(f"Error opening document {selected_doc}: {e}")
+                logger.error(
+                    f"Error opening document {selected_doc}: {e}", exc_info=True
+                )
                 st.error("Fehler beim Öffnen des Dokuments")
