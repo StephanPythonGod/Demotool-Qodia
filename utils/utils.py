@@ -241,7 +241,7 @@ def generate_report_files_as_zip(df: pd.DataFrame):
         df.to_excel(ziffern_path, index=False)
 
         # 3. Get the selected document's PDF
-        document_store = get_document_store()
+        document_store = get_document_store(st.session_state.api_key)
         selected_doc_path = document_store.get_document_path(
             st.session_state.selected_document_id
         )

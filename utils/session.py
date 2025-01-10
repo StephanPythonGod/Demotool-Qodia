@@ -119,6 +119,7 @@ def initialize_session_state(settings: Optional[Dict[str, Any]] = None) -> None:
     st.session_state.setdefault("overlay_removed", False)
     st.session_state.setdefault("page_selections", {})
     st.session_state.setdefault("processing_started", False)
+    st.session_state.setdefault("api_key_tested", False)
 
     # Load API URL and API Key with the following hierarchy: settings > environment variable > fallback
     st.session_state.api_url = settings.get("api_url") or os.getenv(

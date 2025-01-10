@@ -81,16 +81,16 @@ def render_page_grid(document_path: str, total_pages: int):
 
 def select_documents_stage():
     """Main function for the document selection stage."""
-
     render_document_list_sidebar()
     st.title("Dokument und Workflow auswählen")
 
-    document_store = get_document_store()
+    document_store = get_document_store(st.session_state.api_key)
     documents = [
         doc
         for doc in document_store.get_all_documents()
         if doc["status"] == DocumentStatus.UPLOADED.value
     ]
+
     if not documents:
         st.error("Keine Dokumente verfügbar. Bitte laden Sie zuerst Dokumente hoch.")
         return

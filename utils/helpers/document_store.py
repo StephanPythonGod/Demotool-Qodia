@@ -29,7 +29,7 @@ class DocumentStore:
         self.db_path = self._get_db_path()
 
         # Clean up existing data for this user
-        self.cleanup()
+        # self.cleanup()
 
         # Initialize fresh database
         os.makedirs(self.base_dir, exist_ok=True)
@@ -309,9 +309,11 @@ class DocumentStore:
             raise
 
 
-@st.cache_resource
-def get_document_store() -> DocumentStore:
+def get_document_store(api_key: Optional[str] = None) -> DocumentStore:
     """Get or create a DocumentStore instance."""
+    # Create a fresh instance each time
+    if api_key is not None:
+        return DocumentStore(api_key)
     if "document_store" not in st.session_state:
         st.session_state.document_store = DocumentStore(st.session_state.api_key)
     return st.session_state.document_store
@@ -324,81 +326,94 @@ def render_document_list_sidebar() -> None:
             if st.button("Zum Hauptmenü", use_container_width=True):
                 st.session_state.stage = "analyze"
                 st.rerun()
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.title("Dokumente")
-        with col2:
-            if st.button("🔄", help="Aktualisieren"):
-                st.rerun()
+        if st.session_state.api_key_tested:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.title("Dokumente")
+            with col2:
+                if st.button("🔄", help="Aktualisieren"):
+                    st.rerun()
 
-        document_store = get_document_store()
-        documents = document_store.get_all_documents()
+            try:
+                document_store = get_document_store(st.session_state.api_key)
+                documents = (
+                    document_store.get_all_documents()
+                )  # Already filtered by api_key
 
-        if not documents:
-            st.info("Keine Dokumente vorhanden")
-            return
+                if not documents:
+                    st.info("Keine Dokumente vorhanden")
+                    return
 
-        for doc in documents:
-            if doc["status"] != DocumentStatus.UPLOADED.value:
-                with st.container():
-                    col1, col2, col3 = st.columns([3, 1, 1])
+                for doc in documents:
+                    if doc["status"] != DocumentStatus.UPLOADED.value:
+                        with st.container():
+                            col1, col2, col3 = st.columns([3, 1, 1])
 
-                    with col1:
-                        doc_name = doc["id"]
+                            with col1:
+                                doc_name = doc["id"]
 
-                        if st.button(
-                            doc_name.replace("_", " | ")
-                            .replace(".pdf", "")
-                            .replace("pdf", ""),
-                            key=f"doc_btn_{doc_name}",
-                            use_container_width=True,
-                        ):
-                            st.session_state.selected_document_id = doc_name
-                            st.session_state.stage = "result"
-                            from utils.session import reset
+                                if st.button(
+                                    doc_name.replace("_", " | ")
+                                    .replace(".pdf", "")
+                                    .replace("pdf", ""),
+                                    key=f"doc_btn_{doc_name}",
+                                    use_container_width=True,
+                                ):
+                                    st.session_state.selected_document_id = doc_name
+                                    st.session_state.stage = "result"
+                                    from utils.session import reset
 
-                            reset()
-                            st.rerun()
+                                    reset()
+                                    st.rerun()
 
-                    with col2:
-                        if doc["id"] == st.session_state.selected_document_id:
-                            st.write("📄")
+                            with col2:
+                                if doc["id"] == st.session_state.selected_document_id:
+                                    st.write("📄")
 
-                    with col3:
-                        status = doc["status"]
-                        if status == DocumentStatus.QUEUED.value:
-                            st.write("⏳")
-                        elif status == DocumentStatus.PROCESSING.value:
-                            st.write("🤖")
-                        elif status == DocumentStatus.COMPLETED.value:
-                            st.write("✅")
-                        elif status == DocumentStatus.FAILED.value:
-                            st.write("❌")
+                            with col3:
+                                status = doc["status"]
+                                if status == DocumentStatus.QUEUED.value:
+                                    st.write("⏳")
+                                elif status == DocumentStatus.PROCESSING.value:
+                                    st.write("🤖")
+                                elif status == DocumentStatus.COMPLETED.value:
+                                    st.write("✅")
+                                elif status == DocumentStatus.FAILED.value:
+                                    st.write("❌")
 
-        st.subheader("Weitere Dokumente hochladen:")
-        uploaded_files = st.file_uploader(
-            "Dokumente hochladen",
-            type=["pdf", "png", "jpg"],
-            accept_multiple_files=True,
-            key="document_uploader_sidebar",
-            label_visibility="collapsed",
-        )
+                st.subheader("Weitere Dokumente hochladen:")
+                uploaded_files = st.file_uploader(
+                    "Dokumente hochladen",
+                    type=["pdf", "png", "jpg"],
+                    accept_multiple_files=True,
+                    key="document_uploader_sidebar",
+                    label_visibility="collapsed",
+                )
 
-        if uploaded_files:
-            from utils.stages.analyze import handle_file_upload
+                if uploaded_files:
+                    from utils.stages.analyze import handle_file_upload
 
-            handle_file_upload(uploaded_files, from_sidebar=True)
+                    handle_file_upload(uploaded_files, from_sidebar=True)
 
-        # Add section for uploaded documents
-        uploaded_docs = [
-            doc for doc in documents if doc["status"] == DocumentStatus.UPLOADED.value
-        ]
-        if uploaded_docs:
-            st.subheader("Hochgeladene Dokumente:")
-            for doc in uploaded_docs:
-                st.text(doc["id"])
+                # Add section for uploaded documents
+                if st.session_state.api_key_tested:
+                    uploaded_docs = [
+                        doc
+                        for doc in documents
+                        if doc["status"] == DocumentStatus.UPLOADED.value
+                    ]
+                else:
+                    uploaded_docs = []
+                if uploaded_docs:
+                    st.subheader("Hochgeladene Dokumente:")
+                    for doc in uploaded_docs:
+                        st.text(doc["id"])
 
-        st.subheader("Weitere Dokumente selektieren:")
-        if st.button("Hier klicken", use_container_width=True):
-            st.session_state.stage = "select_documents"
-            st.rerun()
+                st.subheader("Weitere Dokumente selektieren:")
+                if st.button("Hier klicken", use_container_width=True):
+                    st.session_state.stage = "select_documents"
+                    st.rerun()
+
+            except Exception:
+                st.error("Bitte überprüfen Sie Ihre API-Einstellungen")
+                return

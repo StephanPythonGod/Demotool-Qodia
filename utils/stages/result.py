@@ -28,7 +28,7 @@ def set_selected_ziffer(index):
         st.session_state.selected_ziffer = index
 
         # Get document and OCR data
-        document_store = get_document_store()
+        document_store = get_document_store(st.session_state.api_key)
         document = document_store.get_document(st.session_state.selected_document_id)
         ocr_data = document_store.get_ocr_data(st.session_state.selected_document_id)
 
@@ -157,7 +157,9 @@ def result_stage() -> None:
         st.error("Kein Dokument ausgewählt")
         return
 
-    document = get_document_store().get_document(st.session_state.selected_document_id)
+    document = get_document_store(st.session_state.api_key).get_document(
+        st.session_state.selected_document_id
+    )
     if not document:
         st.error("Ausgewähltes Dokument nicht gefunden")
         return
@@ -322,7 +324,7 @@ def result_stage() -> None:
 
     with right_col:
         # Get document store instance
-        document_store = get_document_store()
+        document_store = get_document_store(st.session_state.api_key)
 
         # Get PDF path - either highlighted or original
         pdf_path = st.session_state.get(

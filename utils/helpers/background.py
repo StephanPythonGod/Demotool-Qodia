@@ -46,7 +46,7 @@ def process_document(
         arzt_hash: Optional hash value for the doctor
         kassenname_hash: Optional hash value for the insurance provider
     """
-    document_store = get_document_store()
+    document_store = get_document_store(api_key)
 
     try:
         # Update status to PROCESSING
@@ -128,7 +128,7 @@ def queue_document(
 ) -> None:
     """Queue a document for processing."""
     thread_pool = get_thread_pool()
-    document_store = get_document_store()
+    document_store = get_document_store(api_key)
 
     # Check if document is already being processed
     doc = document_store.get_document(document_id)

@@ -306,7 +306,7 @@ def send_feedback_api(response_object: Dict) -> None:
     Args:
         response_object (Dict): The response object from the API.
     """
-    document_store = get_document_store()
+    document_store = get_document_store(st.session_state.api_key)
     document_id = st.session_state.selected_document_id
 
     # Get document from store
@@ -522,4 +522,6 @@ def test_api() -> bool:
         return False
 
     logger.info("API settings are correct. URL and API key are working.")
+
+    st.session_state.api_key_tested = True
     return True

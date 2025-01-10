@@ -63,7 +63,7 @@ def handle_file_upload(
 
         try:
             # Get document store
-            document_store = get_document_store()
+            document_store = get_document_store(st.session_state.api_key)
 
             # Store the file
             document_store.store_document_file(
@@ -145,27 +145,37 @@ def analyze_stage() -> None:
         )
 
         st.subheader("Dokumente hochladen")
+        # Disable uploader if API key hasn't been tested successfully
+        uploader_disabled = st.session_state.api_key_tested is False
+        if uploader_disabled:
+            st.warning(
+                "⚠️ Bitte speichern Sie zuerst die API-Einstellungen, bevor Sie Dokumente hochladen."
+            )
+
         uploaded_files = st.file_uploader(
             "Dokumente hochladen",
             type=["pdf", "png", "jpg"],
             accept_multiple_files=True,
             key="document_uploader",
             label_visibility="collapsed",
+            disabled=uploader_disabled,
+            help="Bitte speichern Sie die API-Einstellungen erst, bevor Sie Dokumente hochladen.",
         )
 
         if uploaded_files:
             handle_file_upload(uploaded_files, from_sidebar=False)
 
-        st.subheader("Aus Zwischenablage einfügen")
-        paste_result = pbutton(
-            label="Aus Zwischenablage einfügen",
-            text_color="#ffffff",
-            background_color="#FF4B4B",
-            hover_background_color="#FF3333",
-        )
+        if not uploader_disabled:
+            st.subheader("Aus Zwischenablage einfügen")
+            paste_result = pbutton(
+                label="Aus Zwischenablage einfügen",
+                text_color="#ffffff",
+                background_color="#FF4B4B",
+                hover_background_color="#FF3333",
+            )
 
-        if paste_result.image_data:
-            handle_clipboard_paste(paste_result)
+            if paste_result.image_data:
+                handle_clipboard_paste(paste_result)
 
     if os.environ.get("DEPLOYMENT_ENV") == "local":
         with right_col:
