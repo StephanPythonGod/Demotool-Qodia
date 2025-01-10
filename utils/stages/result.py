@@ -163,7 +163,7 @@ def result_stage() -> None:
         return
     if document["status"] == DocumentStatus.PROCESSING.value:
         update_time = datetime.fromisoformat(document["updated_at"])
-        st.error(f"Dokument wird seit {datetime.now() - update_time} verarbeitet")
+        st.info(f"Dokument wird seit {datetime.now() - update_time} verarbeitet")
         return
 
     if document["status"] == DocumentStatus.FAILED.value:

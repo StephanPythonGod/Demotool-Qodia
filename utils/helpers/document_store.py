@@ -118,6 +118,7 @@ class DocumentStore:
                     """
                     CREATE TABLE IF NOT EXISTS documents (
                         id TEXT PRIMARY KEY,
+                        api_key TEXT NOT NULL,
                         status TEXT NOT NULL,
                         error_message TEXT,
                         result JSON,
@@ -138,7 +139,8 @@ class DocumentStore:
             with sqlite3.connect(self.db_path) as conn:
                 # Check if document already exists and is being processed
                 cursor = conn.execute(
-                    "SELECT status FROM documents WHERE id = ?", (document_id,)
+                    "SELECT status FROM documents WHERE id = ? AND api_key = ?",
+                    (document_id, self.api_key),
                 )
                 existing = cursor.fetchone()
                 if existing and existing[0] in [
@@ -148,16 +150,25 @@ class DocumentStore:
                 ]:
                     return  # Skip if already being processed
 
-                # Delete existing document with same ID if exists
-                conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+                # Delete existing document with same ID if exists for this user
+                conn.execute(
+                    "DELETE FROM documents WHERE id = ? AND api_key = ?",
+                    (document_id, self.api_key),
+                )
 
                 now = datetime.now().isoformat()
                 conn.execute(
                     """
-                    INSERT INTO documents (id, status, created_at, updated_at)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO documents (id, api_key, status, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
-                    (document_id, DocumentStatus.UPLOADED.value, now, now),
+                    (
+                        document_id,
+                        self.api_key,
+                        DocumentStatus.UPLOADED.value,
+                        now,
+                        now,
+                    ),
                 )
                 conn.commit()
         except Exception as e:
@@ -180,7 +191,7 @@ class DocumentStore:
                     """
                     UPDATE documents
                     SET status = ?, error_message = ?, result = ?, api_headers = ?, updated_at = ?
-                    WHERE id = ?
+                    WHERE id = ? AND api_key = ?
                     """,
                     (
                         status.value,
@@ -189,6 +200,7 @@ class DocumentStore:
                         json.dumps(api_headers) if api_headers else None,
                         now,
                         document_id,
+                        self.api_key,
                     ),
                 )
                 conn.commit()
@@ -204,7 +216,8 @@ class DocumentStore:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.execute(
-                    "SELECT * FROM documents WHERE id = ?", (document_id,)
+                    "SELECT * FROM documents WHERE id = ? AND api_key = ?",
+                    (document_id, self.api_key),
                 )
                 row = cursor.fetchone()
 
@@ -219,12 +232,13 @@ class DocumentStore:
             raise
 
     def get_all_documents(self) -> List[Dict[str, Any]]:
-        """Get all documents in the store."""
+        """Get all documents in the store for the current user."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.execute(
-                    "SELECT * FROM documents ORDER BY created_at DESC"
+                    "SELECT * FROM documents WHERE api_key = ? ORDER BY created_at DESC",
+                    (self.api_key,),
                 )
                 documents = []
                 for row in cursor:
@@ -265,9 +279,9 @@ class DocumentStore:
                     """
                     UPDATE documents
                     SET ocr_data = ?
-                    WHERE id = ?
+                    WHERE id = ? AND api_key = ?
                     """,
-                    (json.dumps(ocr_data), document_id),
+                    (json.dumps(ocr_data), document_id, self.api_key),
                 )
                 conn.commit()
         except Exception as e:
@@ -374,6 +388,15 @@ def render_document_list_sidebar() -> None:
             from utils.stages.analyze import handle_file_upload
 
             handle_file_upload(uploaded_files, from_sidebar=True)
+
+        # Add section for uploaded documents
+        uploaded_docs = [
+            doc for doc in documents if doc["status"] == DocumentStatus.UPLOADED.value
+        ]
+        if uploaded_docs:
+            st.subheader("Hochgeladene Dokumente:")
+            for doc in uploaded_docs:
+                st.text(doc["id"])
 
         st.subheader("Weitere Dokumente selektieren:")
         if st.button("Hier klicken", use_container_width=True):

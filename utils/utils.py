@@ -354,7 +354,7 @@ def highlight_text_in_pdf(
 
     # First check total word count
     total_words = len([w for w in text_to_highlight.split() if w.strip()])
-    if total_words > 250:
+    if total_words > 100:
         st.warning(
             f"Zitat ist zu lang ({total_words} Wörter). Aus Performance-Gründen werden Zitate mit mehr als 250 Wörtern nicht hervorgehoben. Bitte gucken Sie einfach in die Zifferndetails."
         )
