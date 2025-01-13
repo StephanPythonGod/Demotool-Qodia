@@ -5,6 +5,7 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+from streamlit_pdf_viewer import pdf_viewer
 
 from utils.helpers.document_store import DocumentStatus, get_document_store
 from utils.helpers.feedback import handle_feedback_submission
@@ -323,34 +324,27 @@ def result_stage() -> None:
         button_container = st.container()
 
     with right_col:
-        # Get document store instance
         document_store = get_document_store(st.session_state.api_key)
-
-        # Get PDF path - either highlighted or original
         pdf_path = st.session_state.get(
             "current_highlighted_pdf"
         ) or document_store.get_document_path(st.session_state.selected_document_id)
 
         if pdf_path:
-            # Calculate height based on number of elements (40px per element, minimum 800px)
-            pdf_height = max(800, min(1400, 100 * len(st.session_state.original_df)))
+            deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 
-            # Read file as bytes
-            with open(pdf_path, "rb") as file:
-                bytes_data = file.read()
-
-            # Convert to base64
-            base64_pdf = base64.b64encode(bytes_data).decode("utf-8")
-
-            # Log the size of the PDF
-            logger.info(f"PDF size: {len(bytes_data)} bytes")
-            logger.info(f"PDF display height: {pdf_height}px")
-
-            # Embed PDF in HTML with dynamic height
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{pdf_height}" type="application/pdf"></iframe>'
-
-            # Display file
-            st.markdown(pdf_display, unsafe_allow_html=True)
+            if deployment_env == "local":
+                # Keep existing base64 approach for local development
+                pdf_height = max(
+                    800, min(1400, 100 * len(st.session_state.original_df))
+                )
+                with open(pdf_path, "rb") as file:
+                    bytes_data = file.read()
+                base64_pdf = base64.b64encode(bytes_data).decode("utf-8")
+                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{pdf_height}" type="application/pdf"></iframe>'
+                st.markdown(pdf_display, unsafe_allow_html=True)
+            else:
+                # Use streamlit-pdf-viewer for deployed environments
+                pdf_viewer(pdf_path)
         else:
             st.error("PDF konnte nicht geladen werden")
         st.write("")  # Add some spacing
