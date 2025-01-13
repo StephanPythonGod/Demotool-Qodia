@@ -246,8 +246,8 @@ def result_stage() -> None:
         st.subheader("Erkannte Leistungsziffern")
 
         # Header row for recognized services
-        header_cols = st.columns([1, 1, 1])
-        headers = ["Ziffer", "Anzahl", "Faktor"]
+        header_cols = st.columns([1, 1, 1, 0.4, 0.4, 0.4])
+        headers = ["Ziffer", "Anzahl", "Faktor", "", "️", "️"]
 
         for col, header in zip(header_cols, headers):
             col.markdown(f"**{header}**")
@@ -255,7 +255,7 @@ def result_stage() -> None:
         # Display recognized services
         for index, row in recognized_df.iterrows():
             # Update columns to add space for delete button
-            cols = st.columns([1, 1, 1, 0.4, 0.4])
+            cols = st.columns([1, 1, 1, 0.4, 0.4, 0.4])
 
             if cols[0].button(
                 format_ziffer_to_4digits(row["ziffer"]),
@@ -333,7 +333,7 @@ def result_stage() -> None:
 
         if pdf_path:
             # Calculate height based on number of elements (40px per element, minimum 800px)
-            pdf_height = min(800, 100 * len(st.session_state.original_df))
+            pdf_height = max(800, min(1400, 100 * len(st.session_state.original_df)))
 
             # Read file as bytes
             with open(pdf_path, "rb") as file:
@@ -341,6 +341,10 @@ def result_stage() -> None:
 
             # Convert to base64
             base64_pdf = base64.b64encode(bytes_data).decode("utf-8")
+
+            # Log the size of the PDF
+            logger.info(f"PDF size: {len(bytes_data)} bytes")
+            logger.info(f"PDF display height: {pdf_height}px")
 
             # Embed PDF in HTML with dynamic height
             pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{pdf_height}" type="application/pdf"></iframe>'

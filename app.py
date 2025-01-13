@@ -5,6 +5,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from utils.helpers.api import get_workflows, test_api
+from utils.helpers.document_store import get_document_store
 from utils.helpers.logger import logger
 from utils.helpers.settings import load_settings_from_cookies
 from utils.session import cleanup_resources, initialize_session_state
@@ -54,6 +55,10 @@ def init_app():
         if "cleanup_registered" not in st.session_state:
             atexit.register(cleanup_resources)
             st.session_state.cleanup_registered = True
+
+        # Perform cleanup of document store
+        document_store = get_document_store(st.session_state.api_key)
+        document_store.cleanup()
 
         st.session_state.initialized = True
 
