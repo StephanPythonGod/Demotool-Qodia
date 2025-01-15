@@ -1,4 +1,5 @@
 import io
+import os
 import zipfile
 from typing import Dict, List, Optional, Tuple
 
@@ -99,7 +100,7 @@ def process_bill_selections(
 
 
 def create_export_zip(processed_bill: bytes) -> Optional[bytes]:
-    """Create ZIP file with processed text and bill."""
+    """Create ZIP file with processed document and bill."""
     if "distribution_document_id" not in st.session_state:
         st.error("Kein Verteilungsdokument gefunden")
         return None
@@ -114,17 +115,26 @@ def create_export_zip(processed_bill: bytes) -> Optional[bytes]:
     if doc["status"] != DistributionStatus.COMPLETED.value:
         if doc["status"] == DistributionStatus.PROCESSING.value:
             st.info(
-                "Textverarbeitung noch nicht fertig. Probieren Sie es in 10 Sekunden noch einmal."
+                "Dokumentverarbeitung noch nicht fertig. Probieren Sie es in 10 Sekunden noch einmal."
             )
         else:
             st.error(f"Dokument Status: {doc['status']}")
         return None
 
     try:
+        # Get path to redacted PDF
+        redacted_pdf_path = distribution_store.get_redacted_pdf_path(
+            st.session_state.distribution_document_id
+        )
+        if not redacted_pdf_path or not os.path.exists(redacted_pdf_path):
+            st.error("Redacted PDF nicht gefunden")
+            return None
+
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-            # Add processed text
-            zip_file.writestr("bericht.txt", doc["processed_text"].encode("utf-8"))
+            # Add redacted PDF
+            with open(redacted_pdf_path, "rb") as f:
+                zip_file.writestr("bericht.pdf", f.read())
             # Add processed bill
             zip_file.writestr("rechnung.pdf", processed_bill)
 

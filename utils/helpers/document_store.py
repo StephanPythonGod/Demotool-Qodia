@@ -123,6 +123,8 @@ class DocumentStore:
                         error_message TEXT,
                         result JSON,
                         api_headers JSON,
+                        ocr_data JSON,
+                        redacted_pdf_path TEXT,
                         created_at TIMESTAMP NOT NULL,
                         updated_at TIMESTAMP NOT NULL
                     )
@@ -305,6 +307,43 @@ class DocumentStore:
         except Exception as e:
             logger.error(
                 f"Error getting OCR data for document {document_id}: {e}", exc_info=True
+            )
+            raise
+
+    def store_redacted_pdf_path(self, document_id: str, redacted_pdf_path: str) -> None:
+        """Store the path to the redacted version of a document."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    """
+                    UPDATE documents
+                    SET redacted_pdf_path = ?
+                    WHERE id = ? AND api_key = ?
+                    """,
+                    (redacted_pdf_path, document_id, self.api_key),
+                )
+                conn.commit()
+        except Exception as e:
+            logger.error(
+                f"Error storing redacted PDF path for document {document_id}: {e}",
+                exc_info=True,
+            )
+            raise
+
+    def get_redacted_pdf_path(self, document_id: str) -> Optional[str]:
+        """Get the path to the redacted version of a document."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute(
+                    "SELECT redacted_pdf_path FROM documents WHERE id = ? AND api_key = ?",
+                    (document_id, self.api_key),
+                )
+                result = cursor.fetchone()
+                return result[0] if result else None
+        except Exception as e:
+            logger.error(
+                f"Error getting redacted PDF path for document {document_id}: {e}",
+                exc_info=True,
             )
             raise
 

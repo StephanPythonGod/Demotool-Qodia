@@ -1,4 +1,3 @@
-import base64
 import os
 import re
 from datetime import datetime
@@ -103,6 +102,8 @@ def set_sort_mode():
     modes = ["ask", "desc", "text"]
     current_mode = st.session_state.get("sort_mode", "text")
     next_mode = modes[(modes.index(current_mode) + 1) % len(modes)]
+    st.session_state.selected_ziffer = None
+    st.session_state.current_highlighted_pdf = None
     st.session_state.sort_mode = next_mode
     apply_sorting()  # Apply sorting whenever mode changes
 
@@ -251,7 +252,16 @@ def result_stage() -> None:
         headers = ["Ziffer", "Anzahl", "Faktor", "", "️", "️"]
 
         for col, header in zip(header_cols, headers):
-            col.markdown(f"**{header}**")
+            if header == "Ziffer":
+                col.button(
+                    "Ziffer",
+                    key="ziffer_header",
+                    type="secondary",
+                    use_container_width=False,
+                    on_click=set_sort_mode,
+                )
+            else:
+                col.markdown(f"**{header}**")
 
         # Display recognized services
         for index, row in recognized_df.iterrows():
@@ -330,21 +340,8 @@ def result_stage() -> None:
         ) or document_store.get_document_path(st.session_state.selected_document_id)
 
         if pdf_path:
-            deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
-
-            if deployment_env == "local":
-                # Keep existing base64 approach for local development
-                pdf_height = max(
-                    800, min(1400, 100 * len(st.session_state.original_df))
-                )
-                with open(pdf_path, "rb") as file:
-                    bytes_data = file.read()
-                base64_pdf = base64.b64encode(bytes_data).decode("utf-8")
-                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="{pdf_height}" type="application/pdf"></iframe>'
-                st.markdown(pdf_display, unsafe_allow_html=True)
-            else:
-                # Use streamlit-pdf-viewer for deployed environments
-                pdf_viewer(pdf_path)
+            pdf_height = max(800, min(1400, 100 * len(st.session_state.original_df)))
+            pdf_viewer(pdf_path, height=pdf_height)
         else:
             st.error("PDF konnte nicht geladen werden")
         st.write("")  # Add some spacing

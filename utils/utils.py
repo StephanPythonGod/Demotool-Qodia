@@ -4,7 +4,7 @@ import tempfile
 import zipfile
 from html import escape
 from pathlib import Path
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import fitz
 import pandas as pd
@@ -444,3 +444,149 @@ tooltip_css = """
 }
 </style>
 """
+
+
+def redact_text_in_pdf(
+    pdf_path: str,
+    word_map: list,
+    detected_entities: List[Dict[str, Any]],
+    temp_dir: str,
+) -> str:
+    """
+    Create a redacted version of a PDF by drawing black boxes over detected sensitive information.
+
+    Args:
+        pdf_path: Path to the original PDF file
+        word_map: List of word coordinates from OCR
+        detected_entities: List of entities detected by anonymization
+        temp_dir: Directory to store temporary files
+
+    Returns:
+        str: Path to the redacted PDF file
+    """
+    import os
+    from collections import defaultdict
+    from datetime import datetime
+
+    import fitz
+
+    from utils.helpers.logger import logger
+
+    def clean_text(text: str) -> str:
+        """Remove punctuation and convert to lowercase."""
+        return "".join(c.lower() for c in text if c.isalnum() or c.isspace())
+
+    # Create output filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = os.path.join(temp_dir, f"redacted_{timestamp}.pdf")
+
+    logger.info(f"Original PDF path: {pdf_path}")
+    logger.info(f"Temp PDF path: {output_path}")
+
+    # Pre-process word_map: group by page and create word lookup
+    words_by_page = defaultdict(list)
+    word_lookup = defaultdict(list)
+
+    for word in word_map:
+        page_num = word.get("page", 0)
+        clean_word_text = clean_text(word["text"])
+        words_by_page[page_num].append(word)
+        word_lookup[clean_word_text].append((page_num, word))
+
+    # Pre-process entities
+    single_word_entities = []
+    multi_word_entities = []
+
+    for entity in detected_entities:
+        entity_text = entity["original_word"]
+        clean_entity = clean_text(entity_text)
+        if not clean_entity:
+            continue
+
+        entity_words = clean_entity.split()
+        if len(entity_words) == 1:
+            single_word_entities.append((clean_entity, entity_text))
+        else:
+            multi_word_entities.append((entity_words, entity_text))
+
+    # Open the PDF
+    doc = fitz.open(pdf_path)
+    scale_factor = 72.0 / 200.0
+
+    try:
+        # Process single-word entities (direct lookup)
+        for clean_entity, original_entity in single_word_entities:
+            entity_found = False
+            for page_num, word in word_lookup.get(clean_entity, []):
+                entity_found = True
+                bbox = word.get("bbox")
+                if bbox:
+                    page = doc[page_num]
+                    x0, y0, x1, y1 = [coord * scale_factor for coord in bbox]
+                    rect = fitz.Rect(x0, y0, x1, y1)
+                    page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
+
+            if not entity_found:
+                logger.debug(f"Single-word entity not found: {original_entity}")
+
+        # Process multi-word entities
+        for entity_words, original_entity in multi_word_entities:
+            entity_found = False
+            # Only look in pages where first word exists
+            potential_pages = {
+                page_num for page_num, _ in word_lookup.get(entity_words[0], [])
+            }
+
+            for page_num in potential_pages:
+                page_words = words_by_page[page_num]
+
+                # Create word index for faster lookup within page
+                word_index = defaultdict(list)
+                for i, word in enumerate(page_words):
+                    word_index[clean_text(word["text"])].append(i)
+
+                # Find sequences starting with first word
+                for start_idx in word_index.get(entity_words[0], []):
+                    if start_idx + len(entity_words) > len(page_words):
+                        continue
+
+                    matching_words = []
+                    match_found = True
+
+                    for j, entity_word in enumerate(entity_words):
+                        word = page_words[start_idx + j]
+                        if clean_text(word["text"]) != entity_word:
+                            match_found = False
+                            break
+                        matching_words.append(word)
+
+                    if match_found:
+                        entity_found = True
+                        # Create single redaction for matched sequence
+                        min_x = min(w["bbox"][0] for w in matching_words)
+                        max_x = max(w["bbox"][2] for w in matching_words)
+                        min_y = min(w["bbox"][1] for w in matching_words)
+                        max_y = max(w["bbox"][3] for w in matching_words)
+
+                        page = doc[page_num]
+                        x0, y0, x1, y1 = [
+                            coord * scale_factor
+                            for coord in (min_x, min_y, max_x, max_y)
+                        ]
+                        rect = fitz.Rect(x0, y0, x1, y1)
+                        page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
+
+            if not entity_found:
+                logger.debug(f"Multi-word entity not found: {original_entity}")
+
+        # Save the redacted PDF
+        doc.save(output_path, garbage=4, deflate=True, clean=True)
+        logger.info(f"Saved redacted PDF to: {output_path}")
+
+    except Exception as e:
+        logger.error(f"Error redacting PDF: {e}", exc_info=True)
+        raise
+    finally:
+        doc.close()
+
+    return output_path

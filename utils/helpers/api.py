@@ -85,56 +85,55 @@ def get_workflows() -> List[str]:
 
 
 def analyze_api_call(
-    text: str,
-    category: str,
-    api_key: str,
-    api_url: str,
+    text: Optional[str] = None,
+    category: str = None,
+    api_key: str = None,
+    api_url: str = None,
     arzt_hash: Optional[str] = None,
     kassenname_hash: Optional[str] = None,
+    file: Optional[bytes] = None,
+    process_type: str = "predict",
+    ocr_processor: Optional[str] = None,
 ) -> Optional[Dict]:
     """
-    Analyze the given text using the API and return the prediction.
+    Analyze text or file using the API and return the prediction.
 
     Args:
-        text (str): The text to be analyzed
+        text (Optional[str]): The text to be analyzed
         category (str): The category to analyze against
         api_key (str): The API key for authentication
         api_url (str): The base URL for the API
         arzt_hash (Optional[str]): Hash value for the doctor
         kassenname_hash (Optional[str]): Hash value for the insurance provider
+        file (Optional[bytes]): File data to be processed
+        process_type (str): Type of processing ('predict' or 'ocr_and_predict')
+        ocr_processor (Optional[str]): OCR processor to use when processing files
 
     Returns:
         Optional[Dict]: The prediction result or None if an error occurred
     """
-    logger.info("Analyzing text...")
+    logger.info("Analyzing content...")
 
     if not category:
         logger.error("No category selected")
         raise ValueError(
-            "No category selected. Please select a category before analyzing text."
+            "No category selected. Please select a category before analyzing."
         )
 
-    data_folder = os.path.join(os.path.dirname(__file__), "data")
-    os.makedirs(data_folder, exist_ok=True)
-    safe_filename = os.path.join(data_folder, f"{hash(text[100:120])}_response.pkl")
-
-    if USE_CACHE and os.path.exists(safe_filename):
-        logger.info(f"Using cached response from {safe_filename}")
-        try:
-            with open(safe_filename, "rb") as file:
-                cached_response = pickle.load(file)
-            response = cached_response["response"]
-            st.session_state.analyze_api_response = response
-            return cached_response["prediction"]
-        except Exception as e:
-            logger.error(f"Error loading cached response: {e}", exc_info=True)
+    if not text and not file:
+        logger.error("Neither text nor file provided")
+        raise ValueError("Either text or file must be provided for analysis.")
 
     url = f"{api_url}/process_document"
+
+    # Prepare the payload
     payload = {
-        "text": text,
         "category": category,
-        "process_type": "predict",
+        "process_type": process_type,
     }
+
+    if text:
+        payload["text"] = text
 
     if arzt_hash is not None:
         payload["arzt"] = arzt_hash
@@ -142,15 +141,26 @@ def analyze_api_call(
     if kassenname_hash is not None:
         payload["kassenname"] = kassenname_hash
 
+    if ocr_processor:
+        payload["ocr_processor"] = ocr_processor
+
     headers = {"x-api-key": api_key}
 
     try:
-        response = requests.post(url, headers=headers, data=payload)
+        if file:
+            # Send as multipart/form-data with file
+            files = {"file": ("document.pdf", file, "application/pdf")}
+            response = requests.post(url, headers=headers, data=payload, files=files)
+        else:
+            # Send as form-data without file
+            response = requests.post(url, headers=headers, data=payload)
+
         # Store headers for later use
         analyze_api_call.last_response_headers = dict(response.headers)
-        logger.info(f"Done analyzing text. Response status: {response.status_code}")
+        logger.info(f"Done analyzing. Response status: {response.status_code}")
+
     except Exception as e:
-        logger.error(f"Error calling API for text analysis: {e}", exc_info=True)
+        logger.error(f"Error calling API: {e}", exc_info=True)
         raise
 
     if response.status_code != 200:
@@ -162,24 +172,22 @@ def analyze_api_call(
     st.session_state.analyze_api_response = response
 
     try:
-        prediction = response.json()["result"]["prediction"]
-    except KeyError:
-        try:
-            prediction = response.json()["prediction"]
-        except KeyError as e:
-            logger.error(f"Unexpected API response format: {e}", exc_info=True)
-            raise
+        response_json = response.json()
+        # Handle both response formats (direct or nested in result)
+        if "result" in response_json:
+            prediction = response_json["result"].get("prediction")
+        else:
+            prediction = response_json.get("prediction")
 
-    if USE_CACHE:
-        cached_response = {"response": response, "prediction": prediction}
-        try:
-            with open(safe_filename, "wb") as file:
-                pickle.dump(cached_response, file)
-            logger.info(f"Response saved to {safe_filename}")
-        except Exception as e:
-            logger.error(f"Error saving response to file: {e}", exc_info=True)
+        if prediction is None:
+            logger.error("No prediction found in API response")
+            raise KeyError("No prediction found in API response")
 
-    return prediction
+        return prediction
+
+    except (KeyError, json.JSONDecodeError) as e:
+        logger.error(f"Error parsing API response: {e}", exc_info=True)
+        raise
 
 
 def ocr_pdf_to_text_api(
@@ -237,7 +245,7 @@ def ocr_pdf_to_text_api(
 
     url = f"{api_url}/process_document"
     payload = {
-        "ocr_processor": "google_document_ai",
+        "ocr_processor": "smart",
         "process_type": "ocr",
         "category": category,
     }

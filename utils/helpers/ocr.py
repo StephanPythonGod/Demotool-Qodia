@@ -108,7 +108,7 @@ def _process_pdf_with_coordinates(pages: List[Image.Image]) -> dict:
         pages: List of PDF pages converted to PIL Images
 
     Returns:
-        dict: Contains 'text' and 'word_map' with coordinates
+        dict: Contains 'text' and 'word_map' with coordinates sorted by page number
     """
     all_text = []
     all_words = []
@@ -119,21 +119,29 @@ def _process_pdf_with_coordinates(pages: List[Image.Image]) -> dict:
             for i, page in enumerate(pages)
         }
 
+        # Create a temporary list to store results with their page numbers
+        page_results = []
+
         for future in as_completed(futures):
             page_num = futures[future]
             try:
                 result = future.result()
                 all_text.append(result["text"])
 
-                # Update page numbers in word_map
-                for word in result["word_map"]:
+                # Store the words with their page number for later sorting
+                words = result["word_map"]
+                for word in words:
                     word["page"] = page_num
-                    all_words.extend([word])
+                page_results.append((page_num, words))
 
             except Exception as e:
                 logger.error(
                     f"Error processing page {page_num}: {str(e)}", exc_info=True
                 )
+
+        # Sort by page number and flatten the word list
+        page_results.sort(key=lambda x: x[0])  # Sort by page number
+        all_words = [word for _, words in page_results for word in words]
 
     return {"text": " ".join(all_text), "word_map": all_words}
 

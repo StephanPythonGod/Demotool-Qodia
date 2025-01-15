@@ -11,6 +11,7 @@ from utils.helpers.distribution_store import DistributionStatus, get_distributio
 from utils.helpers.document_store import DocumentStatus, get_document_store
 from utils.helpers.logger import logger
 from utils.helpers.ocr import perform_ocr_on_file
+from utils.utils import get_temp_dir, redact_text_in_pdf
 
 
 @st.cache_resource(ttl=3600)
@@ -54,18 +55,48 @@ def process_document(
 
         # Perform OCR on the complete document
         if os.getenv("DEPLOYMENT_ENV") == "local":
-            # Get OCR results with coordinates using existing function
+            # Get OCR results with coordinates
             ocr_result = perform_ocr_on_file(file_data, return_coordinates=True)
             text = ocr_result["text"]
 
             # Store OCR data with coordinates
             document_store.store_ocr_data(document_id, ocr_result)
 
-            # Anonymize the text
+            # First run anonymization
             anonymization_result = anonymize_text_german(
                 text, use_spacy=False, use_flair=True
             )
             text = anonymization_result["anonymized_text"]
+
+            # Create redacted version of PDF using anonymization results
+            pdf_path = document_store.get_document_path(document_id)
+            temp_dir = get_temp_dir()
+            redacted_pdf_path = redact_text_in_pdf(
+                pdf_path=pdf_path,
+                word_map=ocr_result["word_map"],
+                detected_entities=anonymization_result["detected_entities"],
+                temp_dir=temp_dir,
+            )
+
+            # Store path to redacted PDF
+            document_store.store_redacted_pdf_path(document_id, redacted_pdf_path)
+
+            # Read the redacted PDF for sending to API
+            with open(redacted_pdf_path, "rb") as f:
+                redacted_pdf_data = f.read()
+
+            # Send redacted PDF to API for analysis
+            result = analyze_api_call(
+                category=category,
+                api_key=api_key,
+                api_url=api_url,
+                arzt_hash=arzt_hash,
+                kassenname_hash=kassenname_hash,
+                file=redacted_pdf_data,
+                process_type="ocr_and_predict",
+                ocr_processor="smart",
+            )
+
         else:
             # For API mode, we still need text coordinates
             # First get text from API
@@ -81,18 +112,16 @@ def process_document(
             ocr_result = perform_ocr_on_file(file_data, return_coordinates=True)
             document_store.store_ocr_data(document_id, ocr_result)
 
-        if not text:
-            raise Exception("OCR failed to extract text from document")
+            # Analyze text
+            result = analyze_api_call(
+                text=text,
+                category=category,
+                api_key=api_key,
+                api_url=api_url,
+                arzt_hash=arzt_hash,
+                kassenname_hash=kassenname_hash,
+            )
 
-        # Analyze text
-        result = analyze_api_call(
-            text=text,
-            category=category,
-            api_key=api_key,
-            api_url=api_url,
-            arzt_hash=arzt_hash,
-            kassenname_hash=kassenname_hash,
-        )
         if not result:
             raise Exception("API analysis failed")
 
@@ -244,8 +273,8 @@ def _process_distribution_document_background(
     distribution_store = get_distribution_store()
 
     try:
-        # Perform OCR
-        ocr_result = perform_ocr_on_file(pdf_bytes)
+        # Perform OCR with coordinates
+        ocr_result = perform_ocr_on_file(pdf_bytes, return_coordinates=True)
         text = ocr_result["text"]
 
         if not text:
@@ -255,11 +284,29 @@ def _process_distribution_document_background(
         anonymization_result = anonymize_text_german(
             text, use_spacy=False, use_flair=True
         )
-        anonymized_text = anonymization_result["anonymized_text"]
 
-        # Update status to COMPLETED with processed text
+        # Store original PDF path
+        pdf_path = distribution_store.get_document_path(document_id)
+
+        # Create redacted version of PDF
+        temp_dir = get_temp_dir()
+        redacted_pdf_path = redact_text_in_pdf(
+            pdf_path=pdf_path,
+            word_map=ocr_result["word_map"],
+            detected_entities=anonymization_result["detected_entities"],
+            temp_dir=temp_dir,
+        )
+
+        # Store path to redacted PDF
+        distribution_store.store_redacted_pdf_path(document_id, redacted_pdf_path)
+
+        # Update status to COMPLETED
         distribution_store.update_status(
-            document_id, DistributionStatus.COMPLETED, processed_text=anonymized_text
+            document_id,
+            DistributionStatus.COMPLETED,
+            processed_text=anonymization_result[
+                "anonymized_text"
+            ],  # Keep this for backwards compatibility
         )
 
     except Exception as e:

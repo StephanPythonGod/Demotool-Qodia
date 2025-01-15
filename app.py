@@ -1,4 +1,3 @@
-import atexit
 import os
 
 import streamlit as st
@@ -8,7 +7,7 @@ from utils.helpers.api import get_workflows, test_api
 from utils.helpers.document_store import get_document_store
 from utils.helpers.logger import logger
 from utils.helpers.settings import load_settings_from_cookies
-from utils.session import cleanup_resources, initialize_session_state
+from utils.session import initialize_session_state
 from utils.stages.analyze import analyze_stage
 from utils.stages.generate_result_modal import rechnung_erstellen_modal
 from utils.stages.result import result_stage
@@ -53,7 +52,6 @@ def init_app():
 
         # Register cleanup handler for app shutdown
         if "cleanup_registered" not in st.session_state:
-            atexit.register(cleanup_resources)
             st.session_state.cleanup_registered = True
 
         # Perform cleanup of document store
