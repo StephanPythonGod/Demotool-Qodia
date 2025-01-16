@@ -164,6 +164,58 @@ $commonTools = @{
 # Step 1: Define and check the repository directory environment variable
 $repoEnvVar = "QODIA_REPO_PATH"
 
+# Function to setup SSH key
+function Setup-SSHKey {
+    $sshDir = Join-Path $env:USERPROFILE ".ssh"
+    $keyFileName = "qodia_deploy_key"
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $sourceKeyPath = Join-Path $scriptDir $keyFileName
+    $targetKeyPath = Join-Path $sshDir $keyFileName
+
+    # Check if key exists in script directory
+    if (-not (Test-Path $sourceKeyPath)) {
+        Write-Error "Deploy key not found in script directory: $sourceKeyPath"
+        exit 1
+    }
+
+    # Create .ssh directory if it doesn't exist
+    if (-not (Test-Path $sshDir)) {
+        try {
+            New-Item -ItemType Directory -Path $sshDir | Out-Null
+            Write-Host "Created .ssh directory: $sshDir"
+        } catch {
+            Write-Error "Failed to create .ssh directory: $_"
+            exit 1
+        }
+    }
+
+    # Copy key file to .ssh directory
+    try {
+        Copy-Item -Path $sourceKeyPath -Destination $targetKeyPath -Force
+        # Set restrictive permissions
+        icacls $targetKeyPath /inheritance:r
+        icacls $targetKeyPath /grant:r ${env:USERNAME}:"(R)"
+        Write-Host "Deploy key installed successfully"
+        
+        # Clean up original key file
+        Remove-Item -Path $sourceKeyPath -Force
+        Write-Host "Cleaned up original key file"
+
+        # Start ssh-agent and add key
+        Write-Host "Starting ssh-agent and adding deploy key..."
+        start-ssh-agent >$null 2>&1
+        ssh-add $targetKeyPath >$null 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to add SSH key to ssh-agent"
+        }
+        Write-Host "SSH key added to agent successfully"
+
+    } catch {
+        Write-Error "Failed to setup SSH key: $_"
+        exit 1
+    }
+}
+
 # Check if environment variable exists at machine level
 $machineEnvPath = [System.Environment]::GetEnvironmentVariable($repoEnvVar, "Machine")
 if ([string]::IsNullOrWhiteSpace($machineEnvPath)) {
@@ -173,7 +225,6 @@ if ([string]::IsNullOrWhiteSpace($machineEnvPath)) {
     
     try {
         [System.Environment]::SetEnvironmentVariable($repoEnvVar, $repo_dir, "Machine")
-        # Update current session's environment variable
         $env:QODIA_REPO_PATH = $repo_dir
         Write-Host "Repository path saved to environment variable $repoEnvVar."
     } catch {
@@ -196,20 +247,15 @@ if (-not (Test-Path -Path $repo_dir)) {
     }
 }
 
+# Setup SSH key before git operations
+Setup-SSHKey
+
 # Clone repository with proper error handling
 if (-not (Test-Path -Path (Join-Path $repo_dir ".git"))) {
-    # Check if directory is empty
-    $items = Get-ChildItem -Path $repo_dir -Force
-    if ($items.Count -gt 0) {
-        Write-Error "Directory is not empty. Please choose an empty directory for the repository."
-        exit 1
-    }
-    
     try {
         Write-Host "Cloning repository to $repo_dir..."
-        git clone "https://github.com/naibill/Qodia-Kodierungstool.git" $repo_dir
+        git clone "git@github.com:naibill/Demotool.git" $repo_dir
         
-        # Verify the clone was successful by checking for .git directory
         if (-not (Test-Path -Path (Join-Path $repo_dir ".git"))) {
             throw "Git clone appeared to succeed but .git directory not found"
         }

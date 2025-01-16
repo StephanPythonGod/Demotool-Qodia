@@ -3,6 +3,7 @@ setlocal enabledelayedexpansion
 echo ===================================
 echo Qodia Application Launcher
 echo ===================================
+
 REM Check for QODIA_REPO_PATH environment variable
 IF "%QODIA_REPO_PATH%"=="" (
     echo [ERROR] The environment variable QODIA_REPO_PATH is not set.
@@ -10,6 +11,15 @@ IF "%QODIA_REPO_PATH%"=="" (
     pause
     exit /b 1
 )
+
+REM Check for SSH key
+IF NOT EXIST "%USERPROFILE%\.ssh\qodia_deploy_key" (
+    echo [ERROR] SSH deploy key not found.
+    echo Please run the installation script to configure the SSH key.
+    pause
+    exit /b 1
+)
+
 REM Navigate to the repository directory
 cd /d "%QODIA_REPO_PATH%" 2>nul
 IF %ERRORLEVEL% NEQ 0 (
@@ -18,6 +28,7 @@ IF %ERRORLEVEL% NEQ 0 (
     pause
     exit /b 1
 )
+
 REM Check if Git is available
 where git >nul 2>nul
 IF %ERRORLEVEL% NEQ 0 (
@@ -25,6 +36,7 @@ IF %ERRORLEVEL% NEQ 0 (
     echo Updates cannot be checked.
     goto :skip_git
 )
+
 REM Configure safe directory
 echo Configuring repository as safe directory...
 git config --global --add safe.directory "%QODIA_REPO_PATH%" 2>nul
@@ -34,6 +46,15 @@ IF NOT EXIST ".git" (
     echo [WARNING] Git repository not initialized. Skipping updates.
     goto :skip_git
 )
+
+REM Start ssh-agent and add key
+echo Starting ssh-agent and adding deploy key...
+start-ssh-agent >nul 2>&1
+ssh-add "%USERPROFILE%\.ssh\qodia_deploy_key" >nul 2>&1
+
+REM Configure remote with SSH URL
+echo Configuring git remote...
+git remote set-url origin "git@github.com:naibill/Demotool.git" >nul 2>&1
 
 REM Check remote configuration
 echo Checking remote configuration...
@@ -49,17 +70,17 @@ git remote update origin --prune
 
 REM Try normal pull first
 echo Attempting normal pull...
-git pull origin master
+git pull origin main
 if %ERRORLEVEL% NEQ 0 (
     echo Normal pull failed, performing force update...
     REM Fetch the latest state
-    git fetch origin master
+    git fetch origin main
     if %ERRORLEVEL% NEQ 0 (
         echo [WARNING] Failed to fetch from remote. Continuing without updates...
         goto :skip_git
     )
     REM Reset to match remote
-    git reset --hard origin/master
+    git reset --hard origin/main
     if %ERRORLEVEL% NEQ 0 (
         echo [WARNING] Failed to reset to remote state. Continuing without updates...
         goto :skip_git
@@ -87,6 +108,7 @@ IF %ERRORLEVEL% NEQ 0 (
     pause
     exit /b 1
 )
+
 REM Check if the virtual environment exists and create if needed
 poetry env info -p >nul 2>nul
 IF %ERRORLEVEL% NEQ 0 (
@@ -98,6 +120,7 @@ IF %ERRORLEVEL% NEQ 0 (
         exit /b 1
     )
 )
+
 REM Check if app.py exists
 IF NOT EXIST "app.py" (
     echo [ERROR] app.py not found in %QODIA_REPO_PATH%
@@ -105,13 +128,16 @@ IF NOT EXIST "app.py" (
     pause
     exit /b 1
 )
+
 echo ===================================
 echo Starting Qodia application...
 echo ===================================
 echo Press Ctrl+C to stop the application
 echo.
+
 REM Run the Qodia application using Poetry and Streamlit
 poetry run streamlit run app.py
+
 REM Check if the application terminated with an error
 IF %ERRORLEVEL% NEQ 0 (
     echo.
