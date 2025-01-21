@@ -179,7 +179,10 @@ def analyze_stage() -> None:
 
     logger.info("DEPLOYMENT_ENV: %s", os.environ.get("DEPLOYMENT_ENV"))
 
-    if os.environ.get("DEPLOYMENT_ENV") == "local" or None:
+    if (
+        os.environ.get("DEPLOYMENT_ENV") == "local"
+        or os.environ.get("DEPLOYMENT_ENV") is None
+    ):
         with right_col:
             st.title("Dokument teilen")
 
