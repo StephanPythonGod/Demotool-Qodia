@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
 import streamlit as st
 
 from utils.helpers.logger import logger
@@ -125,10 +126,12 @@ class DocumentStore:
                         api_headers JSON,
                         ocr_data JSON,
                         redacted_pdf_path TEXT,
+                        user_modifications JSON,
+                        ocr_text TEXT,
                         created_at TIMESTAMP NOT NULL,
                         updated_at TIMESTAMP NOT NULL
                     )
-                """
+                    """
                 )
                 conn.commit()
         except Exception as e:
@@ -227,6 +230,10 @@ class DocumentStore:
                     result = dict(row)
                     if result["result"]:
                         result["result"] = json.loads(result["result"])
+                    if result.get("user_modifications"):
+                        result["user_modifications"] = json.loads(
+                            result["user_modifications"]
+                        )
                     return result
                 return None
         except Exception as e:
@@ -255,14 +262,36 @@ class DocumentStore:
 
     def cleanup(self) -> None:
         """Clean up the document store and all stored files."""
+        if not os.path.exists(self.base_dir):
+            return
+
         try:
-            if os.path.exists(self.base_dir):
+            # First try to close any open database connections
+            with sqlite3.connect(self.db_path) as conn:
+                conn.close()
+        except Exception as e:
+            logger.warning(f"Error closing database connection during cleanup: {e}")
+
+        # Try to remove files with retries
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
                 import shutil
 
                 shutil.rmtree(self.base_dir)
-        except Exception as e:
-            logger.error(f"Error cleaning up document store: {e}", exc_info=True)
-            raise
+                break
+            except PermissionError as e:
+                if attempt == max_retries - 1:
+                    logger.warning(
+                        f"Could not remove directory {self.base_dir} after {max_retries} attempts: {e}"
+                    )
+                else:
+                    import time
+
+                    time.sleep(0.5)  # Wait before retry
+            except Exception as e:
+                logger.warning(f"Error during cleanup of {self.base_dir}: {e}")
+                break
 
     def store_ocr_data(self, document_id: str, ocr_data: dict) -> None:
         """Store OCR data including word coordinates for a document."""
@@ -346,6 +375,63 @@ class DocumentStore:
                 exc_info=True,
             )
             raise
+
+    def store_user_modifications(self, document_id: str, df: pd.DataFrame) -> None:
+        """Store user modifications to a document."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                now = datetime.now().isoformat()
+                conn.execute(
+                    """
+                    UPDATE documents
+                    SET user_modifications = ?, updated_at = ?
+                    WHERE id = ? AND api_key = ?
+                    """,
+                    (df.to_json(orient="records"), now, document_id, self.api_key),
+                )
+                conn.commit()
+        except Exception as e:
+            logger.error(
+                f"Error storing user modifications for document {document_id}: {e}",
+                exc_info=True,
+            )
+            raise
+
+    def store_ocr_text(self, document_id: str, ocr_text: str) -> None:
+        """Store OCR text for a document."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                now = datetime.now().isoformat()
+                conn.execute(
+                    """
+                    UPDATE documents
+                    SET ocr_text = ?, updated_at = ?
+                    WHERE id = ? AND api_key = ?
+                    """,
+                    (ocr_text or "", now, document_id, self.api_key),
+                )
+                conn.commit()
+        except Exception as e:
+            logger.error(
+                f"Error storing OCR text for document {document_id}: {e}", exc_info=True
+            )
+            raise
+
+    def get_ocr_text(self, document_id: str) -> str:
+        """Get OCR text for a document."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute(
+                    "SELECT ocr_text FROM documents WHERE id = ? AND api_key = ?",
+                    (document_id, self.api_key),
+                )
+                result = cursor.fetchone()
+                return result[0] if result and result[0] else ""
+        except Exception as e:
+            logger.error(
+                f"Error getting OCR text for document {document_id}: {e}", exc_info=True
+            )
+            return ""
 
 
 def get_document_store(api_key: Optional[str] = None) -> DocumentStore:
