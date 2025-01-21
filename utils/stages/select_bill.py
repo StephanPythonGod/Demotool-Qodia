@@ -182,6 +182,19 @@ def select_bill_stage() -> None:
                 doc = distribution_store.get_document(
                     st.session_state.distribution_document_id
                 )
+
+                # Add status check and reload button
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    if doc:
+                        if doc["status"] == DistributionStatus.PROCESSING.value:
+                            st.info("Bericht wird noch verarbeitet...")
+                        elif doc["status"] != DistributionStatus.COMPLETED.value:
+                            st.error(f"Status: {doc['status']}")
+                with col2:
+                    if st.button("Status aktualisieren", type="secondary"):
+                        st.rerun()
+
                 if doc and doc["status"] == DistributionStatus.COMPLETED.value:
                     redacted_pdf_path = distribution_store.get_redacted_pdf_path(
                         st.session_state.distribution_document_id
