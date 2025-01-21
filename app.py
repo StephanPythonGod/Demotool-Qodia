@@ -26,9 +26,24 @@ st.set_page_config(
 def init_app():
     """Initialize app state and configuration"""
     if "initialized" not in st.session_state:
-        load_dotenv()
+        # Get the absolute path to the .env file
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+        logger.info(f"Loading .env file from: {env_path}")
+        load_dotenv(dotenv_path=env_path)
+
+        # Debug: Print some environment variables to verify loading
+        logger.info(f"DEPLOYMENT_ENV: {os.getenv('DEPLOYMENT_ENV')}")
+
         settings = load_settings_from_cookies()
         initialize_session_state(settings)
+
+        # Only perform cleanup on fresh session start (not on reloads)
+        if "session_id" not in st.session_state:
+            st.session_state.session_id = os.urandom(16).hex()
+            if st.session_state.api_key:
+                document_store = get_document_store(st.session_state.api_key)
+                document_store.cleanup()
+
         if (
             os.getenv("DEPLOYMENT_ENV") == "local"
             or os.getenv("DEPLOYMENT_ENV") == "production"
@@ -49,14 +64,6 @@ def init_app():
                     "API-Test fehlgeschlagen. Bitte überprüfen Sie die API-Einstellungen."
                 )
                 st.session_state.workflows = None
-
-        # Register cleanup handler for app shutdown
-        if "cleanup_registered" not in st.session_state:
-            st.session_state.cleanup_registered = True
-
-        # Perform cleanup of document store
-        document_store = get_document_store(st.session_state.api_key)
-        document_store.cleanup()
 
         st.session_state.initialized = True
 
