@@ -1,11 +1,4 @@
-# PowerShell script to set up Qodia-Kodierungstool with persistent environment variable and interactive deployment choice
-
-# Function to check if running as administrator
-function Test-Administrator {
-    $user = [Security.Principal.WindowsIdentity]::GetCurrent();
-    $principal = New-Object Security.Principal.WindowsPrincipal $user
-    return $principal.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
-}
+# PowerShell script to set up Qodia-Kodierungstool with persistent environment variable
 
 # Function to validate directory path
 function Test-ValidPath {
@@ -25,92 +18,10 @@ function Test-ApiKey {
     return -not [string]::IsNullOrWhiteSpace($key)
 }
 
-# Enhanced Function to add directory to PATH if it's not already included
-function Add-ToPath {
-    param(
-        [string]$PathToAdd
-    )
-    
-    if (-not (Test-Path -Path $PathToAdd)) {
-        Write-Host "Path does not exist: $PathToAdd"
-        return $false
-    }
-
-    # Get both Machine and User PATH
-    $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
-
-    # Split paths into arrays for better comparison
-    $machinePathArray = $machinePath -split ";"
-    $userPathArray = $userPath -split ";"
-
-    # Check if path already exists in either Machine or User PATH
-    if (($machinePathArray -contains $PathToAdd) -or ($userPathArray -contains $PathToAdd)) {
-        Write-Host "Path already exists in environment: $PathToAdd"
-        return $true
-    }
-
-    try {
-        # Add to Machine PATH
-        $newMachinePath = ($machinePathArray + $PathToAdd) -join ";"
-        [System.Environment]::SetEnvironmentVariable("Path", $newMachinePath, "Machine")
-        
-        # Update current session
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-        Write-Host "Successfully added to system PATH: $PathToAdd"
-        
-        # Broadcast WM_SETTINGCHANGE message to notify other applications of the environment change
-        if (-not ("Win32.NativeMethods" -as [Type])) {
-            Add-Type -Namespace Win32 -Name NativeMethods -MemberDefinition @"
-                [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-                public static extern IntPtr SendMessageTimeout(
-                    IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam,
-                    uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
-"@
-        }
-        
-        $HWND_BROADCAST = [IntPtr]0xffff
-        $WM_SETTINGCHANGE = 0x1a
-        $result = [UIntPtr]::Zero
-        
-        [Win32.NativeMethods]::SendMessageTimeout(
-            $HWND_BROADCAST,
-            $WM_SETTINGCHANGE,
-            [UIntPtr]::Zero,
-            "Environment",
-            2,
-            5000,
-            [ref]$result
-        ) | Out-Null
-
-        return $true
-    }
-    catch {
-        Write-Error "Failed to add to PATH: $_"
-        return $false
-    }
-}
-
-# Function to verify PATH updates
-function Test-PathEntry {
-    param(
-        [string]$PathToTest
-    )
-    
-    $currentPath = $env:Path -split ";"
-    if ($currentPath -contains $PathToTest) {
-        Write-Host "Verified: $PathToTest is in current session PATH"
-        return $true
-    }
-    Write-Host "Warning: $PathToTest is not in current session PATH"
-    return $false
-}
-
-# Function to get Python command
+# Function to get Python command and validate version
 function Get-PythonCommand {
-    # First try the 'py' launcher as it's more reliable on Windows
+    # First try the 'py' launcher
     if (Get-Command py -ErrorAction SilentlyContinue) {
-        # Verify py command works and points to Python 3.12
         try {
             $pyVersion = (& py -3.12 --version 2>&1).ToString()
             if ($pyVersion -match 'Python 3\.12\.\d+') {
@@ -122,11 +33,10 @@ function Get-PythonCommand {
         }
     }
     
-    # Then try the 'python' command
+    # Then try 'python' command
     if (Get-Command python -ErrorAction SilentlyContinue) {
         try {
             $pythonVersion = (& python --version 2>&1).ToString()
-            # Check if it's not the Microsoft Store redirect
             if ($pythonVersion -notmatch "Microsoft Store" -and 
                 $pythonVersion -notmatch "was not found" -and 
                 $pythonVersion -match 'Python 3\.12\.\d+') {
@@ -141,10 +51,82 @@ function Get-PythonCommand {
     return $null
 }
 
-# Check for administrator rights
-if (-not (Test-Administrator)) {
-    Write-Error "This script requires administrator rights. Please run PowerShell as administrator."
-    exit 1
+# Function to attempt git clone with timeout and progress reporting
+function Invoke-GitCloneWithTimeout {
+    param(
+        [string]$RepoUrl,
+        [string]$Directory,
+        [int]$TimeoutSeconds = 60
+    )
+    
+    try {
+        Write-Host "Attempting to clone repository..."
+        Write-Host @"
+Note: You will be prompted for GitHub credentials if needed.
+For HTTPS authentication, you can use:
+- Username: Your GitHub username
+- Password: A GitHub Personal Access Token
+"@ -ForegroundColor Yellow
+        Write-Host "Timeout set to $TimeoutSeconds seconds"
+        
+        # Set up the clone operation
+        $scriptBlock = {
+            param($RepoUrl, $Directory)
+            
+            # Configure Git for HTTPS and Windows
+            git config --global core.autocrlf true
+            
+            # Try the clone with progress
+            $result = git clone --progress $RepoUrl $Directory 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                return @{Success=$true; Output=$result}
+            } else {
+                return @{Success=$false; Output=$result}
+            }
+        }
+        
+        Write-Host "Starting clone operation..."
+        $job = Start-Job -ScriptBlock $scriptBlock -ArgumentList $RepoUrl, $Directory
+        
+        # Wait for job with progress indicator
+        $elapsed = 0
+        $interval = 5  # Check every 5 seconds
+        while ($elapsed -lt $TimeoutSeconds) {
+            $jobState = Get-Job -Id $job.Id | Select-Object -ExpandProperty State
+            Write-Host "Clone in progress... ($elapsed seconds elapsed)"
+            
+            if ($jobState -eq "Completed") {
+                break
+            }
+            
+            Start-Sleep -Seconds $interval
+            $elapsed += $interval
+        }
+        
+        if ($elapsed -ge $TimeoutSeconds) {
+            Write-Host "Clone operation timed out after $TimeoutSeconds seconds"
+            Stop-Job -Job $job
+            Remove-Job -Job $job -Force
+            return $false
+        }
+        
+        $result = Receive-Job -Job $job
+        Remove-Job -Job $job
+        
+        if ($result.Success) {
+            Write-Host "Clone completed successfully in $elapsed seconds"
+            Write-Host $result.Output
+            return $true
+        } else {
+            Write-Host "Clone failed after $elapsed seconds with output:"
+            Write-Host $result.Output
+            return $false
+        }
+    }
+    catch {
+        Write-Error "Clone attempt failed: $_"
+        return $false
+    }
 }
 
 # Set PowerShell Execution Policy for the current session if needed
@@ -155,76 +137,57 @@ try {
     exit 1
 }
 
-# Verify required tools based on deployment choice
+# Verify required tools
 Write-Host "Checking system requirements..."
-$commonTools = @{
+$requiredTools = @{
     'git' = 'Git is not installed. Please install from https://git-scm.com/downloads'
 }
 
-# Step 1: Define and check the repository directory environment variable
-$repoEnvVar = "QODIA_REPO_PATH"
-
-# Function to setup SSH key
-function Setup-SSHKey {
-    $sshDir = Join-Path $env:USERPROFILE ".ssh"
-    $keyFileName = "qodia_deploy_key"
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $sourceKeyPath = Join-Path $scriptDir $keyFileName
-    $targetKeyPath = Join-Path $sshDir $keyFileName
-
-    # Check if key exists in script directory
-    if (-not (Test-Path $sourceKeyPath)) {
-        Write-Error "Deploy key not found in script directory: $sourceKeyPath"
-        exit 1
-    }
-
-    # Create .ssh directory if it doesn't exist
-    if (-not (Test-Path $sshDir)) {
-        try {
-            New-Item -ItemType Directory -Path $sshDir | Out-Null
-            Write-Host "Created .ssh directory: $sshDir"
-        } catch {
-            Write-Error "Failed to create .ssh directory: $_"
-            exit 1
-        }
-    }
-
-    # Copy key file to .ssh directory
-    try {
-        Copy-Item -Path $sourceKeyPath -Destination $targetKeyPath -Force
-        # Set restrictive permissions
-        icacls $targetKeyPath /inheritance:r
-        icacls $targetKeyPath /grant:r ${env:USERNAME}:"(R)"
-        Write-Host "Deploy key installed successfully"
-        
-        # Clean up original key file
-        Remove-Item -Path $sourceKeyPath -Force
-        Write-Host "Cleaned up original key file"
-
-        # Start ssh-agent and add key
-        Write-Host "Starting ssh-agent and adding deploy key..."
-        start-ssh-agent >$null 2>&1
-        ssh-add $targetKeyPath >$null 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to add SSH key to ssh-agent"
-        }
-        Write-Host "SSH key added to agent successfully"
-
-    } catch {
-        Write-Error "Failed to setup SSH key: $_"
+foreach ($tool in $requiredTools.Keys) {
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+        Write-Error $requiredTools[$tool]
         exit 1
     }
 }
 
-# Check if environment variable exists at machine level
-$machineEnvPath = [System.Environment]::GetEnvironmentVariable($repoEnvVar, "Machine")
-if ([string]::IsNullOrWhiteSpace($machineEnvPath)) {
+# Check Git version
+$gitVersion = (git --version) -replace 'git version '
+if ([version]$gitVersion -lt [version]'2.0.0') {
+    Write-Error "Git version $gitVersion is too old. Please upgrade Git."
+    exit 1
+}
+
+# Display GitHub PAT instructions
+Write-Host @"
+
+Important: This script requires a GitHub Personal Access Token (PAT) for authentication.
+If you haven't already:
+1. Go to GitHub.com → Settings → Developer Settings → Personal Access Tokens → Tokens (classic)
+2. Generate a new token with the following permissions:
+   - repo (Full control of private repositories)
+   - read:org (Read org and team membership)
+3. Copy the token - you'll need it when prompted during the clone operation
+4. Store the token safely - you won't be able to see it again!
+
+"@ -ForegroundColor Yellow
+
+# Environment variable handling
+$repoEnvVar = "QODIA_REPO_PATH"
+$userEnvPath = [System.Environment]::GetEnvironmentVariable($repoEnvVar, "User")
+
+if ([string]::IsNullOrWhiteSpace($userEnvPath)) {
     do {
         $repo_dir = Read-Host "Enter the directory where you want to clone the repository"
+        try {
+            $repo_dir = [System.IO.Path]::GetFullPath($repo_dir)
+        } catch {
+            Write-Host "Invalid path format. Please enter a valid directory path."
+            continue
+        }
     } until (Test-ValidPath $repo_dir)
     
     try {
-        [System.Environment]::SetEnvironmentVariable($repoEnvVar, $repo_dir, "Machine")
+        [System.Environment]::SetEnvironmentVariable($repoEnvVar, $repo_dir, "User")
         $env:QODIA_REPO_PATH = $repo_dir
         Write-Host "Repository path saved to environment variable $repoEnvVar."
     } catch {
@@ -232,7 +195,7 @@ if ([string]::IsNullOrWhiteSpace($machineEnvPath)) {
         exit 1
     }
 } else {
-    $repo_dir = $machineEnvPath
+    $repo_dir = $userEnvPath
     Write-Host "Using existing repository path from environment variable: $repo_dir"
 }
 
@@ -247,23 +210,37 @@ if (-not (Test-Path -Path $repo_dir)) {
     }
 }
 
-# Setup SSH key before git operations
-Setup-SSHKey
-
-# Clone repository with proper error handling
+# Clone repository section
 if (-not (Test-Path -Path (Join-Path $repo_dir ".git"))) {
-    try {
-        Write-Host "Cloning repository to $repo_dir..."
-        git clone "git@github.com:naibill/Demotool.git" $repo_dir
+    $maxRetries = 3
+    $currentTry = 0
+    $success = $false
+    
+    while (-not $success -and $currentTry -lt $maxRetries) {
+        $currentTry++
+        Write-Host "Clone attempt $currentTry of $maxRetries..."
         
-        if (-not (Test-Path -Path (Join-Path $repo_dir ".git"))) {
-            throw "Git clone appeared to succeed but .git directory not found"
+        $success = Invoke-GitCloneWithTimeout -RepoUrl "https://github.com/naibill/Demotool.git" -Directory $repo_dir
+        
+        if (-not $success) {
+            if (Test-Path -Path $repo_dir) {
+                Remove-Item -Path $repo_dir -Recurse -Force -ErrorAction SilentlyContinue
+                New-Item -Path $repo_dir -ItemType Directory -Force | Out-Null
+            }
+            
+            if ($currentTry -lt $maxRetries) {
+                Write-Host "Clone failed, waiting 10 seconds before retry..."
+                Start-Sleep -Seconds 10
+            }
         }
-        Write-Host "Repository cloned successfully."
-    } catch {
-        Write-Error "Failed to clone repository: $_"
+    }
+    
+    if (-not $success) {
+        Write-Error "Failed to clone repository after $maxRetries attempts"
         exit 1
     }
+    
+    Write-Host "Repository cloned successfully."
 } else {
     Write-Host "Repository already exists in $repo_dir"
 }
@@ -282,7 +259,7 @@ if (-not (Test-Path -Path $modelsDir)) {
     Write-Host "'models' directory already exists."
 }
 
-# Environment file handling - simplified to skip if exists
+# Environment file handling
 $envFile = Join-Path -Path $repo_dir -ChildPath ".env"
 if (-not (Test-Path -Path $envFile)) {
     Write-Host "Creating new .env file..."
@@ -290,9 +267,15 @@ if (-not (Test-Path -Path $envFile)) {
         $api_key = Read-Host "Enter API Key"
     } until (Test-ApiKey $api_key)
 
+    # Add URL validation function
+    function Test-Url {
+        param([string]$url)
+        return $url -match '^https?://([\w-]+\.)+[\w-]+(/[\w- ./?%&=]*)?$'
+    }
+
     do {
         $api_url = Read-Host "Enter API URL"
-    } until ($api_url -match '^https?://.+')
+    } until (Test-Url $api_url)
 
     do {
         $rapid_api_key = Read-Host "Enter Rapid API Key"
@@ -311,14 +294,13 @@ if (-not (Test-Path -Path $envFile)) {
         if ([string]::IsNullOrWhiteSpace($otel_endpoint)) {
             $otel_endpoint = "https://grafana-collector-214718361797.europe-west3.run.app"
         }
-    } until ($otel_endpoint -match '^https?://.+')
+    } until (Test-Url $otel_endpoint)
 
     do {
         $deployment_env = Read-Host "Enter deployment environment (production/development)"
         $deployment_env = $deployment_env.ToLower()
     } until ($deployment_env -eq 'production' -or $deployment_env -eq 'development')
 
-    # Create .env file with error handling
     try {
         @"
 DEPLOYMENT_ENV=local
@@ -363,30 +345,6 @@ if ($deploymentChoice -eq '1') {
         }
     }
 
-    # Start Docker service with proper error handling
-    try {
-        $service = Get-Service docker -ErrorAction Stop
-        if ($service.Status -ne 'Running') {
-            Write-Host "Starting Docker service..."
-            Start-Service docker
-            $timeout = 30
-            $timer = [Diagnostics.Stopwatch]::StartNew()
-            while ($service.Status -ne 'Running' -and $timer.Elapsed.TotalSeconds -lt $timeout) {
-                Start-Sleep -Seconds 1
-                $service.Refresh()
-            }
-            if ($service.Status -ne 'Running') {
-                throw "Docker service failed to start within $timeout seconds"
-            }
-            Write-Host "Docker service started successfully."
-        } else {
-            Write-Host "Docker service is already running."
-        }
-    } catch {
-        Write-Error "Docker service error: $_"
-        exit 1
-    }
-
     # Run Docker setup script
     try {
         Set-Location $repo_dir
@@ -401,138 +359,11 @@ if ($deploymentChoice -eq '1') {
     # Python Deployment
     Write-Host "Preparing Python deployment..."
 
-    # Check Python 3.12 and add default paths
+    # Check Python 3.12
     $pythonCmd = Get-PythonCommand
     if (-not $pythonCmd) {
-        Write-Host "No valid Python 3.12 installation found. Please install Python 3.12 from https://www.python.org/downloads/"
-        
-        # Add default Python installation paths to PATH
-        $pythonPaths = @(
-            "${env:ProgramFiles}\Python312",
-            "${env:ProgramFiles}\Python312\Scripts",
-            "${env:ProgramFiles(x86)}\Python312",
-            "${env:ProgramFiles(x86)}\Python312\Scripts",
-            "${env:LocalAppData}\Programs\Python\Python312",
-            "${env:LocalAppData}\Programs\Python\Python312\Scripts"
-        )
-        
-        $pathsAdded = $false
-        foreach ($path in $pythonPaths) {
-            if (Test-Path $path) {
-                if (Add-ToPath $path) {
-                    $pathsAdded = $true
-                    Test-PathEntry $path
-                }
-            }
-        }
-        
-        if ($pathsAdded) {
-            Write-Host "Python paths have been added to system PATH. Please restart your PowerShell session."
-            Write-Host "After installing Python, please restart your PowerShell session and run this script again."
-        } else {
-            Write-Host "No valid Python paths found to add to PATH."
-        }
+        Write-Error "No valid Python 3.12 installation found. Please install Python 3.12 from https://www.python.org/downloads/"
         exit 1
-    } else {
-        try {
-            # No need to check version again since we already did in Get-PythonCommand
-            Write-Host "Using Python command: $pythonCmd"
-        } catch {
-            Write-Error "Failed to verify Python version. Please install Python 3.12 from https://www.python.org/downloads/"
-            exit 1
-        }
-    }
-
-    # Check and install Poetry
-    if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-        Write-Host "Poetry is not installed. Installing Poetry..."
-        try {
-            # Create a temporary file for the installation script
-            $tempFile = [System.IO.Path]::GetTempFileName()
-            $installScript = (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content
-            Set-Content -Path $tempFile -Value $installScript -Encoding UTF8
-
-            # Run the installation script with the detected Python command
-            if ($pythonCmd -eq "py -3.12") {
-                & py -3.12 $tempFile
-            } else {
-                & $pythonCmd $tempFile
-            }
-
-            # Clean up the temporary file
-            Remove-Item -Path $tempFile -Force
-            
-            # Add Poetry to PATH with verification
-            $poetryPath = [System.IO.Path]::Combine($env:APPDATA, "Python", "Scripts")
-            if (Add-ToPath $poetryPath) {
-                Test-PathEntry $poetryPath
-                
-                # Refresh environment variables in current session
-                $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-                
-                if (-not (Get-Command poetry -ErrorAction SilentlyContinue)) {
-                    throw "Poetry installation succeeded but command is not available. Please restart PowerShell."
-                }
-            }
-            Write-Host "Poetry installed successfully."
-        } catch {
-            Write-Error "Failed to install Poetry: $_"
-            Write-Host "Please install Poetry manually from https://python-poetry.org/docs/#installation"
-            exit 1
-        }
-    } else {
-        Write-Host "Poetry is already installed."
-    }
-
-    # Check Tesseract and add default paths
-    function Test-TesseractInstallation {
-        try {
-            $tesseractVersion = & tesseract --version 2>&1
-            if ($tesseractVersion -match "tesseract") {
-                Write-Host "Tesseract is installed and working."
-                return $true
-            }
-        } catch {
-            return $false
-        }
-        return $false
-    }
-
-    if (-not (Test-TesseractInstallation)) {
-        Write-Host "Tesseract is not installed or not working properly. Please install it from https://digi.bib.uni-mannheim.de/tesseract/"
-        
-        # Add default Tesseract installation paths to PATH
-        $tesseractPaths = @(
-            "${env:ProgramFiles}\Tesseract-OCR",
-            "${env:ProgramFiles(x86)}\Tesseract-OCR",
-            "${env:LocalAppData}\Programs\Tesseract-OCR"
-        )
-        
-        $pathsAdded = $false
-        foreach ($path in $tesseractPaths) {
-            if (Test-Path $path) {
-                if (Add-ToPath $path) {
-                    $pathsAdded = $true
-                    Test-PathEntry $path
-                }
-            }
-        }
-        
-        if ($pathsAdded) {
-            Write-Host "Tesseract paths have been added to system PATH."
-            # Check again after adding paths
-            if (Test-TesseractInstallation) {
-                Write-Host "Tesseract is now properly configured."
-            } else {
-                Write-Host "Please restart your PowerShell session and run this script again."
-                exit 1
-            }
-        } else {
-            Write-Host "Please install Tesseract and run this script again."
-            exit 1
-        }
-    } else {
-        Write-Host "Tesseract is installed and working properly."
     }
 
     # Run Python setup script

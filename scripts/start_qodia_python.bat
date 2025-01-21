@@ -1,150 +1,144 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal EnableDelayedExpansion
+
 echo ===================================
 echo Qodia Application Launcher
 echo ===================================
 
-REM Check for QODIA_REPO_PATH environment variable
-IF "%QODIA_REPO_PATH%"=="" (
-    echo [ERROR] The environment variable QODIA_REPO_PATH is not set.
-    echo Please run the installation script to configure the environment.
-    pause
+:: Check for QODIA_REPO_PATH environment variable
+if "%QODIA_REPO_PATH%"=="" (
+    echo Error: QODIA_REPO_PATH environment variable not found.
+    echo Please run download_and_install.ps1 first.
     exit /b 1
 )
 
-REM Check for SSH key
-IF NOT EXIST "%USERPROFILE%\.ssh\qodia_deploy_key" (
-    echo [ERROR] SSH deploy key not found.
-    echo Please run the installation script to configure the SSH key.
-    pause
+:: Change to the repository directory
+cd /d "%QODIA_REPO_PATH%" || (
+    echo Error: Failed to change to repository directory: %QODIA_REPO_PATH%
+    echo Please verify the path exists and you have access to it.
     exit /b 1
 )
 
-REM Navigate to the repository directory
-cd /d "%QODIA_REPO_PATH%" 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to navigate to %QODIA_REPO_PATH%
-    echo Please verify the directory exists and you have access to it.
-    pause
-    exit /b 1
-)
-
-REM Check if Git is available
+:: Check if Git is available
 where git >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Git is not installed or not in PATH.
+if %ERRORLEVEL% neq 0 (
+    echo Warning: Git is not installed or not in PATH.
     echo Updates cannot be checked.
     goto :skip_git
 )
 
-REM Configure safe directory
-echo Configuring repository as safe directory...
+:: Check if git repository is initialized
+if not exist ".git" (
+    echo Warning: Git repository not initialized. Skipping updates.
+    goto :skip_git
+)
+
+echo Checking for updates...
+
+:: Configure repository as safe directory
 git config --global --add safe.directory "%QODIA_REPO_PATH%" 2>nul
 
-REM Check if git repository is initialized
-IF NOT EXIST ".git" (
-    echo [WARNING] Git repository not initialized. Skipping updates.
-    goto :skip_git
+:: Configure for HTTPS
+git config --global url."https://".insteadOf git://
+git config --global core.autocrlf true
+
+:: Check remote configuration
+git remote -v | findstr "origin.*https://github.com/naibill/Demotool.git" >nul
+if %ERRORLEVEL% neq 0 (
+    echo Updating remote URL...
+    git remote set-url origin "https://github.com/naibill/Demotool.git" >nul 2>&1
+    if %ERRORLEVEL% neq 0 (
+        echo Warning: Failed to update remote URL. Skipping updates.
+        goto :skip_git
+    )
 )
 
-REM Start ssh-agent and add key
-echo Starting ssh-agent and adding deploy key...
-start-ssh-agent >nul 2>&1
-ssh-add "%USERPROFILE%\.ssh\qodia_deploy_key" >nul 2>&1
-
-REM Configure remote with SSH URL
-echo Configuring git remote...
-git remote set-url origin "git@github.com:naibill/Demotool.git" >nul 2>&1
-
-REM Check remote configuration
-echo Checking remote configuration...
-git remote -v | findstr "origin" >nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo [WARNING] Remote 'origin' not configured. Skipping updates.
-    goto :skip_git
-)
-
-REM Check for Git updates
-echo Checking for updates...
+:: Try to update repository
 git remote update origin --prune
+if %ERRORLEVEL% neq 0 (
+    echo Warning: Failed to check for updates. Continuing...
+    goto :skip_git
+)
 
-REM Try normal pull first
-echo Attempting normal pull...
-git pull origin main
-if %ERRORLEVEL% NEQ 0 (
-    echo Normal pull failed, performing force update...
-    REM Fetch the latest state
-    git fetch origin main
-    if %ERRORLEVEL% NEQ 0 (
-        echo [WARNING] Failed to fetch from remote. Continuing without updates...
-        goto :skip_git
+:: Check if we're behind the remote
+for /f %%i in ('git rev-list HEAD..origin/main --count 2^>nul') do set "updates=%%i"
+if %updates% gtr 0 (
+    echo Found %updates% update^(s^). Updating...
+    
+    :: Try normal pull first
+    git pull origin main
+    if %ERRORLEVEL% neq 0 (
+        echo Normal pull failed, attempting force update...
+        
+        :: Stash any local changes
+        git stash -u
+        
+        :: Fetch and reset to match remote
+        git fetch origin main && git reset --hard origin/main
+        if %ERRORLEVEL% neq 0 (
+            echo Warning: Update failed. Continuing with existing version...
+            goto :skip_git
+        )
+        echo Successfully updated to latest version.
+        
+        :: Update dependencies after successful pull
+        echo Updating dependencies...
+        poetry install
+        if %ERRORLEVEL% neq 0 (
+            echo Error: Failed to update dependencies.
+            exit /b 1
+        )
     )
-    REM Reset to match remote
-    git reset --hard origin/main
-    if %ERRORLEVEL% NEQ 0 (
-        echo [WARNING] Failed to reset to remote state. Continuing without updates...
-        goto :skip_git
-    )
-    echo Successfully force-updated to match remote.
 ) else (
-    echo Successfully updated with normal pull.
+    echo Already up to date.
 )
 
 :skip_git
-REM Update dependencies after pull
-echo Updating dependencies...
-poetry install
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to update dependencies.
-    pause
-    exit /b 1
-)
 
-REM Check if Poetry is available
+:: Check if Poetry is installed
 where poetry >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Poetry is not installed or not in PATH.
-    echo Please ensure Poetry is installed and added to your PATH.
-    pause
+if %ERRORLEVEL% neq 0 (
+    echo Error: Poetry is not installed.
+    echo Please run download_and_install.ps1 first.
     exit /b 1
 )
 
-REM Check if the virtual environment exists and create if needed
-poetry env info -p >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo Setting up virtual environment...
-    poetry install
-    IF %ERRORLEVEL% NEQ 0 (
-        echo [ERROR] Failed to set up virtual environment.
-        pause
-        exit /b 1
-    )
+:: Check if the virtual environment exists
+poetry env info >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo Error: Poetry virtual environment not found.
+    echo Please run setup_python.ps1 first.
+    exit /b 1
 )
 
-REM Check if app.py exists
-IF NOT EXIST "app.py" (
-    echo [ERROR] app.py not found in %QODIA_REPO_PATH%
+:: Verify qodia_gui.py exists
+if not exist "qodia_gui.py" (
+    echo Error: qodia_gui.py not found in %QODIA_REPO_PATH%
     echo Please verify the repository is properly set up.
     pause
     exit /b 1
 )
 
+:: Start the application
 echo ===================================
-echo Starting Qodia application...
+echo Starting Qodia-Kodierungstool...
 echo ===================================
 echo Press Ctrl+C to stop the application
 echo.
 
-REM Run the Qodia application using Poetry and Streamlit
-poetry run streamlit run app.py
+poetry run python qodia_gui.py
 
-REM Check if the application terminated with an error
-IF %ERRORLEVEL% NEQ 0 (
+:: Check exit status
+if %ERRORLEVEL% neq 0 (
     echo.
-    echo [ERROR] Application terminated with an error.
+    echo Error: Application failed to start.
+    echo Please check the error messages above.
     pause
+    exit /b 1
 ) else (
     echo.
     echo Application terminated successfully.
     timeout /t 3 >nul
 )
+
+endlocal
