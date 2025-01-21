@@ -179,32 +179,40 @@ if (-not (Test-TesseractInstallation)) {
 try {
     Write-Host "Locating Tesseract data directory..."
     
+    # Common Tesseract installation paths
+    $possible_locations = @(
+        "${env:ProgramFiles}\Tesseract-OCR\tessdata",
+        "${env:ProgramFiles(x86)}\Tesseract-OCR\tessdata",
+        "${env:LOCALAPPDATA}\Programs\Tesseract-OCR\tessdata",
+        "${env:USERPROFILE}\AppData\Local\Programs\Tesseract-OCR\tessdata",
+        "${env:USERPROFILE}\Tesseract-OCR\tessdata"
+    )
+
     # Try to get Tesseract installation path from where the executable is
-    $tesseract_exe = (Get-Command tesseract -ErrorAction Stop).Source
-    $tesseract_dir = Split-Path $tesseract_exe -Parent
-    $tessdata_dir = Join-Path (Split-Path $tesseract_dir -Parent) "tessdata"
+    try {
+        $tesseract_exe = (Get-Command tesseract -ErrorAction Stop).Source
+        $tesseract_dir = Split-Path $tesseract_exe -Parent
+        $tessdata_dir = Join-Path (Split-Path $tesseract_dir -Parent) "tessdata"
+        if (Test-Path -Path $tessdata_dir) {
+            $possible_locations = @($tessdata_dir) + $possible_locations
+        }
+    } catch {
+        Write-Host "Could not determine Tesseract path from executable, checking common locations..."
+    }
     
-    if (-not (Test-Path -Path $tessdata_dir)) {
-        # Alternative locations to check
-        $possible_locations = @(
-            "${env:LOCALAPPDATA}\Programs\Tesseract-OCR\tessdata",
-            "${env:USERPROFILE}\AppData\Local\Programs\Tesseract-OCR\tessdata",
-            "${env:USERPROFILE}\Tesseract-OCR\tessdata"
-        )
-        
-        foreach ($loc in $possible_locations) {
-            if (Test-Path -Path $loc) {
-                $tessdata_dir = $loc
-                break
-            }
+    $tessdata_dir = $null
+    foreach ($loc in $possible_locations) {
+        Write-Host "Checking location: $loc"
+        if (Test-Path -Path $loc) {
+            $tessdata_dir = $loc
+            Write-Host "Found Tesseract data directory: $tessdata_dir"
+            break
         }
     }
     
-    if (-not (Test-Path -Path $tessdata_dir)) {
-        throw "Could not find Tesseract data directory"
+    if (-not $tessdata_dir) {
+        throw "Could not find Tesseract data directory in any of the expected locations. Please verify your Tesseract installation."
     }
-    
-    Write-Host "Found Tesseract data directory: $tessdata_dir"
     
     # Download German language file if needed
     $deu_traineddata = Join-Path $tessdata_dir "deu.traineddata"

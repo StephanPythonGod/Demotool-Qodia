@@ -111,14 +111,6 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-:: Verify qodia_gui.py exists
-if not exist "qodia_gui.py" (
-    echo Error: qodia_gui.py not found in %QODIA_REPO_PATH%
-    echo Please verify the repository is properly set up.
-    pause
-    exit /b 1
-)
-
 :: Start the application
 echo ===================================
 echo Starting Qodia-Kodierungstool...
@@ -126,7 +118,7 @@ echo ===================================
 echo Press Ctrl+C to stop the application
 echo.
 
-poetry run python qodia_gui.py
+poetry run python app.py
 
 :: Check exit status
 if %ERRORLEVEL% neq 0 (
