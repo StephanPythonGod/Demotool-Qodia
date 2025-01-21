@@ -177,6 +177,8 @@ def analyze_stage() -> None:
             if paste_result.image_data:
                 handle_clipboard_paste(paste_result)
 
+    logger.info("DEPLOYMENT_ENV: %s", os.environ.get("DEPLOYMENT_ENV"))
+
     if os.environ.get("DEPLOYMENT_ENV") == "local":
         with right_col:
             st.title("Dokument teilen")
