@@ -153,84 +153,153 @@ def select_bill_stage() -> None:
 
     left_column, right_column = st.columns([1, 1])
 
-    with right_column:
-        uploaded_file = st.file_uploader(
-            "Laden Sie Ihre Rechnung hoch (PDF Format)",
-            type=["pdf"],
-            key="bill_file_uploader",
+    # Add radio selection for workflow
+    with left_column:
+        workflow = st.radio(
+            "Wählen Sie eine Option:",
+            options=[
+                "Nur anonymisierten Bericht herunterladen",
+                "Bericht mit Rechnung kombinieren",
+            ],
+            index=0,
+            help="Wählen Sie, ob Sie nur den anonymisierten Bericht herunterladen oder diesen mit einer Rechnung kombinieren möchten.",
         )
 
-    if uploaded_file is None:
+    if workflow == "Nur anonymisierten Bericht herunterladen":
         with left_column:
             st.markdown(
                 """
-                ## Willkommen beim Rechnungs-Bearbeitungstool
+                ## Anonymisierter Bericht
 
-                Mit diesem Tool können Sie wichtige Bereiche Ihrer Rechnung auswählen
-                und in eine neue PDF-Datei übernehmen. Die ausgewählten Bereiche
-                bleiben dabei an ihrer ursprünglichen Position.
-
-                Laden Sie zunächst eine Rechnung im PDF-Format hoch, um zu beginnen.
-                """
+                Sie können den anonymisierten Bericht direkt herunterladen.
+                Der Bericht enthält alle von Ihnen ausgewählten Bereiche,
+                mit maskierten personenbezogenen Daten.
+            """
             )
-    else:
-        selections, has_selections = display_bill_selection_interface(
-            uploaded_file, left_column, right_column
-        )
 
-        if has_selections:
-            try:
-                # Create columns for buttons
-                _, col1, col2 = st.columns([6, 1, 1])
-
-                with col1:
-                    if st.button("Export", type="primary", use_container_width=True):
-                        processed_bill = process_bill_selections(
-                            uploaded_file.getvalue(), selections
-                        )
-                        if processed_bill:
-                            export_zip = create_export_zip(processed_bill)
-                            if export_zip:
-                                st.session_state.export_zip = export_zip
-                                st.session_state.export_ready = True
-                                st.rerun()
-
-                with col2:
-                    # Download button - disabled until export is ready
-                    if st.session_state.get("export_ready", False):
-                        st.download_button(
-                            "Download",
-                            data=st.session_state.export_zip,
-                            file_name="bericht_rechnung.zip",
-                            mime="application/zip",
-                            use_container_width=True,
-                            on_click=lambda: st.session_state.update(
-                                {
-                                    "stage": "analyze",
-                                    "distribution_document_id": None,
-                                    "distribution_page_selections": set(),
-                                    "export_zip": None,
-                                    "export_ready": False,
-                                }
-                            ),
-                            type="primary",
-                        )
+            distribution_store = get_distribution_store()
+            if "distribution_document_id" in st.session_state:
+                doc = distribution_store.get_document(
+                    st.session_state.distribution_document_id
+                )
+                if doc and doc["status"] == DistributionStatus.COMPLETED.value:
+                    redacted_pdf_path = distribution_store.get_redacted_pdf_path(
+                        st.session_state.distribution_document_id
+                    )
+                    if redacted_pdf_path and os.path.exists(redacted_pdf_path):
+                        with open(redacted_pdf_path, "rb") as f:
+                            pdf_data = f.read()
+                            st.download_button(
+                                "Bericht herunterladen",
+                                data=pdf_data,
+                                file_name="bericht.pdf",
+                                mime="application/pdf",
+                                type="primary",
+                                on_click=lambda: st.session_state.update(
+                                    {
+                                        "stage": "analyze",
+                                        "distribution_document_id": None,
+                                        "distribution_page_selections": set(),
+                                    }
+                                ),
+                            )
                     else:
-                        # Disabled download button
-                        st.button(
-                            "Download",
-                            disabled=True,
-                            use_container_width=True,
-                            help="Klicken Sie zuerst auf 'Export', um den Download zu aktivieren",
-                        )
+                        st.error("Anonymisierter Bericht nicht gefunden")
+                else:
+                    st.error("Bericht noch nicht fertig verarbeitet")
 
-            except Exception as e:
-                logger.error(f"Error processing bill: {e}", exc_info=True)
-                st.error("Ein Fehler ist bei der Verarbeitung aufgetreten")
+    else:  # "Bericht mit Rechnung kombinieren"
+        with right_column:
+            st.markdown(
+                """
+                ## Rechnung hinzufügen
+
+                Laden Sie Ihre Rechnung hoch und wählen Sie die relevanten Bereiche aus.
+                Diese werden zusammen mit dem anonymisierten Bericht in einer ZIP-Datei bereitgestellt.
+            """
+            )
+            uploaded_file = st.file_uploader(
+                "Laden Sie Ihre Rechnung hoch (PDF Format)",
+                type=["pdf"],
+                key="bill_file_uploader",
+            )
+
+        if uploaded_file is None:
+            with left_column:
+                st.markdown(
+                    """
+                    ## Willkommen beim Rechnungs-Bearbeitungstool
+
+                    Mit diesem Tool können Sie wichtige Bereiche Ihrer Rechnung auswählen
+                    und in eine neue PDF-Datei übernehmen. Die ausgewählten Bereiche
+                    bleiben dabei an ihrer ursprünglichen Position.
+
+                    Laden Sie zunächst eine Rechnung im PDF-Format hoch, um zu beginnen.
+                    """
+                )
         else:
-            st.warning("Bitte wählen Sie zuerst Bereiche aus in den PDFs")
+            selections, has_selections = display_bill_selection_interface(
+                uploaded_file, left_column, right_column
+            )
 
-        with left_column:
-            if st.button("Zurück zum Hauptmenü", type="secondary"):
-                st.session_state.stage = "analyze"
-                st.rerun()
+            if has_selections:
+                try:
+                    # Create columns for buttons
+                    _, col1, col2 = st.columns([6, 1, 1])
+
+                    with col1:
+                        if st.button(
+                            "Kombinierte Datei erstellen",
+                            type="primary",
+                            use_container_width=True,
+                        ):
+                            processed_bill = process_bill_selections(
+                                uploaded_file.getvalue(), selections
+                            )
+                            if processed_bill:
+                                export_zip = create_export_zip(processed_bill)
+                                if export_zip:
+                                    st.session_state.export_zip = export_zip
+                                    st.session_state.export_ready = True
+                                    st.rerun()
+
+                    with col2:
+                        # Download button - disabled until export is ready
+                        if st.session_state.get("export_ready", False):
+                            st.download_button(
+                                "ZIP herunterladen",
+                                data=st.session_state.export_zip,
+                                file_name="bericht_rechnung.zip",
+                                mime="application/zip",
+                                use_container_width=True,
+                                on_click=lambda: st.session_state.update(
+                                    {
+                                        "stage": "analyze",
+                                        "distribution_document_id": None,
+                                        "distribution_page_selections": set(),
+                                        "export_zip": None,
+                                        "export_ready": False,
+                                    }
+                                ),
+                                type="primary",
+                            )
+                        else:
+                            # Disabled download button
+                            st.button(
+                                "ZIP herunterladen",
+                                disabled=True,
+                                use_container_width=True,
+                                help="Klicken Sie zuerst auf 'Kombinierte Datei erstellen', um den Download zu aktivieren",
+                            )
+
+                except Exception as e:
+                    logger.error(f"Error processing bill: {e}", exc_info=True)
+                    st.error("Ein Fehler ist bei der Verarbeitung aufgetreten")
+            else:
+                st.warning("Bitte wählen Sie zuerst Bereiche aus in den PDFs")
+
+    # Back button always visible at the bottom
+    with left_column:
+        if st.button("Zurück zum Hauptmenü", type="secondary"):
+            st.session_state.stage = "analyze"
+            st.rerun()
