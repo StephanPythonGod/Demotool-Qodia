@@ -15,7 +15,7 @@ from utils.helpers.transform import (
     split_recognized_and_potential,
 )
 from utils.stages.export_modal import export_modal
-from utils.stages.modal import modal_dialog
+from utils.stages.modal import add_new_ziffer, modal_dialog
 from utils.utils import get_temp_dir, highlight_text_in_pdf
 
 
@@ -199,11 +199,15 @@ def result_stage() -> None:
         return
 
     # Update session state with document results
-    result = document["result"]
-    processed_data = analyze_add_data(result)
-
     if st.session_state.df is None or len(st.session_state.df) == 0:
-        st.session_state.df = pd.DataFrame(processed_data)
+        # Check for user modifications first
+        if document.get("user_modifications"):
+            st.session_state.df = pd.DataFrame(document["user_modifications"])
+        else:
+            # Fall back to original API result
+            result = document["result"]
+            processed_data = analyze_add_data(result)
+            st.session_state.df = pd.DataFrame(processed_data)
 
     # Check if we need to clean up after adding a new ziffer
     if st.session_state.get("adding_new_ziffer", False):
@@ -291,12 +295,13 @@ def result_stage() -> None:
                 delete_ziffer(index)
 
         # Add new Ziffer button
-        st.button(
+        if st.button(
             "➕ Ziffer hinzufügen",
             key="add_new_ziffer",
             type="secondary",
             use_container_width=True,
-        )
+        ):
+            add_new_ziffer()
 
         # Potential services section
         st.subheader("Potentielle Leistungsziffern")

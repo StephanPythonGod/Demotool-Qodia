@@ -5,12 +5,9 @@ import streamlit as st
 from streamlit_annotation_tools import text_labeler
 
 from utils.helpers.db import read_in_goa
+from utils.helpers.document_store import get_document_store
 from utils.helpers.logger import logger
-from utils.helpers.transform import (
-    annotate_text_update,
-    concatenate_labels,
-    format_euro,
-)
+from utils.helpers.transform import concatenate_labels, format_euro
 from utils.utils import ziffer_from_options
 
 
@@ -89,7 +86,7 @@ def update_ziffer(new_ziffer: Dict[str, Union[str, int, float, None]]) -> None:
         additional_fields = determine_additional_fields(new_ziffer)
         new_ziffer.update(additional_fields)
 
-        # Check if the ziffer is valid (you may want to adjust this condition)
+        # Check if the ziffer is valid
         is_valid_ziffer = (
             new_ziffer["ziffer"] is not None and new_ziffer["ziffer"] != ""
         )
@@ -103,8 +100,6 @@ def update_ziffer(new_ziffer: Dict[str, Union[str, int, float, None]]) -> None:
                 st.session_state.df = pd.concat(
                     [st.session_state.df, new_row], ignore_index=True
                 )
-
-            annotate_text_update()
         else:
             # Remove the temporary row if it's not valid
             if st.session_state.ziffer_to_edit is not None:
@@ -112,6 +107,12 @@ def update_ziffer(new_ziffer: Dict[str, Union[str, int, float, None]]) -> None:
                     st.session_state.ziffer_to_edit
                 )
                 st.session_state.df = st.session_state.df.reset_index(drop=True)
+
+        # Store modifications in the database
+        document_store = get_document_store(st.session_state.api_key)
+        document_store.store_user_modifications(
+            st.session_state.selected_document_id, st.session_state.df
+        )
 
         # Reset the editing state
         st.session_state.ziffer_to_edit = None
@@ -427,7 +428,13 @@ def display_zitat_input(current_value: Optional[str], ziffer_str: Optional[str])
                 "Wählen Sie zuerst eine Ziffer aus, um ein Zitat auszuwählen.", icon="🔎"
             )
         else:
-            zitat = text_labeler(text=st.session_state.text, labels={ziffer_str: []})
+            # Get OCR text from document store
+            document_store = get_document_store(st.session_state.api_key)
+            ocr_text = document_store.get_ocr_text(
+                st.session_state.selected_document_id
+            )
+
+            zitat = text_labeler(text=ocr_text, labels={ziffer_str: []})
             zitat = concatenate_labels(zitat)
             return zitat
     else:

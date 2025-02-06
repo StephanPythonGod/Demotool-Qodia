@@ -59,6 +59,9 @@ def process_document(
             ocr_result = perform_ocr_on_file(file_data, return_coordinates=True)
             text = ocr_result["text"]
 
+            # Store text in the database
+            document_store.store_ocr_text(document_id, text)
+
             # Store OCR data with coordinates
             document_store.store_ocr_data(document_id, ocr_result)
 
@@ -108,6 +111,9 @@ def process_document(
                 filename=document_id,
             )
 
+            # Store OCR text in the database
+            document_store.store_ocr_text(document_id, text)
+
             # Then get coordinates locally
             ocr_result = perform_ocr_on_file(file_data, return_coordinates=True)
             document_store.store_ocr_data(document_id, ocr_result)
@@ -143,6 +149,7 @@ def process_document(
         document_store.update_status(
             document_id, DocumentStatus.FAILED, error_message=str(e)
         )
+        # No rerun for failed processing
 
 
 def queue_document(
