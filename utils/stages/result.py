@@ -339,6 +339,10 @@ def result_stage() -> None:
         button_container = st.container()
 
     with right_col:
+        # Add total amount display
+        total_amount = recognized_df["gesamtbetrag"].sum()
+        st.markdown(f"**Rechnungsbetrag: {total_amount:,.2f} €**".replace(".", ","))
+
         document_store = get_document_store(st.session_state.api_key)
         pdf_path = st.session_state.get(
             "current_highlighted_pdf"
