@@ -228,6 +228,9 @@ def modal_dialog() -> None:
         st.markdown(f"Gesamtbetrag: {format_euro(gesamtbetrag)}")
         st.markdown(f"Confidence: {ziffer_data.get('confidence', 1.0)}")
         st.markdown(
+            f"Confidence Reason: {ziffer_data.get('confidence_reason', 'nicht spezifiziert')}"
+        )
+        st.markdown(
             f"GO: {'GOÄ' if ziffer_data.get('go') == 'GOAE' else ziffer_data.get('go', 'Nicht verfügbar')}"
         )
 

@@ -13,6 +13,7 @@ from utils.helpers.document_store import (
     render_document_list_sidebar,
 )
 from utils.helpers.logger import logger
+from utils.helpers.pdf_generator import text_to_pdf
 from utils.helpers.settings import settings_sidebar
 
 
@@ -177,6 +178,23 @@ def analyze_stage() -> None:
             if paste_result.image_data:
                 handle_clipboard_paste(paste_result)
 
+        st.subheader("Text eingeben")
+        text_input = st.text_area(
+            "Text direkt eingeben",
+            height=200,
+            help="Geben Sie hier den Text ein, den Sie analysieren möchten.",
+            key="text_input_area",
+            disabled=uploader_disabled,
+        )
+
+        if st.button(
+            "Text analysieren", key="analyze_text_btn", disabled=uploader_disabled
+        ):
+            if text_input.strip():
+                handle_text_input(text_input)
+            else:
+                st.warning("Bitte geben Sie einen Text ein")
+
     logger.info("DEPLOYMENT_ENV: %s", os.environ.get("DEPLOYMENT_ENV"))
 
     if (
@@ -225,6 +243,43 @@ def analyze_stage() -> None:
                             # Clear session state and let user upload again
                             del st.session_state.distribution_document_id
                             st.rerun()
+
+
+def handle_text_input(text: str) -> None:
+    """Handle text input processing.
+
+    Args:
+        text: The text to process
+    """
+    try:
+        # Convert text to PDF
+        doc_id, pdf_bytes = text_to_pdf(text)
+
+        # Get document store
+        document_store = get_document_store(st.session_state.api_key)
+
+        # Add document to store first
+        document_store.add_document(doc_id)
+
+        # Store the file
+        document_store.store_document_file(
+            document_id=doc_id, file_data=pdf_bytes, file_type="application/pdf"
+        )
+
+        # Queue for processing
+        queue_document(
+            document_id=doc_id,
+            api_key=st.session_state.api_key,
+            category=st.session_state.category,
+            api_url=st.session_state.api_url,
+            file_data=pdf_bytes,
+            file_type="application/pdf",
+        )
+
+        st.success("Text wurde erfolgreich zur Verarbeitung hinzugefügt")
+    except Exception as e:
+        logger.error(f"Error processing text input: {e}", exc_info=True)
+        st.error("Fehler bei der Verarbeitung des Textes")
 
 
 def analyze_text(text: str) -> bool:
