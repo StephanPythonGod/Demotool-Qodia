@@ -371,7 +371,7 @@ def result_stage() -> None:
         # Place Extrahieren button on the far right
         with right_btn:
             if st.button("Extrahieren", type="primary", use_container_width=True):
-                export_modal(recognized_df)
+                export_modal(st.session_state.df)
 
     # Add to session state initialization
     if "current_highlighted_pdf" not in st.session_state:

@@ -214,9 +214,15 @@ def create_tooltip(confidence, confidence_reason):
     return emoji
 
 
-def generate_report_files_as_zip(df: pd.DataFrame):
+def generate_report_files_as_zip(
+    recognized_df: pd.DataFrame, potential_df: pd.DataFrame
+):
     """
     Generate a ZIP file containing Rechnung.pdf, Ziffern.xlsx, and the selected document PDF.
+
+    Args:
+        recognized_df (pd.DataFrame): DataFrame containing recognized ziffern
+        potential_df (pd.DataFrame): DataFrame containing potential ziffern
     """
     # Create a temporary directory for file storage
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -229,16 +235,51 @@ def generate_report_files_as_zip(df: pd.DataFrame):
         else:
             from utils.helpers.api import generate_pdf
 
-            bill_pdf_data = generate_pdf(df)
+            bill_pdf_data = generate_pdf(
+                recognized_df
+            )  # Only use recognized ziffern for bill
             st.session_state.pdf_data = bill_pdf_data
 
         # Save the PDF data to the temporary directory
         with open(rechnung_path, "wb") as f:
             f.write(bill_pdf_data)
 
-        # 2. Generate Ziffern.xlsx (Excel sheet of the DataFrame)
+        # 2. Generate Ziffern.xlsx with both recognized and potential ziffern
         ziffern_path = f"{temp_dir}/Ziffern.xlsx"
-        df.to_excel(ziffern_path, index=False)
+
+        # Create Excel writer object with xlsxwriter engine for formatting
+        with pd.ExcelWriter(ziffern_path, engine="xlsxwriter") as writer:
+            # Get the workbook and worksheet objects
+            workbook = writer.book
+
+            # Define the bold format
+            bold_format = workbook.add_format({"bold": True})
+
+            # Write recognized ziffern
+            # First write the header
+            worksheet = workbook.add_worksheet("Ziffern")
+            worksheet.write(0, 0, "Erkannte Ziffern", bold_format)
+
+            # Write the recognized DataFrame starting from row 1
+            recognized_df.to_excel(
+                writer, sheet_name="Ziffern", startrow=1, index=False
+            )
+
+            # Calculate the row number for potential ziffern
+            potential_start_row = (
+                len(recognized_df) + 3
+            )  # +3 for header row, data, and empty row
+
+            # Write potential ziffern header
+            worksheet.write(potential_start_row, 0, "Potentielle Ziffern", bold_format)
+
+            # Write the potential DataFrame
+            potential_df.to_excel(
+                writer,
+                sheet_name="Ziffern",
+                startrow=potential_start_row + 1,
+                index=False,
+            )
 
         # 3. Get the selected document's PDF
         document_store = get_document_store(st.session_state.api_key)

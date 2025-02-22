@@ -1,5 +1,6 @@
 import streamlit as st
 
+from utils.helpers.transform import split_recognized_and_potential
 from utils.utils import generate_report_files_as_zip
 
 
@@ -10,12 +11,14 @@ def export_modal(df):
 
     col1, col2 = st.columns(2)
 
+    recognized_df, potential_df = split_recognized_and_potential(st.session_state.df)
+
     with col1:
         if st.button("PDF generieren", type="primary", use_container_width=True):
             # Close this modal before opening the next one
             st.session_state.show_minderung_modal = True
             st.session_state.generate_type = "pdf"
-            st.session_state.generate_df = df
+            st.session_state.generate_df = recognized_df
             st.rerun()
 
         if st.button(
@@ -23,13 +26,16 @@ def export_modal(df):
         ):
             st.session_state.show_minderung_modal = True
             st.session_state.generate_type = "pad_positionen"
-            st.session_state.generate_df = df
+            st.session_state.generate_df = recognized_df
             st.rerun()
 
     with col2:
         if st.button("Bericht exportieren", type="primary", use_container_width=True):
             with st.spinner("📄 Generiere Bericht..."):
-                st.session_state.pdf_report_data = generate_report_files_as_zip(df=df)
+                st.session_state.pdf_report_data = generate_report_files_as_zip(
+                    recognized_df=recognized_df,
+                    potential_df=potential_df,
+                )
 
         if st.button(
             "PADnext Datei generieren",
