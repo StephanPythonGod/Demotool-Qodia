@@ -19,7 +19,7 @@ def get_thread_pool():
     """Get or create a ThreadPoolExecutor instance."""
     if "thread_pool" not in st.session_state:
         st.session_state.thread_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=4, thread_name_prefix="doc_processor"
+            max_workers=40, thread_name_prefix="doc_processor"
         )
     return st.session_state.thread_pool
 
